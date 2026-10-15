@@ -1,0 +1,706 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<title>Cash Entry</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#1f4fd8">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+:root{--bg:#f4f5f7;--card:#fff;--ink:#1b1f24;--mute:#6b7280;--line:#e2e5ea;--out:#c0392b;--in:#1e8e4e;--acc:#1f4fd8;--warn:#b7791f;--warnbg:#fff6e0;--bad:#c0392b;--badbg:#fdeaea}
+@media(prefers-color-scheme:dark){:root{--bg:#111418;--card:#1b2026;--ink:#e8eaed;--mute:#9aa3ad;--line:#2c333b;--out:#ff7a6b;--in:#4cd08a;--acc:#7ea2ff;--warn:#f0b955;--warnbg:#3a2f14;--bad:#ff7a6b;--badbg:#3b1c1a}}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.35 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;padding-bottom:40px}
+.wrap{max-width:560px;margin:0 auto;padding:0 12px}
+.top{position:sticky;top:0;z-index:5;background:var(--card);border-bottom:1px solid var(--line);padding:8px 12px}
+.top .row{display:flex;gap:8px;align-items:center;max-width:560px;margin:0 auto}
+.top label{font-size:11px;color:var(--mute);display:block}
+.top input{width:100%;font-size:16px;padding:6px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink)}
+.bal{flex:1.3;text-align:right}
+.bal b{font-size:24px;display:block}
+.sub{display:flex;gap:14px;font-size:13px;color:var(--mute);max-width:560px;margin:4px auto 0}
+.sub .o{color:var(--out)}.sub .i{color:var(--in)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px;margin:12px 0}
+h2{font-size:14px;margin:0 0 8px;color:var(--mute);text-transform:uppercase;letter-spacing:.04em}
+input[type=text],input[type=number],input[type=search],textarea{width:100%;font-size:18px;padding:10px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink)}
+textarea{font-size:13px;font-family:ui-monospace,Menlo,monospace}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
+.chip{border:1px solid var(--line);background:var(--bg);color:var(--ink);padding:8px 11px;border-radius:999px;font-size:14px}
+.chip.on{background:var(--acc);color:#fff;border-color:var(--acc)}
+.btn{border:0;border-radius:12px;padding:13px;font-size:17px;font-weight:600;color:#fff;background:var(--acc);width:100%}
+.btn.sec{background:var(--bg);color:var(--ink);border:1px solid var(--line);font-weight:500;font-size:15px;padding:10px}
+.btn.danger{background:var(--bad)}
+.sides{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:8px 0}
+.side{padding:16px;font-size:20px;font-weight:700;border-radius:12px;border:2px solid var(--line);background:var(--bg);color:var(--mute)}
+.side.out.on{background:var(--out);border-color:var(--out);color:#fff}
+.side.in.on{background:var(--in);border-color:var(--in);color:#fff}
+.sides.small .side{padding:9px;font-size:14px;font-weight:600}
+.sides.small .side.on{background:var(--acc);border-color:var(--acc);color:#fff}
+.flag{font-size:13px;padding:6px 9px;border-radius:8px;margin:6px 0}
+.flag.bad{background:var(--badbg);color:var(--bad)}.flag.warn{background:var(--warnbg);color:var(--warn)}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.mute{color:var(--mute);font-size:13px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{font-weight:600;color:var(--mute);text-align:left;font-size:11px;border-bottom:1px solid var(--line);padding:4px 3px}
+td{padding:6px 3px;border-bottom:1px solid var(--line);vertical-align:top}
+td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
+.oo{color:var(--out)}.ii{color:var(--in)}
+tr.unc td{background:var(--warnbg)}
+tr.bad td{background:var(--badbg)}
+.tag{font-size:10px;padding:1px 5px;border-radius:6px;background:var(--warn);color:#fff;margin-left:4px}
+.tag.r{background:var(--bad)}
+.act button{border:0;background:none;color:var(--acc);font-size:13px;padding:3px 5px}
+.tot td{font-weight:700;border-top:2px solid var(--ink)}
+.toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:#222;color:#fff;padding:10px 16px;border-radius:10px;font-size:14px;z-index:20;display:none;max-width:90%}
+details summary{cursor:pointer;color:var(--mute);font-size:14px;padding:4px 0}
+.exrow{display:flex;gap:6px;align-items:center;padding:5px 0;border-bottom:1px solid var(--line);font-size:15px}
+.exrow span{flex:1}.exrow .own{font-size:12px;color:var(--mute)}
+.exrow button{border:0;background:none;color:var(--bad);font-size:16px}
+
+.nav{display:flex;gap:6px;max-width:560px;margin:0 auto 6px}
+.nav button{flex:1;padding:9px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--mute);font-size:15px;font-weight:600}
+.nav button.on{background:var(--acc);border-color:var(--acc);color:#fff}
+.drow{border:1px solid var(--line);border-left:5px solid var(--bad);border-radius:10px;padding:8px;margin:8px 0}
+.drow.ok{border-left-color:var(--in)}.drow.hold{border-left-color:var(--mute);opacity:.6}
+.dtop{display:flex;align-items:center;font-size:13px;margin-bottom:6px}
+.dgrid{display:grid;grid-template-columns:1.5fr 1.3fr .7fr 1.1fr .7fr;gap:5px}
+.dgrid label{font-size:10px;color:var(--mute);display:block}
+.dgrid input,.dgrid select{width:100%;font-size:15px;padding:7px 4px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink)}
+.flag.okf{background:rgba(30,142,78,.12);color:var(--in)}
+.own{font-size:12px;color:var(--mute)}
+</style>
+</head>
+<body>
+<div class="top">
+  <div class="nav"><button id="tabCash" class="on">Cash book</button><button id="tabDeals">Deals (WhatsApp)</button></div>
+  <div id="cashTop">
+  <div class="row">
+    <div style="flex:1"><label>Opening cash</label><input id="open" type="number" inputmode="decimal" placeholder="0"></div>
+    <div class="bal"><label>Cash in hand now</label><b id="bal">0</b></div>
+  </div>
+  <div class="sub"><span class="o">OUT <b id="tout">0</b></span><span class="i">IN <b id="tin">0</b></span><span id="cnt"></span></div>
+  </div>
+</div>
+
+<div class="wrap" id="viewCash">
+
+<div class="card" id="setupCard" style="display:none;border-color:var(--warn)">
+  <h2>First-time setup</h2>
+  <div style="font-size:15px">Load your account codes before you start, so typing mistakes get caught. Open <b>Settings</b> at the bottom of this page, pick your setup file or paste your codes, and tap <b>Save settings</b>.</div>
+  <div style="margin-top:8px"><button class="btn sec" id="openSet">Open settings</button></div>
+</div>
+
+<div class="card" id="entryCard">
+  <h2 id="entryTitle">New entry</h2>
+  <input id="code" type="search" autocapitalize="characters" autocomplete="off" autocorrect="off" spellcheck="false" placeholder="Account code (blank = unconfirmed)">
+  <div id="codeFlag"></div>
+
+  <div class="mute" style="margin-top:6px">Narration</div>
+  <div class="chips" id="narrChips"></div>
+  <input id="narr" type="text" autocomplete="off" placeholder="Narration / name (typed)">
+
+  <div class="sides">
+    <button class="side out" id="sOut">OUT</button>
+    <button class="side in" id="sIn">IN</button>
+  </div>
+  <input id="amt" type="number" inputmode="decimal" placeholder="Amount">
+
+  <div class="mute" style="margin-top:10px">Commission on the same row (optional)</div>
+  <div class="two" style="margin-top:4px">
+    <input id="comm" type="number" inputmode="decimal" placeholder="Commission">
+    <div class="sides small" style="margin:0"><button class="side" id="cR">R (receive)</button><button class="side" id="cI">I (issue)</button></div>
+  </div>
+
+  <div id="entryFlag"></div>
+  <div style="margin-top:10px"><button class="btn" id="add">Add entry</button></div>
+  <div style="margin-top:8px;display:none" id="cancelRow"><button class="btn sec" id="cancelEdit">Cancel edit</button></div>
+</div>
+
+<div class="card">
+  <h2>Small expenses <span id="expCodeLbl"></span></h2>
+  <div class="two"><input id="exLabel" type="text" placeholder="Tea, auto…"><input id="exAmt" type="number" inputmode="decimal" placeholder="Amount"></div>
+  <div class="chips" id="exChips"></div>
+  <div style="margin-top:6px"><button class="btn sec" id="exAdd">Add expense line</button></div>
+  <div id="exList" style="margin-top:8px"></div>
+  <div class="mute" id="exNote"></div>
+  <div style="margin-top:6px"><button class="btn sec" id="exCopy">Copy expense breakdown</button></div>
+  <div class="mute" style="margin-top:6px">Tick “own row” on a line to send it as its own row. For rent, EB and other bigger expenses use the entry form above. DAILY BANK is a normal entry above — tap its chip.</div>
+</div>
+
+<div class="card" id="dayCard">
+  <h2>Today's sheet</h2>
+  <div id="dayTable"></div>
+  <div id="warnLine"></div>
+</div>
+
+<div class="card">
+  <h2>Copy for Excel</h2>
+  <div class="mute" style="margin-bottom:8px">Type the date in column B, click column C of the first empty row, then paste. Columns: Code · Narration · OUT · IN · Comm R · Comm I</div>
+  <button class="btn" id="copy">Copy all rows</button>
+  <div style="margin-top:8px"><textarea id="copyBox" rows="5" readonly></textarea></div>
+  <div class="mute" id="backupNote" style="margin-top:6px"></div>
+</div>
+
+<div class="card">
+  <h2>End of day</h2>
+  <div style="margin-bottom:8px"><button class="btn" id="shareFile">Share day file (with data)</button></div>
+  <div id="bakNote" class="mute" style="margin-bottom:8px"></div>
+  <div style="margin-bottom:8px"><button class="btn sec" id="shareCsv">Export for Excel (.csv)</button></div>
+  <div style="margin-bottom:8px"><button class="btn sec" id="shareText">Share day as message</button></div>
+  <div style="margin-bottom:8px"><button class="btn sec" id="backup">Copy backup of today</button></div>
+  <div style="margin-bottom:8px"><button class="btn danger" id="clear">Clear day</button></div>
+  <div id="restoreRow" style="display:none"><button class="btn sec" id="restore">Restore last cleared day</button></div>
+</div>
+
+<div class="card">
+  <details id="recvBox"><summary>Receive a shared day</summary>
+    <div class="mute" style="margin:6px 0">Open a day file someone sent you, or paste a backup text. Nothing changes until you tap Add or Replace.</div>
+    <input type="file" id="recvFile" accept=".txt,.json,text/plain,application/json" style="width:100%;margin-bottom:8px">
+    <textarea id="recvText" rows="4" placeholder="…or paste backup text here"></textarea>
+    <div id="recvInfo" style="margin-top:8px"></div>
+    <div class="two" style="margin-top:8px"><button class="btn sec" id="recvAdd" disabled>Add to my sheet</button><button class="btn sec" id="recvRep" disabled>Replace my sheet</button></div>
+  </details>
+</div>
+
+<div class="card">
+  <details id="setBox"><summary>Settings — codes and shortcuts</summary>
+    <div class="mute" style="margin:6px 0">Load a setup file, or paste below. Nothing is saved until you tap Save settings.</div>
+    <input type="file" id="setFile" accept=".txt,.csv,text/plain" style="width:100%;margin-bottom:8px">
+    <div class="mute">Account codes (one per line)</div>
+    <textarea id="codesBox" rows="8"></textarea>
+    <div class="mute" style="margin-top:8px">Narration shortcuts (one per line)</div>
+    <textarea id="narrsBox" rows="4"></textarea>
+    <div style="margin-top:8px"><button class="btn sec" id="saveCodes">Save settings</button></div>
+    <div class="mute" style="margin-top:8px">Account code for small expenses</div>
+    <input id="expCode" type="text" style="margin-top:4px;text-transform:uppercase">
+    <div class="mute" style="margin-top:8px">Expense bundle row narration</div>
+    <input id="expNarr" type="text" style="margin-top:4px">
+    <div class="mute" style="margin-top:10px">Version <span id="verNote"></span></div>
+  </details>
+</div>
+</div>
+<div class="wrap" id="viewDeals" style="display:none">
+<div class="card">
+  <h2>WhatsApp deals — one batch at a time</h2>
+  <textarea id="dealText" rows="9" placeholder="Paste the boss's message here&#10;Dora- 1000 @ 27.62&#10;&#10;FD- 2000 @ 27.65" style="font-size:15px;font-family:inherit"></textarea>
+  <div class="two" style="margin-top:8px"><button class="btn sec" id="dealPaste">Paste from clipboard</button><button class="btn sec" id="dealClear">Clear</button></div>
+  <div class="mute" style="margin-top:8px">First block (above the first blank line) = purchase, next block = sale, and so on. .V = purchase, .P = sale override the block. A blank or “bal” volume is worked out so purchases equal sales in that pair of blocks.</div>
+</div>
+<div class="card"><h2>Check each row</h2><div id="dealRows"></div><div id="dealSum" style="margin-top:8px"></div></div>
+<div class="card">
+  <h2>Copy for Currency Purchase &amp; Sales</h2>
+  <div class="mute" style="margin-bottom:8px">Type the date in column B of the first row, click column C of the first empty row, then paste. Columns: Code · Volume · Op · Rate · P/S. Only rows marked OK are copied.</div>
+  <label style="display:flex;gap:8px;align-items:center;margin-bottom:10px;font-size:15px"><input type="checkbox" id="dealChecked" style="width:22px;height:22px"> I checked every row against the message</label>
+  <button class="btn" id="dealCopy">Copy OK rows</button>
+  <div class="mute" id="dealCopyNote" style="margin-top:6px"></div>
+</div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+var DEFAULT_CODES=[];
+var APP_VERSION='2026-10-15.1';
+var NARRS=ls('cashentry.narrs')||[];
+var EXPCODE=ls('cashentry.expcode')||'SHOP-EXP';
+var QUICK_EXP=['Tea','Auto','Food','Water','Tips','Parcel'];
+var KEY='cashentry.v1', CKEY='cashentry.codes', UKEY='cashentry.use', LKEY='cashentry.last';
+var $=function(i){return document.getElementById(i)};
+function ls(k,v){try{if(v===undefined){var s=localStorage.getItem(k);return s?JSON.parse(s):null}localStorage.setItem(k,JSON.stringify(v))}catch(e){return null}}
+function rm(k){try{localStorage.removeItem(k)}catch(e){}}
+var codes=ls(CKEY)||DEFAULT_CODES, use=ls(UKEY)||{};
+var S=ls(KEY)||{open:'',entries:[],exp:[],expNarr:'EXP',seq:1};
+if(!S.expNarr)S.expNarr='EXP';
+var f={side:null,cs:null,editId:null,lastDel:null,confirmClear:false,dupOK:null};
+var META=ls('cashentry.meta')||{chg:0,bak:0};
+function save(){ls(KEY,S);META.chg=Date.now();ls('cashentry.meta',META);try{renderBak()}catch(e){}}
+function markBak(){META.bak=Date.now();ls('cashentry.meta',META);renderBak()}
+function renderBak(){
+  var el=$('bakNote');if(!el)return;
+  var has=S.entries.length||S.exp.length;
+  if(!has){el.className='mute';el.textContent=META.bak?'Last backup: '+new Date(META.bak).toLocaleString():'No backup yet.';return}
+  var stale=META.chg>META.bak;
+  el.className='flag '+(stale?'warn':'okf');
+  el.textContent=stale?(META.bak?'Changed since the last backup ('+new Date(META.bak).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})+'). Share the day file.':'Not backed up yet. Share the day file before you clear the day.'):'Backed up '+new Date(META.bak).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})+' — nothing new since.';
+}
+function r2(x){return Math.round(x*100)/100}
+function num(v){if(v===''||v==null)return 0;var n=parseFloat(String(v).replace(/,/g,''));return isNaN(n)?0:r2(n)}
+function fmt(n){n=r2(n);return n.toLocaleString('en-IN',{minimumFractionDigits:(n%1?2:0),maximumFractionDigits:2})}
+function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
+function toast(m){var t=$('toast');t.textContent=m;t.style.display='block';clearTimeout(toast.h);toast.h=setTimeout(function(){t.style.display='none'},2200)}
+function known(c){return codes.length===0||codes.indexOf(c)>=0}
+function plain(n){return n?String(r2(n)):''}
+
+// rows that go to Excel
+function rows(){
+  var out=S.entries.map(function(e){return{code:e.code,narr:e.narr,out:e.out,inn:e.inn,cr:e.cr,ci:e.ci,id:e.id}});
+  var bundle=0,own=[];
+  S.exp.forEach(function(x){if(x.own)own.push(x);else bundle+=x.amt});
+  if(bundle>0)out.push({code:EXPCODE,narr:S.expNarr,out:r2(bundle),inn:0,cr:0,ci:0,bundle:true});
+  own.forEach(function(x){out.push({code:EXPCODE,narr:x.label,out:x.amt,inn:0,cr:0,ci:0})});
+  return out;
+}
+function totals(){
+  var o=0,i=0,cr=0,ci=0;
+  rows().forEach(function(r){o+=r.out;i+=r.inn;cr+=r.cr;ci+=r.ci});
+  return{o:r2(o),i:r2(i),cr:r2(cr),ci:r2(ci),bal:r2(num(S.open)+i-o)};
+}
+
+function renderTop(){
+  var t=totals();
+  $('tout').textContent=fmt(t.o);$('tin').textContent=fmt(t.i);
+  var b=$('bal');b.textContent=fmt(t.bal);b.style.color=t.bal<0?'var(--bad)':'';
+  $('cnt').textContent=rows().length+' rows';
+}
+function renderNarr(){
+  var cur=$('narr').value.trim().toUpperCase();
+  $('narrChips').innerHTML=!NARRS.length?'':NARRS.map(function(n){return'<button class="chip'+(cur===n?' on':'')+'" data-n="'+n+'">'+n+'</button>'}).join('');
+}
+function renderForm(){
+  $('setupCard').style.display=codes.length?'none':'block';
+  $('sOut').classList.toggle('on',f.side==='out');$('sIn').classList.toggle('on',f.side==='in');
+  $('cR').classList.toggle('on',f.cs==='r');$('cI').classList.toggle('on',f.cs==='i');
+  var c=$('code').value.trim().toUpperCase(),h='';
+  if(!c)h='<div class="flag warn">No code — will be saved as UNCONFIRMED</div>';
+  else if(!known(c))h='<div class="flag bad">“'+esc(c)+'” is not in the Chart of Accounts</div>';
+  $('codeFlag').innerHTML=h;
+  $('add').textContent=f.editId?'Save changes':(c&&!known(c)?'Add anyway (unknown code)':'Add entry');
+  $('entryTitle').textContent=f.editId?'Editing entry':'New entry';
+  $('cancelRow').style.display=f.editId?'block':'none';
+  renderNarr();
+}
+function renderExp(){
+  $('expCodeLbl').textContent='(one row — '+EXPCODE+')';
+  $('exChips').innerHTML=QUICK_EXP.map(function(n){return'<button class="chip" data-x="'+n+'">'+n+'</button>'}).join('');
+  $('exList').innerHTML=S.exp.map(function(x,i){return'<div class="exrow"><span>'+esc(x.label)+' <b>'+fmt(x.amt)+'</b></span><label class="own"><input type="checkbox" data-own="'+i+'"'+(x.own?' checked':'')+'> own row</label><button data-xd="'+i+'">✕</button></div>'}).join('');
+  var b=0;S.exp.forEach(function(x){if(!x.own)b+=x.amt});
+  $('exNote').textContent=b>0?('Bundle row: '+EXPCODE+' · '+S.expNarr+' · OUT '+fmt(b)):'';
+}
+function renderDay(){
+  var rs=rows();
+  if(!rs.length){$('dayTable').innerHTML='<div class="mute">No entries yet.</div>'+(f.lastDel?'<div style="margin-top:8px"><button class="btn sec" id="undo">Undo delete</button></div>':'');$('warnLine').innerHTML='';var u0=$('undo');if(u0)u0.onclick=function(){if(f.lastDel){S.entries.splice(Math.min(f.lastDel.i,S.entries.length),0,f.lastDel.e);f.lastDel=null;save();all()}};return}
+  var unc=0,bad=0;
+  var h='<table><tr><th>#</th><th>Code / narration</th><th class="n">OUT</th><th class="n">IN</th><th class="n">Cm</th><th></th></tr>';
+  rs.forEach(function(r,i){
+    var isUnc=!r.code,isBad=r.code&&!known(r.code);
+    if(isUnc)unc++;if(isBad)bad++;
+    var cm=r.cr?('R '+fmt(r.cr)):(r.ci?('I '+fmt(r.ci)):'');
+    h+='<tr class="'+(isUnc?'unc':isBad?'bad':'')+'"><td>'+(i+1)+'</td><td><b>'+esc(r.code||'—')+'</b>'+(isUnc?'<span class="tag">UNCONFIRMED</span>':'')+(isBad?'<span class="tag r">UNKNOWN</span>':'')+'<br><span class="mute">'+esc(r.narr)+'</span></td><td class="n oo">'+(r.out?fmt(r.out):'')+'</td><td class="n ii">'+(r.inn?fmt(r.inn):'')+'</td><td class="n">'+cm+'</td><td class="act">'+(r.id?'<button data-e="'+r.id+'">edit</button><button data-d="'+r.id+'"'+(f.delPending===r.id?' style="color:var(--bad);font-weight:700"':'')+'>'+(f.delPending===r.id?'sure?':'del')+'</button>':'')+'</td></tr>';
+  });
+  var t=totals();
+  h+='<tr class="tot"><td></td><td>Total</td><td class="n oo">'+fmt(t.o)+'</td><td class="n ii">'+fmt(t.i)+'</td><td class="n">'+(t.cr||t.ci?('R '+fmt(t.cr)+' / I '+fmt(t.ci)):'')+'</td><td></td></tr>';
+  h+='<tr><td></td><td>Opening</td><td colspan="4" class="n">'+fmt(num(S.open))+'</td></tr><tr class="tot"><td></td><td>Closing cash</td><td colspan="4" class="n">'+fmt(t.bal)+'</td></tr></table>';
+  if(f.lastDel)h+='<div style="margin-top:8px"><button class="btn sec" id="undo">Undo delete</button></div>';
+  $('dayTable').innerHTML=h;
+  var w='';
+  if(unc)w+='<div class="flag warn">'+unc+' unconfirmed row(s) — no account code yet</div>';
+  if(bad)w+='<div class="flag bad">'+bad+' row(s) with a code not in the Chart of Accounts</div>';
+  $('warnLine').innerHTML=w;
+  var u=$('undo');if(u)u.onclick=function(){if(f.lastDel){S.entries.splice(Math.min(f.lastDel.i,S.entries.length),0,f.lastDel.e);f.lastDel=null;save();all()}};
+}
+function renderCopy(){
+  var rs=rows();
+  var txt=rs.map(function(r){return[r.code,r.narr,plain(r.out),plain(r.inn),plain(r.cr),plain(r.ci)].join('\t')}).join('\n');
+  $('copyBox').value=txt;
+}
+function renderRestore(){
+  var l=ls(LKEY);var ok=l&&(Date.now()-l.t<86400000);
+  $('restoreRow').style.display=ok?'block':'none';
+  if(l&&!ok)rm(LKEY);
+}
+function all(){renderTop();renderForm();renderExp();renderDay();renderCopy();renderRestore();$('open').value=S.open;$('expNarr').value=S.expNarr}
+
+function resetForm(){
+  $('code').value='';$('amt').value='';$('comm').value='';$('narr').value='';
+  f.side=null;f.cs=null;f.editId=null;f.dupOK=null;$('entryFlag').innerHTML='';renderForm();
+}
+function copyText(txt,msg){
+  function fb(){var ta=document.createElement('textarea');ta.value=txt;ta.style.position='fixed';ta.style.opacity='0';document.body.appendChild(ta);ta.focus();ta.select();var ok=false;try{ok=document.execCommand('copy')}catch(e){}document.body.removeChild(ta);toast(ok?msg:'Copy failed — select the text box and copy manually')}
+  if(navigator.clipboard&&window.isSecureContext){navigator.clipboard.writeText(txt).then(function(){toast(msg)},fb)}else fb();
+}
+
+// events
+$('open').oninput=function(){S.open=this.value;save();renderTop();renderDay();};
+$('code').oninput=function(){this.value=this.value.toUpperCase();f.dupOK=null;renderForm()};
+$('narrChips').onclick=function(e){var n=e.target.getAttribute&&e.target.getAttribute('data-n');if(n){$('narr').value=($('narr').value.trim().toUpperCase()===n?'':n);renderNarr()}};
+$('narr').oninput=renderNarr;
+$('sOut').onclick=function(){f.side='out';f.dupOK=null;renderForm()};
+$('sIn').onclick=function(){f.side='in';f.dupOK=null;renderForm()};
+$('cR').onclick=function(){f.cs=f.cs==='r'?null:'r';renderForm()};
+$('cI').onclick=function(){f.cs=f.cs==='i'?null:'i';renderForm()};
+$('cancelEdit').onclick=resetForm;
+
+$('add').onclick=function(){
+  var code=$('code').value.trim().toUpperCase(),amt=num($('amt').value),cm=num($('comm').value),narr=$('narr').value.trim();
+  var flag=$('entryFlag');
+  if(amt<=0&&cm<=0){flag.innerHTML='<div class="flag bad">Enter an amount.</div>';return}
+  if(amt>0&&!f.side){flag.innerHTML='<div class="flag bad">Tap OUT or IN.</div>';return}
+  if(cm>0&&!f.cs){flag.innerHTML='<div class="flag bad">Choose R or I for the commission.</div>';return}
+  var e={id:f.editId||('e'+(S.seq++)),code:code,narr:narr,out:amt>0&&f.side==='out'?amt:0,inn:amt>0&&f.side==='in'?amt:0,cr:f.cs==='r'?cm:0,ci:f.cs==='i'?cm:0};
+  if(!f.editId){
+    var dup=S.entries.some(function(x){return x.code===e.code&&x.out===e.out&&x.inn===e.inn&&x.cr===e.cr&&x.ci===e.ci});
+    var sig=JSON.stringify([e.code,e.out,e.inn,e.cr,e.ci]);
+    if(dup&&f.dupOK!==sig){f.dupOK=sig;flag.innerHTML='<div class="flag warn">Same code and amount already entered today. Tap Add again if this is a second entry.</div>';return}
+  }
+  if(f.editId){for(var i=0;i<S.entries.length;i++)if(S.entries[i].id===f.editId)S.entries[i]=e}
+  else{S.entries.push(e);if(code)use[code]=(use[code]||0)+1;ls(UKEY,use)}
+  var was=f.editId;save();resetForm();all();toast(was?'Saved':'Added');
+};
+
+$('dayTable').onclick=function(ev){
+  var ed=ev.target.getAttribute&&ev.target.getAttribute('data-e'),dl=ev.target.getAttribute&&ev.target.getAttribute('data-d');
+  if(ed){var e=S.entries.filter(function(x){return x.id===ed})[0];if(!e)return;
+    f.editId=ed;$('code').value=e.code;$('narr').value=e.narr;
+    var a=e.out||e.inn;$('amt').value=a||'';f.side=e.out?'out':(e.inn?'in':null);
+    var c=e.cr||e.ci;$('comm').value=c||'';f.cs=e.cr?'r':(e.ci?'i':null);
+    renderForm();window.scrollTo({top:0,behavior:'smooth'});}
+  if(dl&&f.delPending!==dl){f.delPending=dl;renderDay();clearTimeout(f.dp);f.dp=setTimeout(function(){f.delPending=null;renderDay()},4000);return}
+  if(dl){f.delPending=null;clearTimeout(f.dp);for(var i=0;i<S.entries.length;i++)if(S.entries[i].id===dl){f.lastDel={e:S.entries[i],i:i};S.entries.splice(i,1);break}
+    save();all();toast('Deleted — Undo is under the table');}
+};
+
+// expenses
+function addExp(){
+  var l=$('exLabel').value.trim(),a=num($('exAmt').value);
+  if(!l||a<=0){toast('Enter a label and an amount');return}
+  S.exp.push({label:l,amt:a,own:false});save();$('exLabel').value='';$('exAmt').value='';all();$('exLabel').focus();
+}
+$('exAdd').onclick=addExp;
+$('exChips').onclick=function(e){var n=e.target.getAttribute&&e.target.getAttribute('data-x');if(n){$('exLabel').value=n;$('exAmt').focus()}};
+$('exList').onclick=function(e){var d=e.target.getAttribute&&e.target.getAttribute('data-xd');if(d!==null&&d!==undefined){S.exp.splice(+d,1);save();all()}};
+$('exList').onchange=function(e){var o=e.target.getAttribute&&e.target.getAttribute('data-own');if(o!==null&&o!==undefined){S.exp[+o].own=e.target.checked;save();all()}};
+$('exCopy').onclick=function(){
+  if(!S.exp.length){toast('No expense lines');return}
+  var t=0;var s=S.exp.map(function(x){t+=x.amt;return x.label+' '+plain(x.amt)}).join('\n');
+  copyText(s+'\nTotal '+plain(r2(t)),'Breakdown copied');
+};
+$('expNarr').oninput=function(){S.expNarr=this.value.trim()||'EXP';save();renderExp();renderDay();renderCopy()};
+
+// copy
+$('copy').onclick=function(){
+  var rs=rows();if(!rs.length){toast('Nothing to copy');return}
+  var u=rs.filter(function(r){return !r.code}).length;
+  copyText($('copyBox').value,rs.length+' rows copied'+(u?' ('+u+' unconfirmed)':''));
+  ls('cashentry.copied',Date.now());
+};
+$('backup').onclick=function(){copyText(JSON.stringify(S),'Backup copied — keep it somewhere safe');markBak()};
+$('clear').onclick=function(){
+  var b=$('clear');
+  if(!rows().length&&!S.open){toast('Day is already empty');return}
+  if(!f.confirmClear){
+    var u=rows().filter(function(r){return !r.code}).length;
+    f.confirmClear=true;b.textContent=(META.chg>META.bak?'NOT backed up! ':'')+(u?u+' unconfirmed row(s)! ':'')+'Tap again to clear the day';
+    clearTimeout(f.cc);f.cc=setTimeout(function(){f.confirmClear=false;b.textContent='Clear day'},4000);return;
+  }
+  clearTimeout(f.cc);f.confirmClear=false;b.textContent='Clear day';
+  ls(LKEY,{t:Date.now(),s:S});
+  S={open:'',entries:[],exp:[],expNarr:S.expNarr,seq:1};save();f.lastDel=null;resetForm();all();toast('Day cleared — restore available for 24 hours');
+};
+$('restore').onclick=function(){var l=ls(LKEY);if(!l)return;S=l.s;save();rm(LKEY);all();toast('Restored')};
+$('saveCodes').onclick=function(){
+  var c=$('codesBox').value.split(/\r?\n/).map(function(x){return x.trim().toUpperCase()}).filter(Boolean);
+  var seen={};c=c.filter(function(x){return seen[x]?false:(seen[x]=1)});
+  if(!c.length){toast('No codes found');return}
+  codes=c;ls(CKEY,codes);
+  NARRS=$('narrsBox').value.split(/\r?\n/).map(function(x){return x.trim()}).filter(Boolean);ls('cashentry.narrs',NARRS);
+  EXPCODE=($('expCode').value.trim().toUpperCase())||'SHOP-EXP';ls('cashentry.expcode',EXPCODE);
+  toast(c.length+' codes and '+NARRS.length+' shortcuts saved');all();
+};
+$('narrsBox').value=NARRS.join('\n');$('expCode').value=EXPCODE;$('verNote').textContent=APP_VERSION;
+$('openSet').onclick=function(){$('setBox').open=true;$('setBox').scrollIntoView({behavior:'smooth'})};
+$('setFile').onchange=function(){
+  var fl=this.files&&this.files[0];if(!fl)return;
+  var r=new FileReader();r.onload=function(){
+    var cur='C',C=[],N=[];
+    String(r.result).replace(/^\ufeff/,'').split(/\r?\n/).forEach(function(l){
+      var t=l.trim();if(!t)return;
+      if(/^codes$/i.test(t)){cur='C';return}
+      if(/^narrations?$/i.test(t)){cur='N';return}
+      (cur==='C'?C:N).push(t);
+    });
+    $('codesBox').value=C.join('\n');$('narrsBox').value=N.join('\n');toast('Loaded '+C.length+' codes and '+N.length+' shortcuts — tap Save settings');
+  };r.readAsText(fl);
+};
+$('codesBox').value=codes.join('\n');
+
+// ===== WhatsApp deals parser =====
+var DKEY='cashentry.deals';
+var D=ls(DKEY)||{text:'',ov:{},hold:{},checked:false,view:'cash'};
+D.ov=D.ov||{};D.hold=D.hold||{};
+function dsave(){ls(DKEY,D)}
+function normKey(s){return String(s).toUpperCase().replace(/[^A-Z0-9]/g,'')}
+function matchCode(name){
+  var u=name.trim().toUpperCase();
+  if(!u)return{code:'',note:''};
+  if(known(u))return{code:u,note:''};
+  var k=normKey(u),hits=codes.filter(function(c){return normKey(c)===k});
+  if(k&&hits.length===1)return{code:hits[0],note:'matched '+hits[0]};
+  return{code:u,note:''};
+}
+function parseNumStr(t){
+  if(t==null||t==='')return null;
+  if(/,/.test(t)&&!/^\d{1,3}(,\d{3})+(\.\d+)?$/.test(t))return null;
+  var n=parseFloat(String(t).replace(/,/g,''));
+  return(isNaN(n)||!/^[\d,]*\.?\d+$/.test(String(t).replace(/,/g,'')))?null:n;
+}
+function parseDeals(text){
+  var lines=text.replace(/️/g,'').replace(/ /g,' ').split(/\r?\n/);
+  var out=[],block=0,prevBlank=true;
+  lines.forEach(function(raw,idx){
+    var t=raw.trim();
+    if(!t){prevBlank=true;return}
+    if(prevBlank){block++;prevBlank=false}
+    var m=t.match(/^\[[^\]]*\]\s*[^:]*:\s*(.*)$/);if(m)t=m[1].trim();
+    var row={i:idx,raw:raw.trim(),block:block,pair:Math.ceil(block/2),deal:false};
+    var sm=t.match(/[@➗÷✖×]/);
+    if(!sm){
+      if(/\d/.test(t)){row.deal=true;row.noSep=true;row.name='';row.volText='';row.rateText='';row.sep='';row.divSep=false;row.iruppu=false;row.tag=null;out.push(row);return}
+      row.reason='not a deal line';out.push(row);return}
+    row.sep=sm[0];row.divSep=(sm[0]==='➗'||sm[0]==='÷');
+    var left=t.slice(0,sm.index).trim(),right=t.slice(sm.index+1).trim();
+    var nm=left.match(/^(.+?)\s*[-–—:](?:\s+|$)(.*)$/),name,vol;
+    if(nm){name=nm[1];vol=nm[2].trim()}
+    else{var parts=left.split(/\s+/);vol=parts.length>1?parts.pop():'';name=parts.join(' ')}
+    row.name=name.trim();row.volText=vol;
+    row.rateText=right.split(/\s+/)[0]||'';
+    var tag=row.rateText.match(/^iruppu(?:\.([vp]))?$/i);
+    row.iruppu=!!tag;row.tag=tag&&tag[1]?tag[1].toUpperCase():null;
+    row.deal=true;out.push(row);
+  });
+  return out;
+}
+function computeDeals(rows){
+  var deals=rows.filter(function(r){return r.deal});
+  deals.forEach(function(r){
+    var ov=D.ov[r.i]||{};r.ov=ov;
+    var mc=matchCode(r.name);r.autoCode=mc.code;r.note=mc.note?[mc.note]:[];
+    r.code=ov.code!=null&&ov.code!==''?ov.code.toUpperCase():r.autoCode;
+    if(ov.code&&!known(r.code)){var m2=matchCode(r.code);r.code=m2.code}
+    r.ps=ov.ps||(r.tag==='V'?'P':r.tag==='P'?'S':(r.block%2?'P':'S'));
+    var bal=!r.noSep&&!r.divSep&&(r.volText===''||/^bal$/i.test(r.volText));
+    r.bal=bal;
+    var vn=parseNumStr(r.volText);r.vol=ov.vol!=null&&ov.vol!==''?parseNumStr(ov.vol):(bal?null:vn);
+    r.rate=null;
+    if(ov.rate!=null&&ov.rate!=='')r.rate=parseNumStr(ov.rate);
+    else if(!r.iruppu)r.rate=parseNumStr(r.rateText);
+  });
+  // iruppu rate: copy when every other rate on that side in the pair agrees
+  deals.forEach(function(r){
+    if(r.iruppu&&r.rate==null){
+      var rs=deals.filter(function(x){return x!==r&&x.pair===r.pair&&x.ps===r.ps&&!x.divSep&&!x.iruppu&&x.rate!=null&&x.rate>=10&&!D.hold[x.i]}).map(function(x){return x.rate});
+      if(rs.length&&rs.every(function(v){return Math.abs(v-rs[0])<1e-9})){r.rate=rs[0];r.note.push('rate copied from batch')}
+    }
+  });
+  // balancing volumes, one blank per pair
+  var pairs={};deals.forEach(function(r){if(!r.divSep)(pairs[r.pair]=pairs[r.pair]||[]).push(r)});
+  Object.keys(pairs).forEach(function(k){
+    var g=pairs[k],blanks=g.filter(function(r){return r.bal&&!(r.ov.vol!=null&&r.ov.vol!=='')});
+    if(!blanks.length)return;
+    if(blanks.length>1){blanks.forEach(function(r){r.balErr='two blank volumes in this pair — type one'});return}
+    var b=blanks[0],ps=0,ss=0,bad=false;
+    g.forEach(function(r){if(r===b||D.hold[r.i]||(r.rate!=null&&r.rate>0&&r.rate<10))return;if(r.vol==null){bad=true;return}if(r.ps==='P')ps+=r.vol;else ss+=r.vol});
+    if(bad){b.balErr='another volume in this pair is unreadable';return}
+    var v=r2(b.ps==='P'?ss-ps:ps-ss);
+    if(v>0){b.vol=v;b.note.push('balancing volume')}else b.balErr='balance is not positive — type the volume';
+  });
+  // op + flags
+  var byOp={'*':[],'/':[]};
+  deals.forEach(function(r){
+    r.op=ov(r,'op')||(r.divSep?'/':(r.sep==='✖'||r.sep==='×'?'*':(r.rate!=null&&r.rate<10?'/':'*')));
+  });
+  function ov(r,k){return r.ov[k]||''}
+  deals.forEach(function(r){if(r.rate!=null&&r.rate>=10&&r.op==='*'&&!D.hold[r.i])byOp['*'].push(r.rate)});
+  function med(a){a=a.slice().sort(function(x,y){return x-y});var n=a.length;return n?(n%2?a[(n-1)/2]:(a[n/2-1]+a[n/2])/2):null}
+  var meds={'*':byOp['*'].length>=3?med(byOp['*']):null,'/':byOp['/'].length>=3?med(byOp['/']):null};
+  deals.forEach(function(r){
+    var f=[];
+    if(r.noSep&&!(r.code&&r.ov.vol&&r.ov.rate))f.push('NO @ FOUND — has numbers, fill code/volume/rate or tick skip');
+    if(!r.code)f.push('CODE?');else if(!known(r.code))f.push('CODE? not in list');
+    if(r.vol==null||!(r.vol>0))f.push(r.balErr?'VOLUME? '+r.balErr:'VOLUME?');
+    if(r.rate==null||!(r.rate>0))f.push(r.iruppu?'RATE? iruppu — type the rate':'RATE?');
+    else if(!(r.ov.rate!=null&&r.ov.rate!=='')&&r.op==='*'&&r.rate>=10&&meds['*']&&Math.abs(r.rate-meds['*'])>meds['*']*0.02)f.push('RATE far from others');
+    if(!r.ov.op&&!r.divSep&&r.rate!=null&&r.rate<10)f.push('OP? small rate, confirm / or *');
+    r.flags=f;r.ok=!f.length&&!D.hold[r.i];
+  });
+  return rows;
+}
+function renderDeals(){
+  var rows=computeDeals(parseDeals(D.text)),deals=rows.filter(function(r){return r.deal});
+  var box=$('dealRows');
+  if(!deals.length){box.innerHTML='<div class="mute">'+(D.text.trim()?'No deal lines found (each needs @ or ➗ ).':'Paste one batch of the WhatsApp message above.')+'</div>';$('dealSum').innerHTML='';$('dealCopyNote').textContent='';return}
+  var pv=0,sv=0,okn=0;
+  var h='';
+  rows.forEach(function(r){
+    if(!r.deal){h+='<div class="mute" style="padding:3px 0">Skipped: “'+esc(r.raw)+'” (not a deal line)</div>';return}
+    if(r.ok)okn++;
+    if(!r.divSep&&r.vol>0&&r.rate!=null){if(r.ps==='P')pv+=r.vol;else sv+=r.vol}
+    var held=D.hold[r.i];
+    h+='<div class="drow '+(held?'hold':r.ok?'ok':'bad')+'"><div class="dtop"><b>Block '+r.block+' · '+(r.ps==='P'?'Purchase':'Sale')+'</b><span class="mute" style="flex:1;margin:0 6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(r.raw)+'</span><label class="own"><input type="checkbox" data-hold="'+r.i+'"'+(held?' checked':'')+'> skip</label></div>'
+     +'<div class="dgrid"><div><label>Code</label><input type="text" data-f="code" data-i="'+r.i+'" value="'+esc(r.code)+'" autocapitalize="characters" autocomplete="off"></div>'
+     +'<div><label>Volume</label><input type="text" inputmode="decimal" data-f="vol" data-i="'+r.i+'" value="'+(r.vol!=null?r2(r.vol):'')+'"></div>'
+     +'<div><label>Op</label><select data-f="op" data-i="'+r.i+'"><option'+(r.op==='*'?' selected':'')+'>*</option><option'+(r.op==='/'?' selected':'')+'>/</option></select></div>'
+     +'<div><label>Rate</label><input type="text" inputmode="decimal" data-f="rate" data-i="'+r.i+'" value="'+(r.rate!=null?r.rate:'')+'"></div>'
+     +'<div><label>P/S</label><select data-f="ps" data-i="'+r.i+'"><option'+(r.ps==='P'?' selected':'')+'>P</option><option'+(r.ps==='S'?' selected':'')+'>S</option></select></div></div>'
+     +(held?'<div class="flag warn">Skipped — will not be copied</div>':r.flags.length?'<div class="flag bad">'+esc(r.flags.join(' · '))+'</div>':'<div class="flag okf">OK'+(r.note.length?' — '+esc(r.note.join(', ')):'')+'</div>')
+     +'</div>';
+  });
+  box.innerHTML=h;
+  var bad=deals.filter(function(r){return !r.ok&&!D.hold[r.i]}).length;
+  $('dealSum').innerHTML='<div class="two"><div>Purchase vol <b>'+fmt(pv)+'</b></div><div>Sale vol <b>'+fmt(sv)+'</b></div></div><div class="mute">'+okn+' ready · '+bad+' need attention · '+Object.keys(D.hold).filter(function(k){return D.hold[k]}).length+' skipped. Volume totals are for information (stock kept with Crown need not match).</div>';
+  $('dealChecked').checked=!!D.checked;
+  $('dealCopyNote').textContent=okn+' of '+deals.length+' rows will be copied';
+}
+function dealTSV(){
+  var rows=computeDeals(parseDeals(D.text)).filter(function(r){return r.deal&&r.ok});
+  return rows.map(function(r){return[r.code,String(r2(r.vol)),r.op,String(r.rate),r.ps].join('\t')}).join('\n');
+}
+function setView(v){
+  D.view=v;dsave();
+  $('viewCash').style.display=v==='cash'?'':'none';$('viewDeals').style.display=v==='deals'?'':'none';
+  $('cashTop').style.display=v==='cash'?'':'none';
+  $('tabCash').classList.toggle('on',v==='cash');$('tabDeals').classList.toggle('on',v==='deals');
+  if(v==='deals')renderDeals();
+}
+$('tabCash').onclick=function(){setView('cash')};$('tabDeals').onclick=function(){setView('deals')};
+$('dealText').value=D.text;
+$('dealText').onchange=$('dealText').oninput=function(){if(D.text!==this.value){D.text=this.value;D.ov={};D.hold={};D.checked=false;dsave();renderDeals()}};
+$('dealPaste').onclick=function(){
+  if(navigator.clipboard&&navigator.clipboard.readText){navigator.clipboard.readText().then(function(t){$('dealText').value=t;$('dealText').oninput()},function(){toast('Paste blocked — long-press the box and paste')})}
+  else toast('Long-press the box and paste');
+};
+$('dealClear').onclick=function(){
+  if(!f.dealConfirm){f.dealConfirm=true;this.textContent='Tap again to clear';var b=this;clearTimeout(f.dcT);f.dcT=setTimeout(function(){f.dealConfirm=false;b.textContent='Clear'},3500);return}
+  f.dealConfirm=false;this.textContent='Clear';D.text='';D.ov={};D.hold={};D.checked=false;dsave();$('dealText').value='';renderDeals();
+};
+$('dealRows').onchange=function(e){
+  var t=e.target,i=t.getAttribute('data-i'),fl=t.getAttribute('data-f'),h=t.getAttribute('data-hold');
+  if(h!==null){D.hold[h]=t.checked;D.checked=false;dsave();renderDeals();return}
+  if(fl){var o=D.ov[i]=D.ov[i]||{};o[fl]=t.value.trim();if(fl==='code')o.code=o.code.toUpperCase();D.checked=false;dsave();renderDeals()}
+};
+$('dealChecked').onchange=function(){D.checked=this.checked;dsave()};
+$('dealCopy').onclick=function(){
+  var rows=computeDeals(parseDeals(D.text)).filter(function(r){return r.deal});
+  if(!rows.length){toast('Nothing to copy');return}
+  if(!$('dealChecked').checked){toast('Tick "I checked every row against the message" first');return}
+  var txt=dealTSV(),n=txt?txt.split('\n').length:0,held=rows.length-n;
+  if(!n){toast('No rows are ready');return}
+  copyText(txt,n+' rows copied'+(held?' ('+held+' held back)':''));
+};
+
+// ===== share / receive a day =====
+function dayStamp(){var d=new Date();function p(n){return(n<10?'0':'')+n}return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())}
+function payload(){
+  return summaryText()+'\n\n'+'-----------------------------------------\nCASHENTRY-DATA v1  (used by the tool to reload this day - do not edit below)\n'+JSON.stringify({app:'cashentry',v:1,at:new Date().toISOString(),S:S})}
+function csvCell(v){v=String(v==null?'':v);return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v}
+function dayCSV(){
+  var L=[['Date','Account Code','Narration','OUT','IN','Commission R','Commission I'].join(',')],d=dayStamp();
+  rows().forEach(function(r){L.push([d,r.code,r.narr,plain(r.out),plain(r.inn),plain(r.cr),plain(r.ci)].map(csvCell).join(','))});
+  return '\ufeff'+L.join('\r\n')+'\r\n';
+}
+function summaryText(){
+  var rs=rows(),t=totals();
+  var L=['Cash day '+dayStamp(),'Opening '+fmt(num(S.open))];
+  rs.forEach(function(r,i){
+    var cm=r.cr?(' | R '+plain(r.cr)):(r.ci?(' | I '+plain(r.ci)):'');
+    L.push((i+1)+'. '+(r.code||'(NO CODE)')+' | '+(r.narr||'-')+' | '+(r.out?'OUT '+plain(r.out):'IN '+plain(r.inn))+cm);
+  });
+  L.push('Total OUT '+plain(t.o)+' | IN '+plain(t.i));
+  L.push('Closing cash '+plain(t.bal));
+  return L.join('\n');
+}
+function downloadText(name,txt){
+  var a=document.createElement('a');a.href=URL.createObjectURL(new Blob([txt],{type:'text/plain'}));a.download=name;document.body.appendChild(a);a.click();
+  setTimeout(function(){URL.revokeObjectURL(a.href);document.body.removeChild(a)},1000);
+}
+$('shareFile').onclick=function(){
+  if(!rows().length&&!S.open){toast('Nothing to share yet');return}
+  var name='cash-day-'+dayStamp()+'.txt',txt=payload();
+  try{
+    var file=new File([txt],name,{type:'text/plain'});
+    if(navigator.canShare&&navigator.canShare({files:[file]})){
+      navigator.share({files:[file],title:'Cash day '+dayStamp()}).then(markBak).catch(function(e){if(e&&e.name!=='AbortError'){downloadText(name,txt);markBak();toast('Sharing not available — file downloaded instead')}});
+      return;
+    }
+  }catch(e){}
+  downloadText(name,txt);markBak();toast('File downloaded — send it from your Files app');
+};
+$('shareCsv').onclick=function(){
+  if(!rows().length){toast('Nothing to export yet');return}
+  var name='cash-day-'+dayStamp()+'.csv',txt=dayCSV();
+  try{
+    var file=new File([txt],name,{type:'text/csv'});
+    if(navigator.canShare&&navigator.canShare({files:[file]})){
+      navigator.share({files:[file],title:'Cash day '+dayStamp()}).catch(function(e){if(e&&e.name!=='AbortError'){downloadText(name,txt);toast('Downloaded instead')}});
+      return;
+    }
+  }catch(e){}
+  downloadText(name,txt);toast('Excel file downloaded');
+};
+$('shareText').onclick=function(){
+  if(!rows().length){toast('Nothing to share yet');return}
+  var txt=summaryText();
+  if(navigator.share){navigator.share({text:txt}).catch(function(e){if(e&&e.name!=='AbortError')copyText(txt,'Copied — paste it into a message')});return}
+  copyText(txt,'Copied — paste it into a message');
+};
+var recv=null;
+function parseBackup(raw){
+  var mk=raw.indexOf('CASHENTRY-DATA'),i=raw.indexOf('{',mk>=0?mk:0);if(i<0)return null;
+  var o;try{o=JSON.parse(raw.slice(i))}catch(e){return null}
+  var T=o&&o.app==='cashentry'?o.S:(o&&Array.isArray(o.entries)?o:null);   // also accepts "Copy backup of today" text
+  if(!T||!Array.isArray(T.entries))return null;
+  var ent=T.entries.map(function(e){return{code:String(e.code||'').toUpperCase().trim(),narr:String(e.narr||''),out:num(e.out),inn:num(e.inn),cr:num(e.cr),ci:num(e.ci)}});
+  var exp=(Array.isArray(T.exp)?T.exp:[]).map(function(x){return{label:String(x.label||''),amt:num(x.amt),own:!!x.own}}).filter(function(x){return x.amt>0});
+  return{open:T.open===''||T.open==null?'':String(num(T.open)),entries:ent,exp:exp,expNarr:String(T.expNarr||'EXP'),at:o.at||''};
+}
+function renderRecv(raw){
+  recv=raw&&raw.trim()?parseBackup(raw):null;
+  var inf=$('recvInfo'),ok=!!recv;
+  if(!raw||!raw.trim())inf.innerHTML='';
+  else if(!recv)inf.innerHTML='<div class="flag bad">That does not look like a day file or backup.</div>';
+  else{
+    var dup=recv.entries.filter(function(e){return S.entries.some(function(x){return x.code===e.code&&x.narr===e.narr&&x.out===e.out&&x.inn===e.inn&&x.cr===e.cr&&x.ci===e.ci})}).length;
+    var o=0,i=0;recv.entries.forEach(function(e){o+=e.out;i+=e.inn});var b=0;recv.exp.forEach(function(x){b+=x.amt});
+    inf.innerHTML='<div class="flag okf">'+recv.entries.length+' entries, '+recv.exp.length+' expense lines · OUT '+fmt(o+b)+' · IN '+fmt(i)+(recv.open?' · opening '+fmt(num(recv.open)):'')+'</div>'
+      +(dup?'<div class="flag warn">'+dup+' of these entries are already on your sheet. Adding again will double them.</div>':'');
+  }
+  $('recvAdd').disabled=!ok;$('recvRep').disabled=!ok;
+  $('recvAdd').textContent='Add to my sheet';$('recvRep').textContent='Replace my sheet';f.rc=null;
+}
+$('recvText').oninput=function(){renderRecv(this.value)};
+$('recvFile').onchange=function(){
+  var fl=this.files&&this.files[0];if(!fl)return;
+  var r=new FileReader();r.onload=function(){$('recvText').value=String(r.result);renderRecv(String(r.result))};r.readAsText(fl);
+};
+function confirmTap(btn,key,label,go){
+  if(f.rc!==key){f.rc=key;btn.textContent='Tap again to '+label;clearTimeout(f.rct);f.rct=setTimeout(function(){f.rc=null;btn.textContent=btn.getAttribute('data-l')},4000);return}
+  clearTimeout(f.rct);f.rc=null;go();
+}
+$('recvAdd').setAttribute('data-l','Add to my sheet');$('recvRep').setAttribute('data-l','Replace my sheet');
+$('recvAdd').onclick=function(){
+  if(!recv)return;var r=recv;
+  confirmTap(this,'add','add '+(r.entries.length+r.exp.length)+' rows',function(){
+    r.entries.forEach(function(e){e.id='e'+(S.seq++);S.entries.push(e)});
+    r.exp.forEach(function(x){S.exp.push(x)});
+    if(!S.open&&r.open)S.open=r.open;
+    save();all();$('recvText').value='';$('recvFile').value='';renderRecv('');toast('Added to your sheet');
+  });
+};
+$('recvRep').onclick=function(){
+  if(!recv)return;var r=recv;
+  confirmTap(this,'rep','replace today\'s sheet',function(){
+    ls(LKEY,{t:Date.now(),s:S});
+    var n={open:r.open,entries:[],exp:r.exp,expNarr:r.expNarr||'EXP',seq:S.seq};
+    r.entries.forEach(function(e){e.id='e'+(n.seq++);n.entries.push(e)});
+    S=n;save();f.lastDel=null;all();$('recvText').value='';$('recvFile').value='';renderRecv('');toast('Replaced — your old sheet can be restored for 24 hours');
+  });
+};
+
+try{if('serviceWorker' in navigator&&/^https?:/.test(location.protocol))navigator.serviceWorker.register('sw.js')}catch(e){}
+try{if(navigator.storage&&navigator.storage.persist)navigator.storage.persist()}catch(e){}
+all();renderBak();setView(D.view==='deals'?'deals':'cash');
+})();
+</script>
+</body>
+</html>
