@@ -74,7 +74,8 @@ details summary{cursor:pointer;color:var(--mute);font-size:14px;padding:4px 0}
 </head>
 <body>
 <div class="top">
-  <div class="nav"><button id="tabCash" class="on">Cash book</button><button id="tabDeals">Deals (WhatsApp)</button></div>
+  <div id="bizName" style="display:none;font-weight:700;font-size:14px;max-width:560px;margin:0 auto 4px"></div>
+  <div class="nav" id="navBar"><button id="tabCash" class="on">Cash book</button><button id="tabDeals">Deals (WhatsApp)</button></div>
   <div id="cashTop">
   <div class="row">
     <div style="flex:1"><label>Opening cash</label><input id="open" type="number" inputmode="decimal" placeholder="0"></div>
@@ -118,7 +119,7 @@ details summary{cursor:pointer;color:var(--mute);font-size:14px;padding:4px 0}
   <div style="margin-top:8px;display:none" id="cancelRow"><button class="btn sec" id="cancelEdit">Cancel edit</button></div>
 </div>
 
-<div class="card">
+<div class="card" id="expCard">
   <h2>Small expenses <span id="expCodeLbl"></span></h2>
   <div class="two"><input id="exLabel" type="text" placeholder="Tea, auto…"><input id="exAmt" type="number" inputmode="decimal" placeholder="Amount"></div>
   <div class="chips" id="exChips"></div>
@@ -165,18 +166,24 @@ details summary{cursor:pointer;color:var(--mute);font-size:14px;padding:4px 0}
 </div>
 
 <div class="card">
-  <details id="setBox"><summary>Settings — codes and shortcuts</summary>
-    <div class="mute" style="margin:6px 0">Load a setup file, or paste below. Nothing is saved until you tap Save settings.</div>
+  <details id="setBox"><summary>Settings</summary>
+    <div class="mute" style="margin:6px 0">Load a setup file, or fill in below. Nothing is saved until you tap Save settings.</div>
     <input type="file" id="setFile" accept=".txt,.csv,text/plain" style="width:100%;margin-bottom:8px">
-    <div class="mute">Account codes (one per line)</div>
+    <div class="mute">Business name</div>
+    <input id="bizIn" type="text" style="margin-top:4px" placeholder="e.g. Shop name">
+    <div class="mute" style="margin-top:8px">Features</div>
+    <label style="display:flex;gap:8px;align-items:center;font-size:15px;margin-top:4px"><input type="checkbox" id="modDeals" style="width:20px;height:20px"> Currency deals reader (WhatsApp tab)</label>
+    <label style="display:flex;gap:8px;align-items:center;font-size:15px;margin-top:6px"><input type="checkbox" id="modExp" style="width:20px;height:20px"> Small-expenses bundle</label>
+    <div class="mute" style="margin-top:8px">Account codes (one per line)</div>
     <textarea id="codesBox" rows="8"></textarea>
     <div class="mute" style="margin-top:8px">Narration shortcuts (one per line)</div>
     <textarea id="narrsBox" rows="4"></textarea>
-    <div style="margin-top:8px"><button class="btn sec" id="saveCodes">Save settings</button></div>
     <div class="mute" style="margin-top:8px">Account code for small expenses</div>
     <input id="expCode" type="text" style="margin-top:4px;text-transform:uppercase">
     <div class="mute" style="margin-top:8px">Expense bundle row narration</div>
     <input id="expNarr" type="text" style="margin-top:4px">
+    <div class="two" style="margin-top:10px"><button class="btn sec" id="saveCodes">Save settings</button><button class="btn sec" id="dlSetup">Download my setup file</button></div>
+    <div class="mute" style="margin-top:6px">The setup file holds only your settings (name, codes, shortcuts) — never entries. Use it to set up another phone or a copy of this tool.</div>
     <div class="mute" style="margin-top:10px">Version <span id="verNote"></span></div>
   </details>
 </div>
@@ -202,9 +209,11 @@ details summary{cursor:pointer;color:var(--mute);font-size:14px;padding:4px 0}
 <script>
 (function(){
 var DEFAULT_CODES=[];
-var APP_VERSION='2026-10-15.1';
+var APP_VERSION='2026-10-16.1';
 var NARRS=ls('cashentry.narrs')||[];
 var EXPCODE=ls('cashentry.expcode')||'SHOP-EXP';
+var BIZ=ls('cashentry.biz')||'';
+var MODS=ls('cashentry.mods')||{deals:true,exp:true};
 var QUICK_EXP=['Tea','Auto','Food','Water','Tips','Parcel'];
 var KEY='cashentry.v1', CKEY='cashentry.codes', UKEY='cashentry.use', LKEY='cashentry.last';
 var $=function(i){return document.getElementById(i)};
@@ -399,29 +408,58 @@ $('clear').onclick=function(){
   S={open:'',entries:[],exp:[],expNarr:S.expNarr,seq:1};save();f.lastDel=null;resetForm();all();toast('Day cleared — restore available for 24 hours');
 };
 $('restore').onclick=function(){var l=ls(LKEY);if(!l)return;S=l.s;save();rm(LKEY);all();toast('Restored')};
+function splitLines(t){return String(t).split(/\r?\n/).map(function(x){return x.trim()}).filter(Boolean)}
+function applyMods(){
+  document.title=BIZ||'Cash Entry';
+  var bn=$('bizName');bn.textContent=BIZ;bn.style.display=BIZ?'block':'none';
+  $('expCard').style.display=MODS.exp===false?'none':'';
+  var dealsOn=MODS.deals!==false;
+  $('navBar').style.display=dealsOn?'':'none';
+  if(!dealsOn&&D.view==='deals')setView('cash');
+}
 $('saveCodes').onclick=function(){
-  var c=$('codesBox').value.split(/\r?\n/).map(function(x){return x.trim().toUpperCase()}).filter(Boolean);
+  var c=splitLines($('codesBox').value).map(function(x){return x.toUpperCase()});
   var seen={};c=c.filter(function(x){return seen[x]?false:(seen[x]=1)});
-  if(!c.length){toast('No codes found');return}
   codes=c;ls(CKEY,codes);
-  NARRS=$('narrsBox').value.split(/\r?\n/).map(function(x){return x.trim()}).filter(Boolean);ls('cashentry.narrs',NARRS);
+  NARRS=splitLines($('narrsBox').value);ls('cashentry.narrs',NARRS);
   EXPCODE=($('expCode').value.trim().toUpperCase())||'SHOP-EXP';ls('cashentry.expcode',EXPCODE);
-  toast(c.length+' codes and '+NARRS.length+' shortcuts saved');all();
+  BIZ=$('bizIn').value.trim();ls('cashentry.biz',BIZ);
+  S.expNarr=$('expNarr').value.trim()||'EXP';save();
+  MODS={deals:$('modDeals').checked,exp:$('modExp').checked};ls('cashentry.mods',MODS);
+  applyMods();toast('Settings saved: '+c.length+' codes, '+NARRS.length+' shortcuts');all();
 };
-$('narrsBox').value=NARRS.join('\n');$('expCode').value=EXPCODE;$('verNote').textContent=APP_VERSION;
+$('narrsBox').value=NARRS.join('\n');$('expCode').value=EXPCODE;$('bizIn').value=BIZ;$('modDeals').checked=MODS.deals!==false;$('modExp').checked=MODS.exp!==false;$('verNote').textContent=APP_VERSION;
 $('openSet').onclick=function(){$('setBox').open=true;$('setBox').scrollIntoView({behavior:'smooth'})};
+// setup file: sections CODES / NARRATIONS, plus lines  NAME: x   EXPENSE: x   EXPNARR: x   DEALS: on|off   EXPENSES: on|off
 $('setFile').onchange=function(){
   var fl=this.files&&this.files[0];if(!fl)return;
   var r=new FileReader();r.onload=function(){
-    var cur='C',C=[],N=[];
-    String(r.result).replace(/^\ufeff/,'').split(/\r?\n/).forEach(function(l){
+    var cur='C',C=[],N=[],m;
+    String(r.result).replace(/^﻿/,'').split(/\r?\n/).forEach(function(l){
       var t=l.trim();if(!t)return;
       if(/^codes$/i.test(t)){cur='C';return}
       if(/^narrations?$/i.test(t)){cur='N';return}
+      if((m=t.match(/^(NAME|EXPENSE|EXPNARR|DEALS|EXPENSES)\s*:\s*(.*)$/i))){
+        var k=m[1].toUpperCase(),v=m[2].trim();
+        if(k==='NAME')$('bizIn').value=v;
+        else if(k==='EXPENSE')$('expCode').value=v.toUpperCase();
+        else if(k==='EXPNARR')$('expNarr').value=v;
+        else if(k==='DEALS')$('modDeals').checked=!/^(off|no|false|0)$/i.test(v);
+        else if(k==='EXPENSES')$('modExp').checked=!/^(off|no|false|0)$/i.test(v);
+        return;
+      }
       (cur==='C'?C:N).push(t);
     });
-    $('codesBox').value=C.join('\n');$('narrsBox').value=N.join('\n');toast('Loaded '+C.length+' codes and '+N.length+' shortcuts — tap Save settings');
+    if(C.length)$('codesBox').value=C.join('\n');
+    if(N.length)$('narrsBox').value=N.join('\n');
+    toast('Loaded '+C.length+' codes and '+N.length+' shortcuts — tap Save settings');
   };r.readAsText(fl);
+};
+$('dlSetup').onclick=function(){
+  var L=[];
+  L.push('NAME: '+BIZ,'EXPENSE: '+EXPCODE,'EXPNARR: '+S.expNarr,'DEALS: '+(MODS.deals===false?'off':'on'),'EXPENSES: '+(MODS.exp===false?'off':'on'),'','CODES');
+  codes.forEach(function(c){L.push(c)});L.push('','NARRATIONS');NARRS.forEach(function(n){L.push(n)});
+  downloadText('cash-entry-setup'+(BIZ?'-'+BIZ.replace(/[^A-Za-z0-9]+/g,'-'):'')+'.txt',L.join('\n')+'\n');toast('Setup file downloaded');
 };
 $('codesBox').value=codes.join('\n');
 
@@ -592,7 +630,7 @@ $('dealCopy').onclick=function(){
 // ===== share / receive a day =====
 function dayStamp(){var d=new Date();function p(n){return(n<10?'0':'')+n}return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())}
 function payload(){
-  return summaryText()+'\n\n'+'-----------------------------------------\nCASHENTRY-DATA v1  (used by the tool to reload this day - do not edit below)\n'+JSON.stringify({app:'cashentry',v:1,at:new Date().toISOString(),S:S})}
+  return summaryText()+'\n\n'+'-----------------------------------------\nCASHENTRY-DATA v1  (used by the tool to reload this day - do not edit below)\n'+JSON.stringify({app:'cashentry',v:1,biz:BIZ,at:new Date().toISOString(),S:S})}
 function csvCell(v){v=String(v==null?'':v);return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v}
 function dayCSV(){
   var L=[['Date','Account Code','Narration','OUT','IN','Commission R','Commission I'].join(',')],d=dayStamp();
@@ -601,7 +639,7 @@ function dayCSV(){
 }
 function summaryText(){
   var rs=rows(),t=totals();
-  var L=['Cash day '+dayStamp(),'Opening '+fmt(num(S.open))];
+  var L=['Cash day '+dayStamp()+(BIZ?' - '+BIZ:''),'Opening '+fmt(num(S.open))];
   rs.forEach(function(r,i){
     var cm=r.cr?(' | R '+plain(r.cr)):(r.ci?(' | I '+plain(r.ci)):'');
     L.push((i+1)+'. '+(r.code||'(NO CODE)')+' | '+(r.narr||'-')+' | '+(r.out?'OUT '+plain(r.out):'IN '+plain(r.inn))+cm);
@@ -652,7 +690,7 @@ function parseBackup(raw){
   if(!T||!Array.isArray(T.entries))return null;
   var ent=T.entries.map(function(e){return{code:String(e.code||'').toUpperCase().trim(),narr:String(e.narr||''),out:num(e.out),inn:num(e.inn),cr:num(e.cr),ci:num(e.ci)}});
   var exp=(Array.isArray(T.exp)?T.exp:[]).map(function(x){return{label:String(x.label||''),amt:num(x.amt),own:!!x.own}}).filter(function(x){return x.amt>0});
-  return{open:T.open===''||T.open==null?'':String(num(T.open)),entries:ent,exp:exp,expNarr:String(T.expNarr||'EXP'),at:o.at||''};
+  return{open:T.open===''||T.open==null?'':String(num(T.open)),entries:ent,exp:exp,expNarr:String(T.expNarr||'EXP'),at:o.at||'',biz:String(o.biz||'')};
 }
 function renderRecv(raw){
   recv=raw&&raw.trim()?parseBackup(raw):null;
@@ -663,7 +701,7 @@ function renderRecv(raw){
     var dup=recv.entries.filter(function(e){return S.entries.some(function(x){return x.code===e.code&&x.narr===e.narr&&x.out===e.out&&x.inn===e.inn&&x.cr===e.cr&&x.ci===e.ci})}).length;
     var o=0,i=0;recv.entries.forEach(function(e){o+=e.out;i+=e.inn});var b=0;recv.exp.forEach(function(x){b+=x.amt});
     inf.innerHTML='<div class="flag okf">'+recv.entries.length+' entries, '+recv.exp.length+' expense lines · OUT '+fmt(o+b)+' · IN '+fmt(i)+(recv.open?' · opening '+fmt(num(recv.open)):'')+'</div>'
-      +(dup?'<div class="flag warn">'+dup+' of these entries are already on your sheet. Adding again will double them.</div>':'');
+      +((recv.biz&&BIZ&&recv.biz.toLowerCase()!==BIZ.toLowerCase())?'<div class="flag bad">This day file is from "'+esc(recv.biz)+'" but this tool is "'+esc(BIZ)+'". Check you picked the right file before adding.</div>':'')+(dup?'<div class="flag warn">'+dup+' of these entries are already on your sheet. Adding again will double them.</div>':'');
   }
   $('recvAdd').disabled=!ok;$('recvRep').disabled=!ok;
   $('recvAdd').textContent='Add to my sheet';$('recvRep').textContent='Replace my sheet';f.rc=null;
@@ -699,7 +737,7 @@ $('recvRep').onclick=function(){
 
 try{if('serviceWorker' in navigator&&/^https?:/.test(location.protocol))navigator.serviceWorker.register('sw.js')}catch(e){}
 try{if(navigator.storage&&navigator.storage.persist)navigator.storage.persist()}catch(e){}
-all();renderBak();setView(D.view==='deals'?'deals':'cash');
+all();renderBak();setView(D.view==='deals'?'deals':'cash');applyMods();
 })();
 </script>
 </body>
