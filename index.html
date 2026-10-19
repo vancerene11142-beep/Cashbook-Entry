@@ -12,7 +12,7 @@
 :root{--bg:#f4f5f7;--card:#fff;--ink:#1b1f24;--mute:#6b7280;--line:#e2e5ea;--out:#c0392b;--in:#1e8e4e;--acc:#1f4fd8;--warn:#b7791f;--warnbg:#fff6e0;--bad:#c0392b;--badbg:#fdeaea}
 @media(prefers-color-scheme:dark){:root{--bg:#111418;--card:#1b2026;--ink:#e8eaed;--mute:#9aa3ad;--line:#2c333b;--out:#ff7a6b;--in:#4cd08a;--acc:#7ea2ff;--warn:#f0b955;--warnbg:#3a2f14;--bad:#ff7a6b;--badbg:#3b1c1a}}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.35 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;padding-bottom:40px}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.35 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;padding-bottom:96px}
 .wrap{max-width:560px;margin:0 auto;padding:0 12px}
 .top{position:sticky;top:0;z-index:5;background:var(--card);border-bottom:1px solid var(--line);padding:8px 12px}
 .top .row{display:flex;gap:8px;align-items:center;max-width:560px;margin:0 auto}
@@ -53,7 +53,7 @@ tr.bad td{background:var(--badbg)}
 .tag.r{background:var(--bad)}
 .act button{border:0;background:none;color:var(--acc);font-size:13px;padding:3px 5px}
 .tot td{font-weight:700;border-top:2px solid var(--ink)}
-.toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:#222;color:#fff;padding:10px 16px;border-radius:10px;font-size:14px;z-index:20;display:none;max-width:90%}
+.toast{position:fixed;left:50%;bottom:84px;transform:translateX(-50%);background:#222;color:#fff;padding:10px 16px;border-radius:10px;font-size:14px;z-index:20;display:none;max-width:90%}
 details summary{cursor:pointer;color:var(--mute);font-size:14px;padding:4px 0}
 .exrow{display:flex;gap:6px;align-items:center;padding:5px 0;border-bottom:1px solid var(--line);font-size:15px}
 .exrow span{flex:1}.exrow .own{font-size:12px;color:var(--mute)}
@@ -84,12 +84,19 @@ details summary{cursor:pointer;color:var(--mute);font-size:14px;padding:4px 0}
 .sm{padding:8px 10px;font-size:14px;border-radius:10px;width:auto}
 input[type=date]{width:100%;font-size:16px;padding:9px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink)}
 .bcard{border:1px solid var(--line);border-radius:10px;padding:8px;margin:6px 0;font-size:14px}
+.hdr{display:flex;align-items:center;max-width:560px;margin:0 auto 4px}
+#bizName{flex:1;font-weight:700;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#gear{border:0;background:none;font-size:22px;color:var(--mute);padding:2px 6px;line-height:1}
+.bnav{position:fixed;left:0;right:0;bottom:0;z-index:9;display:flex;background:var(--card);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom)}
+.bnav button{flex:1;border:0;background:none;color:var(--mute);font-size:12px;font-weight:600;padding:8px 2px 9px;display:flex;flex-direction:column;align-items:center;gap:1px}
+.bnav button i{font-style:normal;font-size:20px;line-height:1.1}
+.bnav button.on{color:var(--acc)}
+.pill{display:inline-block;border:1px solid var(--line);background:var(--bg);border-radius:999px;padding:7px 12px;font-size:14px;color:var(--acc);font-weight:600}
 </style>
 </head>
 <body>
 <div class="top">
-  <div id="bizName" style="display:none;font-weight:700;font-size:14px;max-width:560px;margin:0 auto 4px"></div>
-  <div class="nav" id="navBar"><button id="tabCash" class="on">Cash book</button><button id="tabDeals">Deals</button><button id="tabLedger">Ledger</button></div>
+  <div class="hdr"><div id="bizName">Cash Entry</div><button id="gear" aria-label="Settings">⚙</button></div>
   <div id="cashTop">
   <div class="row">
     <div style="flex:1"><label>Opening cash</label><input id="open" type="number" inputmode="decimal" placeholder="0"></div>
@@ -100,7 +107,6 @@ input[type=date]{width:100%;font-size:16px;padding:9px;border:1px solid var(--li
 </div>
 
 <div class="wrap" id="viewCash">
-
 <div class="card" id="setupCard" style="display:none;border-color:var(--warn)">
   <h2>First-time setup</h2>
   <div style="font-size:15px">Load your account codes before you start, so typing mistakes get caught. Open <b>Settings</b> at the bottom of this page, pick your setup file or paste your codes, and tap <b>Save settings</b>.</div>
@@ -148,13 +154,19 @@ input[type=date]{width:100%;font-size:16px;padding:9px;border:1px solid var(--li
   <h2>Today's sheet</h2>
   <div id="dayTable"></div>
   <div id="warnLine"></div>
+  <div id="dealsLink" style="margin-top:8px"></div>
 </div>
 
-<div class="card" id="dealsTodayCard" style="display:none">
-  <h2>Deals on today's sheet</h2>
-  <div id="dealsToday"></div>
 </div>
-
+<div class="wrap" id="viewDay" style="display:none">
+<div class="card" id="paperCard">
+  <h2>Paper book check</h2>
+  <div class="mute" style="margin-bottom:6px">Type the totals written in the paper book for this day. Nothing is blocked — it only tells you if they differ.</div>
+  <div class="two"><div><div class="mute">Cash book — OUT</div><input id="pcOut" type="text" inputmode="decimal"></div><div><div class="mute">Cash book — IN</div><input id="pcIn" type="text" inputmode="decimal"></div></div>
+  <div id="paperCash" style="margin-top:6px"></div>
+  <div id="paperDealsBox"><div class="two" style="margin-top:8px"><div><div class="mute">Deals — OUT (sales, INR)</div><input id="pdOut" type="text" inputmode="decimal"></div><div><div class="mute">Deals — IN (purchases, INR)</div><input id="pdIn" type="text" inputmode="decimal"></div></div>
+  <div id="paperDeals" style="margin-top:6px"></div></div>
+</div>
 <div class="card" id="closeCard">
   <h2>Close day — post to the ledger</h2>
   <div class="two"><div><div class="mute">Date of this sheet</div><input type="date" id="dayDate"></div><div><div class="mute">Cash in hand at close</div><div class="bigbal" id="closeBal" style="font-size:22px;padding-top:6px">0</div></div></div>
@@ -195,8 +207,10 @@ input[type=date]{width:100%;font-size:16px;padding:9px;border:1px solid var(--li
   </details>
 </div>
 
+</div>
+<div class="wrap" id="viewSettings" style="display:none">
 <div class="card">
-  <details id="setBox"><summary>Settings</summary>
+  <details id="setBox" open><summary>Settings</summary>
     <div class="mute" style="margin:6px 0">Load a setup file, or fill in below. Nothing is saved until you tap Save settings.</div>
     <input type="file" id="setFile" accept=".txt,.csv,text/plain" style="width:100%;margin-bottom:8px">
     <div class="mute">Business name</div>
@@ -214,11 +228,19 @@ input[type=date]{width:100%;font-size:16px;padding:9px;border:1px solid var(--li
     <input id="expNarr" type="text" style="margin-top:4px">
     <div class="two" style="margin-top:10px"><button class="btn sec" id="saveCodes">Save settings</button><button class="btn sec" id="dlSetup">Download my setup file</button></div>
     <div class="mute" style="margin-top:6px">The setup file holds only your settings (name, codes, shortcuts) — never entries. Use it to set up another phone or a copy of this tool.</div>
+    <div class="mute" style="margin-top:8px">Rate alert tolerance (% from the account's usual rate)</div><input id="tolRate" type="text" inputmode="decimal" style="margin-top:4px">
+    <div class="mute" style="margin-top:8px">Batch volume tolerance (% — purchases vs sales in one message)</div><input id="tolBatch" type="text" inputmode="decimal" style="margin-top:4px">
     <div class="mute" style="margin-top:10px">Version <span id="verNote"></span></div>
   </details>
 </div>
+
 </div>
 <div class="wrap" id="viewDeals" style="display:none">
+<div class="card" id="dealsTodayCard" style="display:none">
+  <h2>Today's deals on the sheet</h2>
+  <div id="dealsToday"></div>
+  <div id="dealsStats" style="margin-top:8px"></div>
+</div>
 <div class="card">
   <h2>WhatsApp deals — one batch at a time</h2>
   <textarea id="dealText" rows="9" placeholder="Paste the boss's message here&#10;Dora- 1000 @ 27.62&#10;&#10;FD- 2000 @ 27.65" style="font-size:15px;font-family:inherit"></textarea>
@@ -280,12 +302,13 @@ input[type=date]{width:100%;font-size:16px;padding:9px;border:1px solid var(--li
   <div style="margin-top:8px"><button class="btn sec" id="ledRestore" disabled>Replace the ledger with this backup</button></div>
 </details></div>
 </div>
+<div class="bnav" id="navBar"><button id="tabCash" class="on"><i>✎</i>Cash</button><button id="tabDeals"><i>⇄</i>Deals</button><button id="tabLedger"><i>☰</i>Ledger</button><button id="tabDay"><i>✓</i>Day</button></div>
 <div class="toast" id="toast"></div>
 
 <script>
 (function(){
 var DEFAULT_CODES=[];
-var APP_VERSION='2026-10-19.2';
+var APP_VERSION='2026-10-20.1';
 var NARRS=ls('cashentry.narrs')||[];
 var EXPCODE=ls('cashentry.expcode')||'SHOP-EXP';
 var BIZ=ls('cashentry.biz')||'';
@@ -302,6 +325,7 @@ if(!Array.isArray(S.deals))S.deals=[];
 function newSid(){return's'+Date.now().toString(36)+Math.random().toString(36).slice(2,7)}
 if(!S.sid)S.sid=newSid();
 var SEEN=ls('cashentry.seen')||{};
+var TOL=ls('cashentry.tol')||{rate:4,batch:1};
 function markSeen(sid,at){if(!sid)return;var t=new Date(at).getTime()||Date.now();SEEN[sid]=Math.max(SEEN[sid]||0,t);var k=Object.keys(SEEN);if(k.length>300){k.sort(function(a,b){return SEEN[a]-SEEN[b]}).slice(0,k.length-300).forEach(function(x){delete SEEN[x]})}ls('cashentry.seen',SEEN)}
 if(!S.date){var _d=new Date();S.date=_d.getFullYear()+'-'+('0'+(_d.getMonth()+1)).slice(-2)+'-'+('0'+_d.getDate()).slice(-2)}
 var f={side:null,cs:null,editId:null,lastDel:null,confirmClear:false,dupOK:null};
@@ -343,7 +367,7 @@ function renderTop(){
   var t=totals();
   $('tout').textContent=fmt(t.o);$('tin').textContent=fmt(t.i);
   var b=$('bal');b.textContent=fmt(t.bal);b.style.color=t.bal<0?'var(--bad)':'';
-  $('cnt').textContent=rows().length+' rows';
+  var nr=rows().length;$('cnt').textContent=nr+(nr===1?' row':' rows')+(S.date?' · '+fd(S.date):'');
 }
 function renderNarr(){
   var cur=$('narr').value.trim().toUpperCase();
@@ -401,7 +425,7 @@ function renderRestore(){
   $('restoreRow').style.display=ok?'block':'none';
   if(l&&!ok)rm(LKEY);
 }
-function all(){renderTop();renderForm();renderExp();renderDay();renderCopy();renderRestore();renderClose();$('open').value=S.open;$('expNarr').value=S.expNarr}
+function all(){renderTop();renderForm();renderExp();renderDay();renderCopy();renderRestore();renderClose();renderPaper();$('open').value=S.open;$('expNarr').value=S.expNarr}
 
 function resetForm(){
   $('code').value='';$('amt').value='';$('comm').value='';$('narr').value='';
@@ -493,10 +517,10 @@ $('restore').onclick=function(){var l=ls(LKEY);if(!l)return;S=l.s;save();rm(LKEY
 function splitLines(t){return String(t).split(/\r?\n/).map(function(x){return x.trim()}).filter(Boolean)}
 function applyMods(){
   document.title=BIZ||'Cash Entry';
-  var bn=$('bizName');bn.textContent=BIZ;bn.style.display=BIZ?'block':'none';
+  var bn=$('bizName');bn.textContent=BIZ||'Cash Entry';
   $('expCard').style.display=MODS.exp===false?'none':'';
   var dealsOn=MODS.deals!==false;
-  $('tabDeals').style.display=dealsOn?'':'none';
+  $('tabDeals').style.display=dealsOn?'':'none';$('paperDealsBox').style.display=dealsOn?'':'none';
   if(!dealsOn&&D.view==='deals')setView('cash');
 }
 $('saveCodes').onclick=function(){
@@ -508,10 +532,13 @@ $('saveCodes').onclick=function(){
   BIZ=$('bizIn').value.trim();ls('cashentry.biz',BIZ);
   S.expNarr=$('expNarr').value.trim()||'EXP';save();
   MODS={deals:$('modDeals').checked,exp:$('modExp').checked};ls('cashentry.mods',MODS);
+  var tr=parseFloat($('tolRate').value),tb=parseFloat($('tolBatch').value);TOL={rate:tr>0?tr:4,batch:tb>0?tb:1};ls('cashentry.tol',TOL);HIST=null;
   applyMods();toast('Settings saved: '+c.length+' codes, '+NARRS.length+' shortcuts');all();
 };
+$('tolRate').value=TOL.rate;$('tolBatch').value=TOL.batch;
 $('narrsBox').value=NARRS.join('\n');$('expCode').value=EXPCODE;$('bizIn').value=BIZ;$('modDeals').checked=MODS.deals!==false;$('modExp').checked=MODS.exp!==false;$('verNote').textContent=APP_VERSION;
-$('openSet').onclick=function(){$('setBox').open=true;$('setBox').scrollIntoView({behavior:'smooth'})};
+$('openSet').onclick=function(){setView('settings')};
+$('gear').onclick=function(){setView('settings')};
 // setup file: sections CODES / NARRATIONS, plus lines  NAME: x   EXPENSE: x   EXPNARR: x   DEALS: on|off   EXPENSES: on|off
 $('setFile').onchange=function(){
   var fl=this.files&&this.files[0];if(!fl)return;
@@ -688,12 +715,16 @@ function dealTSV(){
   return rows.map(function(r){return[r.code,String(r2(r.vol)),r.op,String(r.rate),r.ps].join('\t')}).join('\n');
 }
 function setView(v){
+  if(['cash','deals','ledger','day','settings'].indexOf(v)<0)v='cash';
+  if(v==='deals'&&MODS.deals===false)v='cash';
   D.view=v;dsave();
-  $('viewCash').style.display=v==='cash'?'':'none';$('viewDeals').style.display=v==='deals'?'':'none';$('viewLedger').style.display=v==='ledger'?'':'none';
+  ['Cash','Deals','Ledger','Day','Settings'].forEach(function(n){$('view'+n).style.display=(v===n.toLowerCase())?'':'none'});
   $('cashTop').style.display=v==='cash'?'':'none';
-  $('tabCash').classList.toggle('on',v==='cash');$('tabDeals').classList.toggle('on',v==='deals');$('tabLedger').classList.toggle('on',v==='ledger');
-  if(v==='deals')renderDeals();if(v==='ledger')renderLedger();window.scrollTo(0,0);
+  ['Cash','Deals','Ledger','Day'].forEach(function(n){$('tab'+n).classList.toggle('on',v===n.toLowerCase())});
+  if(v==='deals')renderDeals();if(v==='ledger')renderLedger();if(v==='day'){renderClose();renderPaper()}
+  window.scrollTo(0,0);
 }
+$('tabDay').onclick=function(){setView('day')};
 $('tabCash').onclick=function(){setView('cash')};$('tabDeals').onclick=function(){setView('deals')};
 $('dealText').value=D.text;
 $('dealText').onchange=$('dealText').oninput=function(){if(D.text!==this.value){D.text=this.value;D.ov={};D.hold={};D.checked=false;dsave();renderDeals()}};
@@ -785,7 +816,7 @@ function parseBackup(raw){
   if(!T||!Array.isArray(T.entries))return null;
   var ent=T.entries.map(function(e){return{code:String(e.code||'').toUpperCase().trim(),narr:String(e.narr||''),out:num(e.out),inn:num(e.inn),cr:num(e.cr),ci:num(e.ci)}});
   var exp=(Array.isArray(T.exp)?T.exp:[]).map(function(x){return{label:String(x.label||''),amt:num(x.amt),own:!!x.own}}).filter(function(x){return x.amt>0});
-  var dl=(Array.isArray(T.deals)?T.deals:[]).map(function(x){var v=num(x.vol),r=parseFloat(x.rate),op=x.op==='/'?'/':'*';return{code:String(x.code||'').toUpperCase().trim(),vol:v,op:op,rate:r,ps:x.ps==='S'?'S':'P',inr:(v>0&&r>0)?dealInr(v,op,r):0}}).filter(function(x){return x.code&&x.vol>0&&x.rate>0});
+  var dl=(Array.isArray(T.deals)?T.deals:[]).map(function(x){var v=num(x.vol),r=parseFloat(x.rate),op=x.op==='/'?'/':'*';return{code:String(x.code||'').toUpperCase().trim(),vol:v,op:op,rate:r,ps:x.ps==='S'?'S':'P',inr:(v>0&&r>0)?dealInr(v,op,r):0,b:+x.b||0}}).filter(function(x){return x.code&&x.vol>0&&x.rate>0});
   return{sid:String(o.sid||T.sid||''),date:/^\d{4}-\d\d-\d\d$/.test(T.date||'')?T.date:'',deals:dl,open:T.open===''||T.open==null?'':String(num(T.open)),entries:ent,exp:exp,expNarr:String(T.expNarr||'EXP'),at:o.at||'',biz:String(o.biz||'')};
 }
 function sheetSig(T){
@@ -1096,8 +1127,7 @@ function renderClose(){
   var uc=$('undoClose');
   if(L&&L.days.length){var ld=latestDay();uc.style.display='';if(f.uc!==ld.id)uc.textContent='Undo last close ('+fd(ld.date)+')'}else uc.style.display='none';
   renderReview();
-  $('dealsTodayCard').style.display=dl.length?'':'none';
-  $('dealsToday').innerHTML=dl.map(function(x,ix){return'<div class="exrow"><span><b>'+esc(x.code)+'</b> '+x.vol+' '+x.op+' '+x.rate+' ('+x.ps+') = '+fmt2(x.inr)+'</span><button data-dd="'+ix+'">'+(f.dd===ix?'sure?':'✕')+'</button></div>'}).join('');
+  renderDealsToday();
 }
 
 
@@ -1252,7 +1282,7 @@ function reopenDay(id){
     if(!ok){L.days=keep;CACHE=null;return}
     var n={open:String(day.open||''),entries:[],exp:[],expNarr:S.expNarr,seq:S.seq,deals:[],date:day.date,sid:day.sid||newSid()};
     (day.ent||[]).forEach(function(e){n.entries.push({id:'e'+(n.seq++),code:e.c,narr:e.n,out:e.o,inn:e.i,cr:e.cr,ci:e.ci})});
-    (day.deals||[]).forEach(function(x){n.deals.push({code:x.c,vol:x.v,op:x.op,rate:x.r,ps:x.ps,inr:x.inr})});
+    (day.deals||[]).forEach(function(x){n.deals.push({code:x.c,vol:x.v,op:x.op,rate:x.r,ps:x.ps,inr:x.inr,b:x.b||0})});
     S=n;save();f.review=false;all();setView('cash');toast('Day reopened on the Cash book tab — review it, then post it again');
   });
 }
@@ -1412,6 +1442,7 @@ function renderReview(){
   var big=rs.slice().sort(function(a,b){return(b.out+b.inn)-(a.out+a.inn)}).slice(0,3).filter(function(r){return r.out+r.inn>0});
   var h='<div class="bcard" style="border-color:var(--acc)"><b>Review before posting — '+fd(S.date)+'</b>';
   h+='<div class="mute" style="margin-top:4px">Cash: OUT '+fmt2(t.o)+' · IN '+fmt2(t.i)+' · closing cash '+fmt2(t.bal)+(dl.length?'<br>Deals: '+dl.length+' (purchase volume '+fmt(pv)+', sale volume '+fmt(sv)+')':'')+'</div>';
+  h+=reviewChecks(dl);
   var cp=crownPos(),cp2=crownPos(dl);
   if(cp2.n>cp.n)h+='<div class="mute" style="margin-top:4px">Crown AED volume held: '+signed(cp.net)+' → <b>'+signed(cp2.net)+'</b></div>';
   if(dupD.length)h+='<div class="flag bad">Same deal twice on this sheet: '+esc(dupD.join('; '))+'. If that is wrong, remove one (✕) under “Deals on today’s sheet”.</div>';
@@ -1441,7 +1472,7 @@ function doPost(){
   var date=S.date,rs=rows(),dl=S.deals||[],nc=rs.filter(function(r){return !r.code}).length;
   snapshot('before posting '+fd(date));
   var t=totals(),ent=[],wait=[],snap={days:L.days,wait:L.wait,seq:L.seq};
-  var deals=dl.map(function(x){return{c:x.code,v:x.vol,op:x.op,r:x.rate,ps:x.ps,inr:x.inr,s:L.seq++}});
+  var deals=dl.map(function(x){return{c:x.code,v:x.vol,op:x.op,r:x.rate,ps:x.ps,inr:x.inr,b:x.b||0,s:L.seq++}});
   rs.forEach(function(r){
     if(r.code)ent.push({c:r.code,n:r.narr,o:r.out,i:r.inn,cr:r.cr,ci:r.ci,s:L.seq++});
     else wait.push({id:'w'+(L.seq++),d:date,n:r.narr,o:r.out,i:r.inn,cr:r.cr,ci:r.ci});
@@ -1470,13 +1501,93 @@ $('dealAdd').onclick=function(){
   if(live.some(function(r){return !r.ok})){toast('Fix or skip the red rows first');return}
   if(!$('dealChecked').checked){toast('Tick "I checked every row against the message" first');return}
   S.deals=S.deals||[];
-  live.forEach(function(r){var v=r2(r.vol);S.deals.push({code:r.code,vol:v,op:r.op,rate:r.rate,ps:r.ps,inr:dealInr(v,r.op,r.rate)})});
+  S.bseq=(S.bseq||0)+1;
+  live.forEach(function(r){var v=r2(r.vol);S.deals.push({code:r.code,vol:v,op:r.op,rate:r.rate,ps:r.ps,inr:dealInr(v,r.op,r.rate),b:S.bseq})});
   save();D.text='';D.ov={};D.hold={};D.checked=false;dsave();$('dealText').value='';renderDeals();all();toast(live.length+' deals added to today\'s sheet');
 };
 
+
+// ===== checks: batch, rate, profit, paper book =====
+var HIST=null,HISTFOR=null;
+function rateStep(h,c,op,r){
+  var k=c+'|'+op,e=h[k]||(h[k]={n:0,s:0}),avg=0;
+  if(e.n>=2){var a=e.s/e.n;if(Math.abs(r-a)>a*TOL.rate/100)avg=a}
+  if(!avg){e.n++;e.s+=r}
+  return avg;
+}
+function rateHist(){
+  var ev=events();
+  if(HISTFOR===ev&&HIST)return HIST;
+  var h={},ob=L.ob?L.ob.date:'';
+  L.days.forEach(function(d){if(ob&&d.date<ob)return;(d.deals||[]).forEach(function(x){rateStep(h,x.c,x.op,x.r)})});
+  HIST=h;HISTFOR=ev;return h;
+}
+function dealFlags(dl){
+  var h=L?rateHist():{},cl={};
+  dl.forEach(function(x){var k=x.code+'|'+x.op;if(!cl[k])cl[k]=h[k]?{n:h[k].n,s:h[k].s}:{n:0,s:0}});
+  return dl.map(function(x){var a=rateStep(cl,x.code,x.op,x.rate);return a?'Rate '+x.rate+' is more than '+TOL.rate+'% from this account\'s usual '+r2(a*10000)/10000:''});
+}
+function batchStats(dl){
+  var g={},keys=[];
+  dl.forEach(function(x){var k=x.b||0;if(!g[k]){g[k]={p:0,s:0};keys.push(k)}g[k][x.ps==='P'?'p':'s']+=x.vol});
+  return keys.map(function(k,i){var o=g[k],diff=r2(o.p-o.s),base=Math.max(o.p,o.s);return{i:i+1,p:r2(o.p),s:r2(o.s),diff:diff,bad:base>0&&Math.abs(diff)>base*TOL.batch/100}});
+}
+function dealsProfit(dl){var o=0,i=0;dl.forEach(function(x){if(x.ps==='S')o+=x.inr;else i+=x.inr});return{o:r2(o),i:r2(i),profit:r2(o-i)}}
+function profitMsg(p){return p<0?'LOSS — unusual, please review':p===0?'Zero — check entries':'OK — profit as expected'}
+function pnum(v){v=String(v==null?'':v).trim();return v===''?null:numCell(v)}
+function cmpPair(po,pi,eo,ei){
+  var a=pnum(po),b=pnum(pi);
+  if(a===null&&b===null)return{state:'none',msg:''};
+  var bad=[];
+  if(a!==null&&(isNaN(a)||Math.abs(a-eo)>=0.005))bad.push('OUT: paper '+(isNaN(a)?'?':fmt2(a))+' · entered '+fmt2(eo));
+  if(b!==null&&(isNaN(b)||Math.abs(b-ei)>=0.005))bad.push('IN: paper '+(isNaN(b)?'?':fmt2(b))+' · entered '+fmt2(ei));
+  return bad.length?{state:'bad',msg:'CHECK — mismatch. '+bad.join(' — ')}:{state:'ok',msg:'OK — matches'+((a===null||b===null)?' (only one total typed)':'')};
+}
+function paperState(){
+  var pp=S.paper||{},t=totals(),dp=dealsProfit(S.deals||[]);
+  return{cash:cmpPair(pp.co,pp.ci,t.o,t.i),deals:cmpPair(pp.do,pp.di,dp.o,dp.i)};
+}
+function renderPaper(){
+  var pp=S.paper||{},st=paperState();
+  [['pcOut','co'],['pcIn','ci'],['pdOut','do'],['pdIn','di']].forEach(function(a){if(document.activeElement!==$(a[0]))$(a[0]).value=pp[a[1]]||''});
+  function box(id,x){$(id).innerHTML=x.state==='none'?'':'<div class="flag '+(x.state==='ok'?'okf':'bad')+'">'+esc(x.msg)+'</div>'}
+  box('paperCash',st.cash);box('paperDeals',st.deals);
+}
+[['pcOut','co'],['pcIn','ci'],['pdOut','do'],['pdIn','di']].forEach(function(a){
+  $(a[0]).oninput=function(){S.paper=S.paper||{};S.paper[a[1]]=this.value;save();renderPaper();if(f.review)renderReview()};
+});
+function reviewChecks(dl){
+  var h='',st=paperState(),dp=dealsProfit(dl);
+  if(st.cash.state==='none'&&(st.deals.state==='none'||!dl.length))h+='<div class="flag warn">Paper book totals not checked (Day tab).</div>';
+  else{
+    if(st.cash.state!=='none')h+='<div class="flag '+(st.cash.state==='ok'?'okf':'bad')+'">Paper cash book: '+esc(st.cash.msg)+'</div>';
+    if(dl.length&&st.deals.state!=='none')h+='<div class="flag '+(st.deals.state==='ok'?'okf':'bad')+'">Paper deals: '+esc(st.deals.msg)+'</div>';
+  }
+  if(dl.length){
+    h+='<div class="mute" style="margin-top:4px">Deals profit today (sales − purchases, INR): <b>'+signed(dp.profit)+'</b> · '+profitMsg(dp.profit)+'</div>';
+    batchStats(dl).forEach(function(b){if(b.bad)h+='<div class="flag warn">Message '+b.i+': purchases '+fmt2(b.p)+' vs sales '+fmt2(b.s)+' — differ by '+fmt2(Math.abs(b.diff))+' (stock kept with Crown?)</div>'});
+    var fl=dealFlags(dl);dl.forEach(function(x,i){if(fl[i])h+='<div class="flag warn">'+esc(x.code)+' '+x.vol+' '+x.op+' '+x.rate+' ('+x.ps+'): '+esc(fl[i])+'</div>'});
+  }
+  return h;
+}
+function renderDealsToday(){
+  var dl=S.deals||[];
+  $('dealsTodayCard').style.display=dl.length?'':'none';
+  $('dealsLink').innerHTML=dl.length?'<button class="pill" id="goDeals">'+dl.length+' deal'+(dl.length>1?'s':'')+' on today\'s sheet — see Deals tab →</button>':'';
+  if(!dl.length){$('dealsToday').innerHTML='';$('dealsStats').innerHTML='';return}
+  var fl=L?dealFlags(dl):dl.map(function(){return''});
+  $('dealsToday').innerHTML=dl.map(function(x,ix){return'<div class="exrow"><span><b>'+esc(x.code)+'</b> '+x.vol+' '+x.op+' '+x.rate+' ('+x.ps+') = '+fmt2(x.inr)+(fl[ix]?'<div class="flag warn" style="margin:2px 0 0">'+esc(fl[ix])+'</div>':'')+'</span><button data-dd="'+ix+'">'+(f.dd===ix?'sure?':'✕')+'</button></div>'}).join('');
+  var dp=dealsProfit(dl),h='';
+  batchStats(dl).forEach(function(b){h+='<div class="flag '+(b.bad?'warn':'okf')+'">Message '+b.i+': purchases '+fmt2(b.p)+' · sales '+fmt2(b.s)+(b.bad?' — differ by '+fmt2(Math.abs(b.diff))+' (stock kept with Crown?)':' — balanced')+'</div>'});
+  h+='<div class="mute">Deals profit (sales − purchases, INR): <b>'+signed(dp.profit)+'</b> · '+profitMsg(dp.profit)+'</div>';
+  if(L){var cp=crownPos(),cp2=crownPos(dl);if(cp2.n>cp.n)h+='<div class="mute" style="margin-top:4px">Crown AED volume held: '+signed(cp.net)+' → <b>'+signed(cp2.net)+'</b> after this sheet</div>'}
+  $('dealsStats').innerHTML=h;
+}
+$('dealsLink').onclick=function(e){if(e.target.id==='goDeals')setView('deals')};
+
 try{if('serviceWorker' in navigator&&/^https?:/.test(location.protocol))navigator.serviceWorker.register('sw.js')}catch(e){}
 try{if(navigator.storage&&navigator.storage.persist)navigator.storage.persist()}catch(e){}
-all();renderBak();setView(D.view==='deals'||D.view==='ledger'?D.view:'cash');applyMods();
+all();renderBak();setView(D.view==='settings'?'cash':D.view);applyMods();
 kvGet('ledger',function(v){L=fixLedger(v);CACHE=null;renderClose();renderLedBak();renderSnaps();if(D.view==='ledger')renderLedger()});
 })();
 </script>
