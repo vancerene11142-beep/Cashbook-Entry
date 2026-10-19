@@ -238,6 +238,7 @@ input[type=date]{width:100%;font-size:16px;padding:9px;border:1px solid var(--li
 </div>
 <div class="wrap" id="viewLedger" style="display:none">
 <div id="ledBanner"></div>
+<div class="card" id="crownCard"><h2>Crown AED position</h2><div id="crownBody"></div></div>
 <div class="card">
   <h2>Statement for account</h2>
   <input id="stIn" type="search" autocapitalize="characters" autocomplete="off" autocorrect="off" spellcheck="false" placeholder="Type an account code…">
@@ -255,6 +256,7 @@ input[type=date]{width:100%;font-size:16px;padding:9px;border:1px solid var(--li
   <div class="mute" style="margin:6px 0">Copy the Chart of Accounts columns Account Code · Type · Opening OUT · Opening IN (or just Code · OUT · IN) and paste here. Balances count only days dated on or after this date.</div>
   <div class="mute">Balances start on</div><input type="date" id="obDate">
   <div class="mute" style="margin-top:8px">Commission account code (all commission earned is credited here, as in the Excel Monthly Summary)</div><input type="text" id="commCode" style="margin-top:4px;text-transform:uppercase">
+  <div class="two" style="margin-top:8px"><div><div class="mute">Crown account code</div><input type="text" id="crownCode" style="text-transform:uppercase"></div><div><div class="mute">Opening AED volume held</div><input type="text" id="crownOpen" inputmode="decimal" placeholder="e.g. -743.43"></div></div>
   <textarea id="obText" rows="6" placeholder="paste here" style="margin-top:8px"></textarea>
   <div id="obInfo" style="margin-top:8px"></div>
   <div style="margin-top:8px"><button class="btn sec" id="obSave" disabled>Save opening balances</button></div>
@@ -262,6 +264,7 @@ input[type=date]{width:100%;font-size:16px;padding:9px;border:1px solid var(--li
 </details></div>
 <div class="card"><details id="cmpBox"><summary>Compare with Excel trial balance</summary>
   <div class="mute" style="margin:6px 0">In Excel's Monthly Summary copy Account Code · OUT · IN of the trial balance and paste here. Accounts where the tool and Excel differ are listed.</div>
+  <div class="mute">Excel Crown AED net volume held (Currency Purchase &amp; Sales, cell P3) — optional</div><input type="text" id="cmpCrown" inputmode="decimal" style="margin:4px 0 8px">
   <textarea id="cmpText" rows="6" placeholder="paste here"></textarea>
   <div id="cmpOut" style="margin-top:8px"></div>
 </details></div>
@@ -282,7 +285,7 @@ input[type=date]{width:100%;font-size:16px;padding:9px;border:1px solid var(--li
 <script>
 (function(){
 var DEFAULT_CODES=[];
-var APP_VERSION='2026-10-19.1';
+var APP_VERSION='2026-10-19.2';
 var NARRS=ls('cashentry.narrs')||[];
 var EXPCODE=ls('cashentry.expcode')||'SHOP-EXP';
 var BIZ=ls('cashentry.biz')||'';
@@ -855,8 +858,8 @@ $('recvRep').onclick=function(){
 
 // ===== permanent ledger (stored in IndexedDB) =====
 var L=null,CACHE=null,dbH=null,dbTried=false;
-function newLedger(){return{v:1,ob:null,days:[],late:[],wait:[],commCode:'COMM',seq:1,chg:0,bak:0}}
-function fixLedger(x){x=x||newLedger();x.days=x.days||[];x.late=x.late||[];x.wait=x.wait||[];x.seq=x.seq||1;x.commCode=x.commCode==null?'COMM':x.commCode;x.chg=x.chg||0;x.bak=x.bak||0;x.ob=x.ob||null;return x}
+function newLedger(){return{v:1,crown:{code:'CROWN',open:0},ob:null,days:[],late:[],wait:[],commCode:'COMM',seq:1,chg:0,bak:0}}
+function fixLedger(x){x=x||newLedger();x.days=x.days||[];x.late=x.late||[];x.wait=x.wait||[];x.seq=x.seq||1;x.commCode=x.commCode==null?'COMM':x.commCode;x.crown=x.crown||{code:'CROWN',open:0};x.chg=x.chg||0;x.bak=x.bak||0;x.ob=x.ob||null;return x}
 function idb(cb){
   if(dbH){cb(dbH);return}
   if(dbTried){cb(null);return}
@@ -941,6 +944,12 @@ function statement(code,from,to){
   var rows=list.filter(function(r){return r.tail?(!to||to>=td):((!from||r.d>=from)&&(!to||r.d<=to))});
   return{open:open,obr:showOb?obr:null,odate:odate,rows:rows,bal:rows.length?rows[rows.length-1].b:open};
 }
+function crownPos(extra){
+  var cr=L.crown||{code:'CROWN',open:0},ob=L.ob?L.ob.date:'',p=0,sl=0,n=0;
+  L.days.forEach(function(d){if(ob&&d.date<ob)return;(d.deals||[]).forEach(function(x){if(x.c===cr.code){n++;if(x.ps==='P')p+=x.v;else sl+=x.v}})});
+  (extra||[]).forEach(function(x){if(x.code===cr.code){n++;if(x.ps==='P')p+=x.vol;else sl+=x.vol}});
+  return{open:num(cr.open),p:r2(p),s:r2(sl),net:r2(num(cr.open)+p-sl),n:n,code:cr.code};
+}
 function acctList(){var s={};codes.forEach(function(c){s[c]=1});if(L)Object.keys(balances()).forEach(function(c){s[c]=1});return Object.keys(s)}
 
 // ----- tables pasted from Excel -----
@@ -970,9 +979,15 @@ function signed(n){return n<0?'-'+fmt2(-n):fmt2(n)}
 function oi(n){return n<0?'<span class="oo">OUT '+fmt2(-n)+'</span>':n>0?'<span class="ii">IN '+fmt2(n)+'</span>':'0'}
 
 // ----- Ledger view -----
+function renderCrown(){
+  var c=crownPos(),ex=crownPos(S.deals||[]),h='<div class="two"><div><div class="mute">Opening</div><b>'+signed(c.open)+'</b></div><div><div class="mute">Purchased (P)</div><b class="ii">'+fmt2(c.p)+'</b></div><div><div class="mute">Sold (S)</div><b class="oo">'+fmt2(c.s)+'</div></div></b>';
+  h='<div class="two"><div class="bcard" style="margin:0"><div class="mute">NET AED VOLUME HELD ('+esc(c.code)+')</div><div class="bigbal" style="font-size:24px">'+signed(c.net)+'</div></div><div class="bcard" style="margin:0"><div class="mute">Opening '+signed(c.open)+'</div><div class="mute"><span class="ii">+ '+fmt2(c.p)+'</span> bought · <span class="oo">− '+fmt2(c.s)+'</span> sold</div></div></div>';
+  if((S.deals||[]).some(function(x){return x.code===c.code}))h+='<div class="mute" style="margin-top:6px">With the deals on today\'s sheet (not posted yet): '+signed(ex.net)+'</div>';
+  $('crownBody').innerHTML=h;
+}
 function renderLedger(){
   if(!L){$('ledBanner').innerHTML='<div class="card"><div class="mute">Opening the ledger…</div></div>';return}
-  renderLedBanner();renderStatement();renderBalList();renderWait();renderPosted();renderOb();renderLedBak();
+  renderLedBanner();renderCrown();renderStatement();renderBalList();renderWait();renderPosted();renderOb();renderLedBak();
 }
 function renderLedBanner(){
   var h='';
@@ -1047,6 +1062,8 @@ function renderOb(){
   else cur.textContent='Nothing saved yet.';
   if(!$('obDate').value)$('obDate').value=L.ob?L.ob.date:'';
   if(document.activeElement!==$('commCode'))$('commCode').value=L.commCode||'';
+  if(document.activeElement!==$('crownCode'))$('crownCode').value=(L.crown||{}).code||'CROWN';
+  if(document.activeElement!==$('crownOpen'))$('crownOpen').value=(L.crown&&L.crown.open)?L.crown.open:'';
 }
 function renderLedBak(){
   if(!L||!$('ledBak'))return;
@@ -1282,11 +1299,17 @@ $('obSave').onclick=function(){
   ldSave(function(ok){if(!ok)L.ob=old;else{$('obText').value='';obP=null;$('obInfo').innerHTML='';$('obSave').disabled=true;toast('Saved '+Object.keys(rows).length+' balances'+(added?' · '+added+' codes added':''))}b.textContent='Save opening balances';renderLedger();all()});
 };
 $('obDate').onchange=function(){};
+$('crownCode').onchange=$('crownOpen').onchange=function(){
+  if(!L)return;
+  L.crown={code:($('crownCode').value.trim().toUpperCase())||'CROWN',open:num($('crownOpen').value)};
+  ldSave(function(){renderLedger();toast('Crown position saved')});
+};
 
 // compare with Excel
 $('cmpText').oninput=function(){
   var out=$('cmpOut');if(!L){out.innerHTML='';return}
   if(!this.value.trim()){out.innerHTML='';return}
+  oninputCrown();
   var p=parseSheetRows(this.value),net=balances(),seen={},diffs=[],ok=0;
   p.rows.forEach(function(r){
     seen[r.code]=1;var ex=r2(r.i-r.o),tl=net[r.code]||0;
@@ -1304,6 +1327,16 @@ $('cmpText').oninput=function(){
   out.innerHTML=h;
 };
 
+function crownCmp(){
+  var v=$('cmpCrown').value.trim(),el=$('cmpCrownOut');
+  if(!el){el=document.createElement('div');el.id='cmpCrownOut';$('cmpCrown').parentNode.insertBefore(el,$('cmpText'))}
+  if(!L||v===''){el.innerHTML='';return}
+  var x=numCell(v),c=crownPos();
+  if(isNaN(x)){el.innerHTML='<div class="flag bad">Not a number.</div>';return}
+  el.innerHTML=Math.abs(x-c.net)<0.005?'<div class="flag okf">Crown AED position matches: '+signed(c.net)+'</div>':'<div class="flag bad">Crown AED differs — Excel '+signed(x)+' · tool '+signed(c.net)+' · difference '+signed(r2(c.net-x))+'</div>';
+}
+function oninputCrown(){crownCmp()}
+$('cmpCrown').oninput=crownCmp;
 // backup / restore / export
 function shareFileGen(name,txt,mime,done){
   try{
@@ -1379,6 +1412,8 @@ function renderReview(){
   var big=rs.slice().sort(function(a,b){return(b.out+b.inn)-(a.out+a.inn)}).slice(0,3).filter(function(r){return r.out+r.inn>0});
   var h='<div class="bcard" style="border-color:var(--acc)"><b>Review before posting — '+fd(S.date)+'</b>';
   h+='<div class="mute" style="margin-top:4px">Cash: OUT '+fmt2(t.o)+' · IN '+fmt2(t.i)+' · closing cash '+fmt2(t.bal)+(dl.length?'<br>Deals: '+dl.length+' (purchase volume '+fmt(pv)+', sale volume '+fmt(sv)+')':'')+'</div>';
+  var cp=crownPos(),cp2=crownPos(dl);
+  if(cp2.n>cp.n)h+='<div class="mute" style="margin-top:4px">Crown AED volume held: '+signed(cp.net)+' → <b>'+signed(cp2.net)+'</b></div>';
   if(dupD.length)h+='<div class="flag bad">Same deal twice on this sheet: '+esc(dupD.join('; '))+'. If that is wrong, remove one (✕) under “Deals on today’s sheet”.</div>';
   if(dupR.length)h+='<div class="flag warn">Same cash row more than once: '+esc(dupR.join('; '))+'. Fine if it really happened twice.</div>';
   if(big.length)h+='<div class="flag warn">Largest rows — check for a wrong extra zero: '+big.map(function(r){return esc(r.code||'(no code)')+' '+fmt2(r.out||r.inn)}).join(' · ')+'</div>';
