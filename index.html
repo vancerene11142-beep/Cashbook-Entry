@@ -269,11 +269,28 @@ input[type=date]{width:100%;font-size:16px;padding:9px;border:1px solid var(--li
 </div>
 <div class="card">
   <h2>All accounts</h2>
+  <div class="chips" id="typeBar" style="margin-top:0"></div>
   <div class="chips" style="margin-top:0"><button class="chip on" id="srtAZ">A–Z</button><button class="chip" id="srtBig">Largest first</button><button class="chip on" id="hideZero">Hide zero</button></div>
   <div id="balList"></div>
 </div>
+<div class="card" id="monthCard">
+  <h2>Month summary</h2>
+  <input type="month" id="monthIn">
+  <div id="monthBody" style="margin-top:8px"></div>
+  <div class="mute" style="margin-top:10px">RESERVE account code</div>
+  <input id="reserveCode" type="text" style="margin-top:4px;text-transform:uppercase">
+  <div style="margin-top:10px"><button class="btn sec" id="monthCopy">Copy next month's opening balances</button></div>
+  <div class="mute" id="monthNote" style="margin-top:6px"></div>
+</div>
 <div class="card" id="waitCard" style="display:none"><h2>Waiting for account code</h2><div id="waitList"></div></div>
 <div class="card"><details id="postedBox"><summary>Posted days</summary><div id="postedList" style="margin-top:8px"></div></details></div>
+<div class="card"><details id="acctBox"><summary>Accounts and types</summary>
+  <div class="mute" style="margin:6px 0">The type decides what counts as an expense in the month summary, and filters the account list. Types load from the Chart of Accounts paste.</div>
+  <div class="two"><input id="acNew" type="text" placeholder="New account code" autocapitalize="characters" style="text-transform:uppercase"><select id="acNewType"><option>Customer</option><option>Correspondent</option><option>Internal</option><option>Expense</option></select></div>
+  <div style="margin-top:6px"><button class="btn sec" id="acAdd">Add account</button></div>
+  <input id="acQ" type="search" placeholder="Find an account…" autocapitalize="characters" style="margin-top:10px">
+  <div id="acList" style="margin-top:6px"></div>
+</details></div>
 <div class="card"><details id="obBox"><summary>Opening balances</summary>
   <div class="mute" style="margin:6px 0">Copy the Chart of Accounts columns Account Code · Type · Opening OUT · Opening IN (or just Code · OUT · IN) and paste here. Balances count only days dated on or after this date.</div>
   <div class="mute">Balances start on</div><input type="date" id="obDate">
@@ -308,7 +325,7 @@ input[type=date]{width:100%;font-size:16px;padding:9px;border:1px solid var(--li
 <script>
 (function(){
 var DEFAULT_CODES=[];
-var APP_VERSION='2026-10-20.1';
+var APP_VERSION='2026-10-20.2';
 var NARRS=ls('cashentry.narrs')||[];
 var EXPCODE=ls('cashentry.expcode')||'SHOP-EXP';
 var BIZ=ls('cashentry.biz')||'';
@@ -889,8 +906,8 @@ $('recvRep').onclick=function(){
 
 // ===== permanent ledger (stored in IndexedDB) =====
 var L=null,CACHE=null,dbH=null,dbTried=false;
-function newLedger(){return{v:1,crown:{code:'CROWN',open:0},ob:null,days:[],late:[],wait:[],commCode:'COMM',seq:1,chg:0,bak:0}}
-function fixLedger(x){x=x||newLedger();x.days=x.days||[];x.late=x.late||[];x.wait=x.wait||[];x.seq=x.seq||1;x.commCode=x.commCode==null?'COMM':x.commCode;x.crown=x.crown||{code:'CROWN',open:0};x.chg=x.chg||0;x.bak=x.bak||0;x.ob=x.ob||null;return x}
+function newLedger(){return{v:1,types:{},reserve:'RESERVE',crown:{code:'CROWN',open:0},ob:null,days:[],late:[],wait:[],commCode:'COMM',seq:1,chg:0,bak:0}}
+function fixLedger(x){x=x||newLedger();x.days=x.days||[];x.late=x.late||[];x.wait=x.wait||[];x.seq=x.seq||1;x.commCode=x.commCode==null?'COMM':x.commCode;x.crown=x.crown||{code:'CROWN',open:0};x.types=x.types||{};x.reserve=x.reserve||'RESERVE';x.chg=x.chg||0;x.bak=x.bak||0;x.ob=x.ob||null;return x}
 function idb(cb){
   if(dbH){cb(dbH);return}
   if(dbTried){cb(null);return}
@@ -934,10 +951,10 @@ function events(){
   return(CACHE=ev);
 }
 // net = IN minus OUT.  negative = they owe us (OUT), positive = we owe them (IN)
-function balances(){
+function balances(to){
   var net={},cm=0,cc=L.commCode;
   if(L.ob)Object.keys(L.ob.rows).forEach(function(c){var r=L.ob.rows[c];net[c]=(r[1]||0)-(r[0]||0)});
-  events().forEach(function(e){var v=e.i-e.o;if(e.c!==cc)v+=e.ci-e.cr;net[e.c]=(net[e.c]||0)+v;cm+=e.cr-e.ci});
+  events().forEach(function(e){if(to&&e.d>to)return;var v=e.i-e.o;if(e.c!==cc)v+=e.ci-e.cr;net[e.c]=(net[e.c]||0)+v;cm+=e.cr-e.ci});
   if(cc&&Math.abs(cm)>0.0001)net[cc]=(net[cc]||0)+cm;
   Object.keys(net).forEach(function(k){net[k]=r2(net[k])});
   return net;
@@ -989,12 +1006,12 @@ function parseSheetRows(text){
   var rows=[],bad=[],seen={},dup=[];
   String(text).split(/\r?\n/).forEach(function(line){
     if(!line.trim())return;
-    var code,o,i,m;
+    var code,o,i,m,typ='';
     if(line.indexOf('\t')>=0){
       var t=line.split('\t').map(function(x){return x.trim()});
       code=t[0].toUpperCase();var rest=t.slice(1);
       if(/^ACCOUNT/.test(code)||/^CODE$/.test(code))return;
-      if(t.length>=4&&(t[1]===''||isNaN(numCell(t[1]))))rest=t.slice(2);          // Code, Type, OUT, IN, ...
+      if(t.length>=4&&(t[1]===''||isNaN(numCell(t[1])))){rest=t.slice(2);typ=t[1]}          // Code, Type, OUT, IN, ...
       else if(rest.length&&rest[0]!==''&&isNaN(numCell(rest[0])))rest.shift();   // an Account Type column
       o=numCell(rest[0]);i=numCell(rest[1]);
     }else if((m=line.trim().match(/^(.+?)\s+(-?[\d,]*\.?\d+)\s+(-?[\d,]*\.?\d+)$/))){
@@ -1002,7 +1019,7 @@ function parseSheetRows(text){
     }else{bad.push(line.trim());return}
     if(!code||isNaN(o)||isNaN(i)){bad.push(line.trim());return}
     if(seen[code]){dup.push(code);return}seen[code]=1;
-    rows.push({code:code,o:r2(o),i:r2(i)});
+    rows.push({code:code,o:r2(o),i:r2(i),t:typ});
   });
   return{rows:rows,bad:bad,dup:dup};
 }
@@ -1018,7 +1035,7 @@ function renderCrown(){
 }
 function renderLedger(){
   if(!L){$('ledBanner').innerHTML='<div class="card"><div class="mute">Opening the ledger…</div></div>';return}
-  renderLedBanner();renderCrown();renderStatement();renderBalList();renderWait();renderPosted();renderOb();renderLedBak();
+  renderLedBanner();renderCrown();renderStatement();renderTypeBar();renderBalList();renderMonth();renderAccts();renderWait();renderPosted();renderOb();renderLedBak();
 }
 function renderLedBanner(){
   var h='';
@@ -1061,6 +1078,7 @@ function renderBalList(){
   if(f.hz===undefined)f.hz=true;
   if(f.hz)keys=keys.filter(function(k){return Math.abs(net[k])>=0.005});
   else{codes.forEach(function(c){if(keys.indexOf(c)<0)keys.push(c)});keys=keys.map(function(k){return k})}
+  if(f.ty)keys=keys.filter(function(k){return typeOf(k)===f.ty});
   keys.sort(f.big?function(a,b){return Math.abs(net[b]||0)-Math.abs(net[a]||0)||(a<b?-1:1)}:function(a,b){return a<b?-1:a>b?1:0});
   var to=0,ti=0;
   Object.keys(net).forEach(function(k){if(net[k]<0)to-=net[k];else ti+=net[k]});
@@ -1215,6 +1233,88 @@ function sendStatement(){
   }
 }
 
+
+// ===== account types and month summary =====
+var TYPES=['Customer','Correspondent','Internal','Expense'];
+function normType(t){t=String(t||'').trim().toLowerCase();for(var i=0;i<TYPES.length;i++)if(TYPES[i].toLowerCase()===t)return TYPES[i];return''}
+function typeOf(c){return(L&&L.types&&L.types[c])||''}
+function lastDayOf(m){var p=m.split('-'),d=new Date(+p[0],+p[1],0);return m+'-'+z2(d.getDate())}
+function monthSummary(m){
+  var pre=m+'-',end=m+'-31',dp=0,cm=0,ex=0;
+  events().forEach(function(e){
+    if(e.d.slice(0,8)!==pre)return;
+    if(e.k===0)dp+=e.o-e.i;
+    else{cm+=e.cr-e.ci;if(typeOf(e.c)==='Expense')ex+=e.o-e.i}
+  });
+  L.wait.forEach(function(w){if(String(w.d).slice(0,8)===pre)cm+=(w.cr||0)-(w.ci||0)});
+  var net=r2(dp+cm-ex),bal=balances(end),res=bal[L.reserve||'RESERVE']||0,last=null;
+  L.days.forEach(function(d){if(d.date<=end&&(!last||d.date>last.date))last=d});
+  return{dp:r2(dp),cm:r2(cm),ex:r2(ex),net:net,res:res,sug:r2(res+net),cash:last?last.close:null,cashDate:last?last.date:'',bal:bal};
+}
+function renderMonth(){
+  if(!L)return;
+  if(!$('monthIn').value)$('monthIn').value=today().slice(0,7);
+  if(document.activeElement!==$('reserveCode'))$('reserveCode').value=L.reserve||'RESERVE';
+  var m=$('monthIn').value,box=$('monthBody');
+  if(!m){box.innerHTML='';return}
+  var r=monthSummary(m);
+  function row(l,v,cls){return'<tr><td>'+l+'</td><td class="n '+(cls||'')+'">'+v+'</td></tr>'}
+  box.innerHTML='<table class="stmt">'
+    +row('Cash in hand'+(r.cashDate?' (closing, '+fd(r.cashDate)+')':''),r.cash==null?'—':fmt2(r.cash))
+    +row('Currency trading profit',signed(r.dp),r.dp<0?'oo':'ii')
+    +row('Commission profit',signed(r.cm),r.cm<0?'oo':'ii')
+    +row('Total expenses',signed(r.ex))
+    +'<tr class="tot"><td>NET PROFIT FOR THE MONTH</td><td class="n '+(r.net<0?'oo':'ii')+'">'+signed(r.net)+'</td></tr>'
+    +row('Current RESERVE balance',signed(r.res))
+    +'<tr class="tot"><td>Suggested new RESERVE</td><td class="n">'+signed(r.sug)+'</td></tr></table>'
+    +'<div class="mute" style="margin-top:6px">Same rules as the Excel Monthly Summary. Expenses are accounts of type Expense'+(Object.keys(L.types||{}).length?'':' — <b>no account types loaded yet</b> (paste the Chart of Accounts under Opening balances, or set types under Accounts and types)')+'.</div>';
+}
+$('monthIn').onchange=renderMonth;
+$('reserveCode').onchange=function(){if(!L)return;L.reserve=this.value.trim().toUpperCase()||'RESERVE';ldSave(function(){renderMonth()})};
+$('monthCopy').onclick=function(){
+  if(!L)return;var m=$('monthIn').value;if(!m){toast('Pick the month');return}
+  var r=monthSummary(m),nextFirst=addDay(lastDayOf(m),1),lines=[],to=0,ti=0,rc=L.reserve||'RESERVE';
+  var all={};codes.forEach(function(c){all[c]=1});Object.keys(r.bal).forEach(function(c){all[c]=1});
+  Object.keys(all).sort().forEach(function(c){
+    var ty=typeOf(c),v=r.bal[c]||0;
+    if(c===rc)v=r.sug;
+    if(ty==='Expense')v=0;
+    var o=v<0?-v:0,i=v>0?v:0;to+=o;ti+=i;
+    lines.push([c,ty,o?plain(o):'',i?plain(i):'',nextFirst].join('\t'));
+  });
+  copyText(lines.join('\n'),lines.length+' accounts copied');
+  $('monthNote').textContent='Columns: Code · Type · OUT · IN · Date (for the Chart of Accounts). Expense accounts are blank and '+rc+' carries the suggested new reserve. Totals: OUT '+fmt2(to)+' · IN '+fmt2(ti)+' · difference '+fmt2(r2(to-ti))+'. Check that difference against how you balance the opening cash (SHOP-IRUPU) in Excel before pasting.';
+};
+// account types UI
+function renderTypeBar(){
+  var has={};Object.keys(L.types||{}).forEach(function(k){has[L.types[k]]=1});
+  var h='';
+  if(Object.keys(has).length){h='<button class="chip'+(f.ty?'':' on')+'" data-ty="">All types</button>'+TYPES.filter(function(t){return has[t]}).map(function(t){return'<button class="chip'+(f.ty===t?' on':'')+'" data-ty="'+t+'">'+t+'</button>'}).join('')}
+  $('typeBar').innerHTML=h;
+}
+$('typeBar').onclick=function(e){var t=e.target.getAttribute&&e.target.getAttribute('data-ty');if(t===null||t===undefined)return;f.ty=t;renderBalList()};
+function renderAccts(){
+  if(!L)return;
+  var q=$('acQ').value.trim().toUpperCase(),list=acctList().sort().filter(function(c){return!q||c.indexOf(q)>=0}).slice(0,80);
+  $('acList').innerHTML=list.map(function(c){
+    var ty=typeOf(c);
+    return'<div class="exrow"><span><b>'+esc(c)+'</b></span><select data-ac="'+esc(c)+'" style="font-size:15px;padding:6px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink)"><option value="">—</option>'+TYPES.map(function(t){return'<option'+(t===ty?' selected':'')+'>'+t+'</option>'}).join('')+'</select></div>';
+  }).join('')+(acctList().length>80&&!q?'<div class="mute">Showing 80 — type to find others.</div>':'');
+}
+$('acQ').oninput=renderAccts;
+$('acList').onchange=function(e){
+  var c=e.target.getAttribute&&e.target.getAttribute('data-ac');if(!c||!L)return;
+  L.types=L.types||{};if(e.target.value)L.types[c]=e.target.value;else delete L.types[c];
+  ldSave(function(){renderTypeBar();renderMonth();toast(c+' → '+(e.target.value||'no type'))});
+};
+$('acAdd').onclick=function(){
+  if(!L)return;var c=$('acNew').value.trim().toUpperCase();if(!c){toast('Type the new account code');return}
+  if(codes.indexOf(c)>=0){toast(c+' already exists');return}
+  codes.push(c);codes.sort();ls(CKEY,codes);$('codesBox').value=codes.join('\n');
+  L.types=L.types||{};L.types[c]=$('acNewType').value;
+  ldSave(function(){$('acNew').value='';renderLedger();toast(c+' added')});
+};
+
 // ----- events: ledger -----
 $('tabLedger').onclick=function(){setView('ledger')};
 $('stIn').oninput=function(){var v=this.value.trim().toUpperCase();this.value=v;f.stAll=false;f.stCode=(v&&acctList().indexOf(v)>=0)?v:null;renderStatement()};
@@ -1326,7 +1426,8 @@ $('obSave').onclick=function(){
   obP.rows.forEach(function(r){rows[r.code]=[r.o,r.i];if(codes.indexOf(r.code)<0){codes.push(r.code);added++}});
   codes.sort();ls(CKEY,codes);$('codesBox').value=codes.join('\n');
   L.ob={date:date,rows:rows};
-  ldSave(function(ok){if(!ok)L.ob=old;else{$('obText').value='';obP=null;$('obInfo').innerHTML='';$('obSave').disabled=true;toast('Saved '+Object.keys(rows).length+' balances'+(added?' · '+added+' codes added':''))}b.textContent='Save opening balances';renderLedger();all()});
+  var oldT=L.types;L.types=Object.assign({},L.types||{});obP.rows.forEach(function(r){var ty=normType(r.t);if(ty)L.types[r.code]=ty});
+  ldSave(function(ok){if(!ok){L.ob=old;L.types=oldT}else{$('obText').value='';obP=null;$('obInfo').innerHTML='';$('obSave').disabled=true;toast('Saved '+Object.keys(rows).length+' balances'+(added?' · '+added+' codes added':''))}b.textContent='Save opening balances';renderLedger();all()});
 };
 $('obDate').onchange=function(){};
 $('crownCode').onchange=$('crownOpen').onchange=function(){
