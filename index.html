@@ -54,6 +54,7 @@ tr.bad td{background:var(--badbg)}
 .act button{border:0;background:none;color:var(--acc);font-size:13px;padding:3px 5px}
 .tot td{font-weight:700;border-top:2px solid var(--ink)}
 .toast{position:fixed;left:50%;bottom:84px;transform:translateX(-50%);background:#222;color:#fff;padding:10px 16px;border-radius:10px;font-size:14px;z-index:20;display:none;max-width:90%}
+table.vt{width:100%;border-collapse:collapse;font-size:14px}.vt td{padding:5px 4px;border-bottom:1px solid var(--line);vertical-align:top}.vt .num{text-align:right;white-space:nowrap}.vt .vh td{font-weight:600;color:var(--mute)}.vt tr.hit td{background:rgba(255,200,0,.25)}.fq{cursor:pointer}
 details summary{cursor:pointer;color:var(--mute);font-size:14px;padding:4px 0}
 .exrow{display:flex;gap:6px;align-items:center;padding:5px 0;border-bottom:1px solid var(--line);font-size:15px}
 .exrow span{flex:1}.exrow .own{font-size:12px;color:var(--mute)}
@@ -120,7 +121,7 @@ input[type=date]{width:100%;font-size:16px;padding:9px;border:1px solid var(--li
 
   <div class="mute" style="margin-top:6px">Narration</div>
   <div class="chips" id="narrChips"></div>
-  <input id="narr" type="text" autocomplete="off" placeholder="Narration / name (typed)">
+  <input id="narr" type="text" autocomplete="off" placeholder="NARRATION / NAME (typed)" autocapitalize="characters" style="text-transform:uppercase">
 
   <div class="sides">
     <button class="side out" id="sOut">OUT</button>
@@ -178,6 +179,17 @@ input[type=date]{width:100%;font-size:16px;padding:9px;border:1px solid var(--li
   <div class="mute" style="margin-top:6px">Copy the rows for Excel first if you are still using it. Rows with no account code are not lost: they move to “Waiting for code” in the Ledger tab and join the ledger once you give them a code. Posted days can be reopened from the Ledger tab.</div>
 </div>
 
+<div class="card"><details id="bakBox" open><summary>Backup, restore and export</summary>
+  <div id="ledBak" class="mute" style="margin:6px 0"></div>
+  <div style="margin-bottom:8px"><button class="btn" id="ledShare">Back up the whole ledger</button></div>
+  <div style="margin-bottom:8px"><button class="btn sec" id="ledCsv">Export ledger (.csv)</button></div>
+  <div class="mute" style="margin:10px 0 4px">Safety copies kept inside the app (last 5, made before every post, reopen or restore)</div>
+  <div id="snapList"></div>
+  <div class="mute" style="margin:10px 0 4px">Restore from a backup file</div>
+  <input type="file" id="ledFile" accept=".json,.txt,application/json,text/plain" style="width:100%;margin-bottom:8px">
+  <div id="ledRInfo"></div>
+  <div style="margin-top:8px"><button class="btn sec" id="ledRestore" disabled>Replace the ledger with this backup</button></div>
+</details></div>
 <div class="card">
   <h2>Copy for Excel</h2>
   <div class="mute" style="margin-bottom:8px">Type the date in column B, click column C of the first empty row, then paste. Columns: Code · Narration · OUT · IN · Comm R · Comm I</div>
@@ -261,6 +273,12 @@ input[type=date]{width:100%;font-size:16px;padding:9px;border:1px solid var(--li
 <div class="wrap" id="viewLedger" style="display:none">
 <div id="ledBanner"></div>
 <div class="card" id="crownCard"><h2>Crown AED position</h2><div id="crownBody"></div></div>
+<div class="card" id="dayViewCard" style="display:none"></div>
+<div class="card">
+  <h2>Find an entry</h2>
+  <input id="fqIn" type="search" autocomplete="off" autocorrect="off" spellcheck="false" placeholder="Amount, narration or account code…">
+  <div id="fqOut" style="margin-top:8px"></div>
+</div>
 <div class="card">
   <h2>Statement for account</h2>
   <input id="stIn" type="search" autocapitalize="characters" autocomplete="off" autocorrect="off" spellcheck="false" placeholder="Type an account code…">
@@ -283,7 +301,7 @@ input[type=date]{width:100%;font-size:16px;padding:9px;border:1px solid var(--li
   <div class="mute" id="monthNote" style="margin-top:6px"></div>
 </div>
 <div class="card" id="waitCard" style="display:none"><h2>Waiting for account code</h2><div id="waitList"></div></div>
-<div class="card"><details id="postedBox"><summary>Posted days</summary><div id="postedList" style="margin-top:8px"></div></details></div>
+<div class="card"><details id="postedBox" open><summary>Posted days</summary><div id="postedList" style="margin-top:8px"></div></details></div>
 <div class="card"><details id="acctBox"><summary>Accounts and types</summary>
   <div class="mute" style="margin:6px 0">The type decides what counts as an expense in the month summary, and filters the account list. Types load from the Chart of Accounts paste.</div>
   <div class="two"><input id="acNew" type="text" placeholder="New account code" autocapitalize="characters" style="text-transform:uppercase"><select id="acNewType"><option>Customer</option><option>Correspondent</option><option>Internal</option><option>Expense</option></select></div>
@@ -307,17 +325,6 @@ input[type=date]{width:100%;font-size:16px;padding:9px;border:1px solid var(--li
   <textarea id="cmpText" rows="6" placeholder="paste here"></textarea>
   <div id="cmpOut" style="margin-top:8px"></div>
 </details></div>
-<div class="card"><details id="bakBox"><summary>Backup, restore and export</summary>
-  <div id="ledBak" class="mute" style="margin:6px 0"></div>
-  <div style="margin-bottom:8px"><button class="btn" id="ledShare">Back up the whole ledger</button></div>
-  <div style="margin-bottom:8px"><button class="btn sec" id="ledCsv">Export ledger (.csv)</button></div>
-  <div class="mute" style="margin:10px 0 4px">Safety copies kept inside the app (last 5, made before every post, reopen or restore)</div>
-  <div id="snapList"></div>
-  <div class="mute" style="margin:10px 0 4px">Restore from a backup file</div>
-  <input type="file" id="ledFile" accept=".json,.txt,application/json,text/plain" style="width:100%;margin-bottom:8px">
-  <div id="ledRInfo"></div>
-  <div style="margin-top:8px"><button class="btn sec" id="ledRestore" disabled>Replace the ledger with this backup</button></div>
-</details></div>
 </div>
 <div class="bnav" id="navBar"><button id="tabCash" class="on"><i>✎</i>Cash</button><button id="tabDeals"><i>⇄</i>Deals</button><button id="tabLedger"><i>☰</i>Ledger</button><button id="tabDay"><i>✓</i>Day</button></div>
 <div class="toast" id="toast"></div>
@@ -325,7 +332,7 @@ input[type=date]{width:100%;font-size:16px;padding:9px;border:1px solid var(--li
 <script>
 (function(){
 var DEFAULT_CODES=[];
-var APP_VERSION='2026-10-20.2';
+var APP_VERSION='2026-10-21.1';
 var NARRS=ls('cashentry.narrs')||[];
 var EXPCODE=ls('cashentry.expcode')||'SHOP-EXP';
 var BIZ=ls('cashentry.biz')||'';
@@ -457,7 +464,7 @@ function copyText(txt,msg){
 $('open').oninput=function(){S.open=this.value;save();renderTop();renderDay();};
 $('code').oninput=function(){this.value=this.value.toUpperCase();f.dupOK=null;renderForm()};
 $('narrChips').onclick=function(e){var n=e.target.getAttribute&&e.target.getAttribute('data-n');if(n){$('narr').value=($('narr').value.trim().toUpperCase()===n?'':n);renderNarr()}};
-$('narr').oninput=renderNarr;
+$('narr').oninput=function(){var a=this.selectionStart,b=this.selectionEnd,u=this.value.toUpperCase();if(u!==this.value){this.value=u;try{this.setSelectionRange(a,b)}catch(x){}}renderNarr()};
 $('sOut').onclick=function(){f.side='out';f.dupOK=null;renderForm()};
 $('sIn').onclick=function(){f.side='in';f.dupOK=null;renderForm()};
 $('cR').onclick=function(){f.cs=f.cs==='r'?null:'r';renderForm()};
@@ -465,7 +472,7 @@ $('cI').onclick=function(){f.cs=f.cs==='i'?null:'i';renderForm()};
 $('cancelEdit').onclick=resetForm;
 
 $('add').onclick=function(){
-  var code=$('code').value.trim().toUpperCase(),amt=num($('amt').value),cm=num($('comm').value),narr=$('narr').value.trim();
+  var code=$('code').value.trim().toUpperCase(),amt=num($('amt').value),cm=num($('comm').value),narr=$('narr').value.trim().toUpperCase();
   var flag=$('entryFlag');
   if(amt<=0&&cm<=0){flag.innerHTML='<div class="flag bad">Enter an amount.</div>';return}
   if(amt>0&&!f.side){flag.innerHTML='<div class="flag bad">Tap OUT or IN.</div>';return}
@@ -484,7 +491,7 @@ $('add').onclick=function(){
 $('dayTable').onclick=function(ev){
   var ed=ev.target.getAttribute&&ev.target.getAttribute('data-e'),dl=ev.target.getAttribute&&ev.target.getAttribute('data-d');
   if(ed){var e=S.entries.filter(function(x){return x.id===ed})[0];if(!e)return;
-    f.editId=ed;$('code').value=e.code;$('narr').value=e.narr;
+    f.editId=ed;$('code').value=e.code;$('narr').value=String(e.narr||'').toUpperCase();
     var a=e.out||e.inn;$('amt').value=a||'';f.side=e.out?'out':(e.inn?'in':null);
     var c=e.cr||e.ci;$('comm').value=c||'';f.cs=e.cr?'r':(e.ci?'i':null);
     renderForm();window.scrollTo({top:0,behavior:'smooth'});}
@@ -738,7 +745,7 @@ function setView(v){
   ['Cash','Deals','Ledger','Day','Settings'].forEach(function(n){$('view'+n).style.display=(v===n.toLowerCase())?'':'none'});
   $('cashTop').style.display=v==='cash'?'':'none';
   ['Cash','Deals','Ledger','Day'].forEach(function(n){$('tab'+n).classList.toggle('on',v===n.toLowerCase())});
-  if(v==='deals')renderDeals();if(v==='ledger')renderLedger();if(v==='day'){renderClose();renderPaper()}
+  if(v==='deals')renderDeals();if(v==='ledger')renderLedger();if(v==='day'){renderClose();renderPaper();renderLedBak();renderSnaps()}
   window.scrollTo(0,0);
 }
 $('tabDay').onclick=function(){setView('day')};
@@ -1035,13 +1042,13 @@ function renderCrown(){
 }
 function renderLedger(){
   if(!L){$('ledBanner').innerHTML='<div class="card"><div class="mute">Opening the ledger…</div></div>';return}
-  renderLedBanner();renderCrown();renderStatement();renderTypeBar();renderBalList();renderMonth();renderAccts();renderWait();renderPosted();renderOb();renderLedBak();
+  renderLedBanner();renderCrown();renderStatement();renderTypeBar();renderBalList();renderMonth();renderAccts();renderWait();renderPosted();renderOb();renderLedBak();renderDayView();if($('fqIn').value)renderFind();
 }
 function renderLedBanner(){
   var h='';
   if(!L.ob)h+='<div class="flag warn" style="margin:12px 0">No opening balances yet. Open “Opening balances” below and paste them from the Chart of Accounts.</div>';
   if(L.wait.length)h+='<div class="flag warn" style="margin:12px 0">'+L.wait.length+' entr'+(L.wait.length>1?'ies are':'y is')+' waiting for an account code (see below).</div>';
-  if(L.days.length&&L.chg>L.bak)h+='<div class="flag warn" style="margin:12px 0">The ledger has changed since the last backup. Open “Backup, restore and export” and back it up.</div>';
+  if(L.days.length&&L.chg>L.bak)h+='<div class="flag warn" style="margin:12px 0">The ledger has changed since the last backup. Open the Day tab and use “Backup, restore and export”.</div>';
   $('ledBanner').innerHTML=h;
 }
 function renderStatement(){
@@ -1102,7 +1109,7 @@ function renderPosted(){
   $('postedBox').querySelector('summary').textContent='Posted days ('+d.length+')';
   $('postedList').innerHTML=d.length?d.slice(0,60).map(function(x){
     var o=0,i=0;(x.ent||[]).forEach(function(e){o+=e.o;i+=e.i});
-    return'<div class="bcard"><div style="display:flex;justify-content:space-between"><b>'+fd(x.date)+'</b><span class="mute">'+(x.ent||[]).length+' rows'+((x.deals||[]).length?' · '+x.deals.length+' deals':'')+'</span></div><div class="mute">OUT '+fmt(o)+' · IN '+fmt(i)+' · cash at close '+fmt(x.close)+'</div><div style="margin-top:4px"><button class="btn sec sm" data-ro="'+x.id+'">'+(f.ro===x.id?'Tap again to reopen':'Reopen to edit')+'</button></div></div>';
+    return'<div class="bcard"><div style="display:flex;justify-content:space-between"><b>'+fd(x.date)+'</b><span class="mute">'+(x.ent||[]).length+' rows'+((x.deals||[]).length?' · '+x.deals.length+' deals':'')+'</span></div><div class="mute">OUT '+fmt(o)+' · IN '+fmt(i)+' · cash at close '+fmt(x.close)+'</div><div style="margin-top:4px"><button class="btn sec sm" data-vw="'+x.id+'" style="margin-right:6px">View</button><button class="btn sec sm" data-ro="'+x.id+'">'+(f.ro===x.id?'Tap again to reopen':'Reopen to edit')+'</button></div></div>';
   }).join('')+(d.length>60?'<div class="mute">Showing the latest 60 days.</div>':''):'<div class="mute">No days posted yet.</div>';
 }
 function renderOb(){
@@ -1386,7 +1393,81 @@ function reopenDay(id){
     S=n;save();f.review=false;all();setView('cash');toast('Day reopened on the Cash book tab — review it, then post it again');
   });
 }
+
+// ---- find an entry + posted-day view
+function dayById(id){for(var i=0;i<L.days.length;i++)if(L.days[i].id===id)return L.days[i];return null}
+function sortedDays(){return L.days.slice().sort(function(a,b){return a.date<b.date?-1:a.date>b.date?1:(a.at||0)-(b.at||0)})}
+function renderDayView(){
+  var c=$('dayViewCard');if(!f.vw){c.style.display='none';return}
+  var d=dayById(f.vw);if(!d){f.vw=null;c.style.display='none';return}
+  var sd=sortedDays(),ix=sd.indexOf(d),o=0,i=0,cr=0,ci=0;
+  var ent=(d.ent||[]).slice().sort(function(a,b){return a.s-b.s});
+  var h='<div style="display:flex;justify-content:space-between;align-items:center"><h2 style="margin:0">'+fd(d.date)+'</h2><button class="btn sec sm" id="vwClose">Close</button></div>';
+  h+='<div class="two" style="margin-top:6px"><div><div class="mute">Opening cash</div><b>'+fmt(d.open)+'</b></div><div><div class="mute">Closing cash</div><b>'+fmt(d.close)+'</b></div></div>';
+  if((d.deals||[]).length){
+    var dd=d.deals.slice().sort(function(a,b){return a.s-b.s});
+    h+='<div class="mute" style="margin-top:10px">Currency deals ('+dd.length+')</div><table class="vt">'+dd.map(function(x){return'<tr><td><b>'+esc(x.c)+'</b></td><td>'+esc(dealNarr(x))+'</td><td class="num '+(x.ps==='S'?'oo':'ii')+'">'+(x.ps==='S'?'OUT ':'IN ')+fmt2(x.inr)+'</td></tr>'}).join('')+'</table>';
+  }
+  h+='<div class="mute" style="margin-top:10px">Cash book ('+ent.length+' rows)</div><table class="vt"><tr class="vh"><td>Code</td><td>Narration</td><td class="num">OUT</td><td class="num">IN</td></tr>';
+  ent.forEach(function(e){
+    o+=e.o;i+=e.i;cr+=e.cr||0;ci+=e.ci||0;
+    h+='<tr'+(f.hl===e.s?' class="hit"':'')+'><td><b>'+esc(e.c)+'</b></td><td>'+esc(e.n)+((e.cr||e.ci)?'<div class="mute">Comm '+(e.cr?'R '+fmt2(e.cr):'')+(e.ci?'I '+fmt2(e.ci):'')+'</div>':'')+'</td><td class="num oo">'+(e.o?fmt2(e.o):'')+'</td><td class="num ii">'+(e.i?fmt2(e.i):'')+'</td></tr>';
+  });
+  h+='<tr class="vh"><td colspan="2">Total</td><td class="num">'+fmt2(o)+'</td><td class="num">'+fmt2(i)+'</td></tr></table>';
+  if(cr||ci)h+='<div class="mute">Commission R '+fmt2(cr)+' · Commission I '+fmt2(ci)+'</div>';
+  h+='<div class="two" style="margin-top:10px"><button class="btn sec sm" id="vwPrev"'+(ix>0?'':' disabled')+'>◀ Earlier day</button><button class="btn sec sm" id="vwNext"'+(ix<sd.length-1?'':' disabled')+'>Later day ▶</button></div>';
+  h+='<div style="margin-top:8px"><button class="btn sec" id="vwCopy">Copy this day\'s rows</button></div><div class="mute" style="margin-top:6px">This is a read-only view. To change a day, reopen it from “Posted days”.</div>';
+  c.innerHTML=h;c.style.display='';
+}
+function openDayView(id,hl){f.vw=id;f.hl=hl==null?null:hl;renderDayView();var c=$('dayViewCard');c.scrollIntoView({behavior:'smooth',block:'start'});var hit=c.querySelector('.hit');if(hit)setTimeout(function(){hit.scrollIntoView({block:'center'})},50)}
+$('dayViewCard').onclick=function(e){
+  var t=e.target,id=t.id;if(!id)return;
+  var d=dayById(f.vw),sd=sortedDays(),ix=sd.indexOf(d);
+  if(id==='vwClose'){f.vw=null;renderDayView()}
+  else if(id==='vwPrev'&&ix>0){f.vw=sd[ix-1].id;f.hl=null;renderDayView()}
+  else if(id==='vwNext'&&ix<sd.length-1){f.vw=sd[ix+1].id;f.hl=null;renderDayView()}
+  else if(id==='vwCopy'){copyText((d.ent||[]).slice().sort(function(a,b){return a.s-b.s}).map(function(e){return[e.c,e.n,e.o||'',e.i||'',e.cr||'',e.ci||''].join('\t')}).join('\n'),'Rows copied')}
+};
+function findEntries(q){
+  q=q.trim().toUpperCase();if(!q)return[];
+  var qn=q.replace(/[,\s]/g,''),isNum=/^\d+(\.\d+)?$/.test(qn),res=[];
+  function hit(e){
+    if(e.c&&e.c.indexOf(q)>=0)return true;
+    if(e.n&&String(e.n).toUpperCase().indexOf(q)>=0)return true;
+    if(isNum){var a=[e.o,e.i,e.cr,e.ci];for(var k=0;k<4;k++){if(a[k]&&(String(r2(a[k]))===qn||String(r2(a[k])).indexOf(qn)===0||String(Math.round(a[k]))===qn))return true}}
+    return false;
+  }
+  L.days.forEach(function(d){
+    (d.ent||[]).forEach(function(e){if(hit(e))res.push({d:d.date,id:d.id,s:e.s,e:e,w:''})});
+    (d.deals||[]).forEach(function(x){
+      var e={c:x.c,n:dealNarr(x),o:x.ps==='S'?x.inr:0,i:x.ps==='P'?x.inr:0};
+      if(hit(e)||(isNum&&(String(x.v)===qn||String(x.r)===qn)))res.push({d:d.date,id:d.id,s:x.s,e:e,w:'deal'});
+    });
+  });
+  (L.late||[]).forEach(function(e0){var e={c:e0.c,n:e0.n,o:e0.o,i:e0.i,cr:e0.cr,ci:e0.ci};if(hit(e))res.push({d:e0.d,id:null,e:e,w:'late'})});
+  (L.wait||[]).forEach(function(w){var e={c:'(no code)',n:w.n,o:w.o,i:w.i,cr:w.cr,ci:w.ci};if(hit({c:'',n:w.n,o:w.o,i:w.i,cr:w.cr,ci:w.ci}))res.push({d:w.d,id:null,e:e,w:'wait'})});
+  rows().forEach(function(r){var e={c:r.code,n:r.narr,o:r.out,i:r.inn,cr:r.cr,ci:r.ci};if(hit(e))res.push({d:S.date,id:null,e:e,w:'today'})});
+  (S.deals||[]).forEach(function(x){var e={c:x.code,n:x.vol+' '+x.op+' '+x.rate+' ('+x.ps+')',o:x.ps==='S'?x.inr:0,i:x.ps==='P'?x.inr:0};if(hit(e))res.push({d:S.date,id:null,e:e,w:'today'})});
+  res.sort(function(a,b){return a.d<b.d?1:a.d>b.d?-1:0});
+  return res;
+}
+function renderFind(){
+  var q=$('fqIn').value,out=$('fqOut');
+  if(!q.trim()){out.innerHTML='';return}
+  var r=findEntries(q),h='';
+  if(!r.length){out.innerHTML='<div class="mute">Nothing found.</div>';return}
+  var tag={deal:'deal',late:'late entry',wait:'waiting for code',today:'today\'s sheet, not posted'};
+  h+='<div class="mute">'+r.length+' found'+(r.length>100?' — showing the latest 100':'')+'</div>';
+  h+=r.slice(0,100).map(function(x,k){
+    var e=x.e;
+    return'<div class="bcard fq" data-k="'+k+'"><div style="display:flex;justify-content:space-between"><b>'+esc(e.c)+'</b><span class="mute">'+fd(x.d)+(x.w?' · '+tag[x.w]:'')+'</span></div><div>'+esc(e.n||'')+'</div><div>'+(e.o?'<span class="oo">OUT '+fmt2(e.o)+'</span> ':'')+(e.i?'<span class="ii">IN '+fmt2(e.i)+'</span> ':'')+(e.cr?'<span class="mute">Comm R '+fmt2(e.cr)+'</span> ':'')+(e.ci?'<span class="mute">Comm I '+fmt2(e.ci)+'</span>':'')+'</div>'+(x.id?'<div class="mute">Tap to see this day</div>':'')+'</div>';
+  }).join('');
+  out.innerHTML=h;f.fr=r;
+}
+$('fqIn').oninput=function(){clearTimeout(f.fqt);f.fqt=setTimeout(renderFind,150)};
+$('fqOut').onclick=function(e){var c=e.target.closest&&e.target.closest('.fq');if(!c||!f.fr)return;var x=f.fr[+c.getAttribute('data-k')];if(x&&x.id)openDayView(x.id,x.s)};
 $('postedList').onclick=function(e){
+  var vw=e.target.getAttribute&&e.target.getAttribute('data-vw');if(vw){openDayView(vw,null);return}
   var id=e.target.getAttribute&&e.target.getAttribute('data-ro');if(!id)return;
   if(f.ro!==id){f.ro=id;renderPosted();clearTimeout(f.rot);f.rot=setTimeout(function(){f.ro=null;renderPosted()},4000);return}
   f.ro=null;reopenDay(id);
