@@ -347,7 +347,7 @@ input[type=date]{width:100%;font-size:16px;padding:9px;border:1px solid var(--li
 <script>
 (function(){
 var DEFAULT_CODES=[];
-var APP_VERSION='2026-10-21.2';
+var APP_VERSION='2026-10-21.3';
 var NARRS=ls('cashentry.narrs')||[];
 var EXPCODE=ls('cashentry.expcode')||'SHOP-EXP';
 var BIZ=ls('cashentry.biz')||'';
@@ -1571,7 +1571,7 @@ function renderDrive(){
   $('driveBtn').style.display=c.cid?'':'none';
   $('drForget').style.display=c.cid?'':'none';
   var n=$('driveNote');
-  n.textContent=c.cid?(c.last?'Last Drive backup: '+new Date(c.last).toLocaleString():'Connected. No Drive backup yet.'):'Not set up. Open “Google Drive setup” below.';
+  n.textContent=c.cid?(c.last?'Last Drive backup: '+new Date(c.last).toLocaleString():'Client ID saved. Tap “Back up to Google Drive” above to sign in.'):'Not set up. Open “Google Drive setup” below.';
 }
 function loadGIS(cb){
   if(window.google&&google.accounts&&google.accounts.oauth2)return cb(true);
@@ -1636,7 +1636,7 @@ function driveBackup(interactive,done){
   });
 }
 $('driveBtn').onclick=function(){driveBackup(true)};
-$('drCid').onchange=function(){var c=drCfg();c.cid=this.value.trim();if(!c.cid){c.folder=null;c.files={}}DT=null;drSave(c);renderDrive()};
+$('drCid').onchange=function(){var c=drCfg();c.cid=this.value.trim();if(!c.cid){c.folder=null;c.files={}}DT=null;drSave(c);renderDrive();if(c.cid){toast('Client ID saved. Now tap “Back up to Google Drive”');$('driveBtn').scrollIntoView({behavior:'smooth',block:'center'})}};
 $('drAuto').onchange=function(){var c=drCfg();c.auto=this.checked;drSave(c)};
 $('drForget').onclick=function(){drSave({});DT=null;renderDrive();toast('Google Drive disconnected (files already in Drive stay there)')};
 $('ledShare').onclick=function(){
