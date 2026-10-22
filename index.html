@@ -347,7 +347,7 @@ input[type=date]{width:100%;font-size:16px;padding:9px;border:1px solid var(--li
 <script>
 (function(){
 var DEFAULT_CODES=[];
-var APP_VERSION='2026-10-21.3';
+var APP_VERSION='2026-10-22.1';
 var NARRS=ls('cashentry.narrs')||[];
 var EXPCODE=ls('cashentry.expcode')||'SHOP-EXP';
 var BIZ=ls('cashentry.biz')||'';
@@ -1636,7 +1636,7 @@ function driveBackup(interactive,done){
   });
 }
 $('driveBtn').onclick=function(){driveBackup(true)};
-$('drCid').onchange=function(){var c=drCfg();c.cid=this.value.trim();if(!c.cid){c.folder=null;c.files={}}DT=null;drSave(c);renderDrive();if(c.cid){toast('Client ID saved. Now tap “Back up to Google Drive”');$('driveBtn').scrollIntoView({behavior:'smooth',block:'center'})}};
+$('drCid').onchange=function(){var c=drCfg();c.cid=this.value.replace(/\s+/g,'');this.value=c.cid;if(!c.cid){c.folder=null;c.files={}}DT=null;drSave(c);renderDrive();if(c.cid&&!/^\d+-[A-Za-z0-9_]+\.apps\.googleusercontent\.com$/.test(c.cid)){toast('That does not look like a Client ID. It should look like 1234567890-abc123.apps.googleusercontent.com')}else if(c.cid){toast('Client ID saved. Now tap “Back up to Google Drive”');$('driveBtn').scrollIntoView({behavior:'smooth',block:'center'})}};
 $('drAuto').onchange=function(){var c=drCfg();c.auto=this.checked;drSave(c)};
 $('drForget').onclick=function(){drSave({});DT=null;renderDrive();toast('Google Drive disconnected (files already in Drive stay there)')};
 $('ledShare').onclick=function(){
