@@ -214,7 +214,8 @@ input[type=date]{width:100%;font-size:16px;padding:9px;border:1px solid var(--li
 
 <div class="card">
   <h2>Share today's sheet</h2>
-  <div style="margin-bottom:8px"><button class="btn" id="shareFile">Share day file (with data)</button></div>
+  <div style="margin-bottom:8px"><button class="btn" id="shareImg">Send cash book picture (for the boss)</button></div>
+  <div style="margin-bottom:8px"><button class="btn sec" id="shareFile">Share day file (with data, for backup)</button></div>
   <div id="bakNote" class="mute" style="margin-bottom:8px"></div>
   <details id="moreShare"><summary>Other ways: Excel file, message, clear the day</summary>
     <div style="margin:8px 0"><button class="btn sec" id="shareCsv">Export for Excel (.csv)</button></div>
@@ -347,7 +348,7 @@ input[type=date]{width:100%;font-size:16px;padding:9px;border:1px solid var(--li
 <script>
 (function(){
 var DEFAULT_CODES=[];
-var APP_VERSION='2026-10-22.1';
+var APP_VERSION='2026-10-22.2';
 var NARRS=ls('cashentry.narrs')||[];
 var EXPCODE=ls('cashentry.expcode')||'SHOP-EXP';
 var BIZ=ls('cashentry.biz')||'';
@@ -1220,9 +1221,8 @@ function stCanvases(code){
   return out;
 }
 function downloadFile(file){var a=document.createElement('a');a.href=URL.createObjectURL(file);a.download=file.name;document.body.appendChild(a);a.click();setTimeout(function(){URL.revokeObjectURL(a.href);document.body.removeChild(a)},1500)}
-function sendStatement(){
-  var code=f.stCode;if(!code||!L)return;
-  var cs=stCanvases(code),files=[],n=0,base='statement-'+code.replace(/[^A-Za-z0-9]+/g,'-')+'-'+today();
+function shareImages(cs,base,title,msg){
+  var files=[],n=0;
   cs.forEach(function(c,i){c.toBlob(function(b){
     files[i]=new File([b],base+(cs.length>1?'-p'+(i+1):'')+'.png',{type:'image/png'});
     if(++n===cs.length)finish();
@@ -1230,14 +1230,111 @@ function sendStatement(){
   function finish(){
     try{
       if(navigator.canShare&&navigator.canShare({files:files})){
-        navigator.share({files:files,title:'Statement '+code}).catch(function(e){if(e&&e.name!=='AbortError'){files.forEach(downloadFile);toast('Sharing not available — image downloaded')}});
+        navigator.share({files:files,title:title}).catch(function(e){if(e&&e.name!=='AbortError'){files.forEach(downloadFile);toast('Sharing not available — image downloaded')}});
         return;
       }
     }catch(e){}
-    files.forEach(downloadFile);toast('Statement image downloaded — send it from your Files or Gallery');
+    files.forEach(downloadFile);toast(msg+' image downloaded — send it from your Files or Gallery');
   }
 }
+function sendStatement(){
+  var code=f.stCode;if(!code||!L)return;
+  shareImages(stCanvases(code),'statement-'+code.replace(/[^A-Za-z0-9]+/g,'-')+'-'+today(),'Statement '+code,'Statement');
+}
 
+// ===== daily cash book picture (for the boss) =====
+function dayModelToday(){
+  var t=totals(),dl=S.deals||[];
+  return{date:S.date,open:num(S.open),close:t.bal,unposted:true,
+    rows:rows().map(function(r){return{c:r.code,n:r.narr,o:r.out,i:r.inn,cr:r.cr,ci:r.ci}}),
+    deals:dl.map(function(x){return{c:x.code,n:x.vol+' '+x.op+' '+x.rate+' ('+x.ps+')',ps:x.ps,inr:x.inr}})};
+}
+function dayModelPosted(d){
+  return{date:d.date,open:d.open,close:d.close,
+    rows:(d.ent||[]).slice().sort(function(a,b){return a.s-b.s}).map(function(e){return{c:e.c,n:e.n,o:e.o,i:e.i,cr:e.cr,ci:e.ci}}),
+    deals:(d.deals||[]).slice().sort(function(a,b){return a.s-b.s}).map(function(x){return{c:x.c,n:dealNarr(x),ps:x.ps,inr:x.inr}})};
+}
+function dayCanvases(m){
+  var W=900,rowH=40,PER=36,FONT='system-ui,Arial,sans-serif',RED='#c0392b',GRN='#1e8e4e',GREY='#6b7280';
+  var to=0,ti=0,tcr=0,tci=0;m.rows.forEach(function(r){to+=r.o||0;ti+=r.i||0;tcr+=r.cr||0;tci+=r.ci||0});
+  var hasC=tcr>0||tci>0,dp=dealsProfit(m.deals.map(function(x){return{ps:x.ps,inr:x.inr}}));
+  var X=hasC?{n:28,code:78,narr:200,nw:235,o:570,i:690,cr:788,ci:872}:{n:28,code:78,narr:200,nw:380,o:640,i:800};
+  var lines=[],k=0;
+  m.rows.forEach(function(r){k++;lines.push({t:'r',k:k,r:r})});
+  if(!m.rows.length)lines.push({t:'msg',x:'No cash entries.'});
+  if(m.deals.length){lines.push({t:'sec',x:'CURRENCY DEALS'});m.deals.forEach(function(d,ix){lines.push({t:'d',k:ix+1,d:d})})}
+  var pages=[];for(var i=0;i<lines.length;i+=PER)pages.push(lines.slice(i,i+PER));
+  if(!pages.length)pages=[[]];
+  var np=pages.length,out=[];
+  function fit(g,t,mw){t=String(t==null?'':t);if(g.measureText(t).width<=mw)return t;while(t.length>1&&g.measureText(t+'…').width>mw)t=t.slice(0,-1);return t+'…'}
+  pages.forEach(function(pl,pi){
+    var first=pi===0,last=pi===np-1,headH=first?290:110,footH=last?(180+(hasC?30:0)+(m.deals.length?36:0)):60;
+    var c=document.createElement('canvas');c.width=W;c.height=headH+40+pl.length*rowH+footH;
+    var g=c.getContext('2d');
+    function T(t,x,y,o){o=o||{};g.font=(o.b?'bold ':'')+(o.sz||21)+'px '+FONT;g.fillStyle=o.c||'#1b1f24';g.textAlign=o.a||'left';g.textBaseline='middle';g.fillText(t,x,y)}
+    g.fillStyle='#fff';g.fillRect(0,0,W,c.height);
+    g.fillStyle='#1f4fd8';g.fillRect(0,0,W,first?96:70);
+    T(BIZ||'Daily cash book',28,first?48:35,{b:1,sz:32,c:'#fff'});
+    if(first){
+      T('DAILY CASH BOOK',28,128,{sz:18,c:GREY});
+      T(fd(m.date),28,166,{b:1,sz:36});
+      if(m.unposted)T('Not yet posted to the ledger',W-28,128,{a:'right',sz:18,c:GREY});
+      T(m.rows.length+' entries'+(m.deals.length?' · '+m.deals.length+' deals':''),W-28,160,{a:'right',sz:20,c:GREY});
+      var cw=(W-56-16)/2,cards=[['OPENING CASH',m.open],['CLOSING CASH',m.close]];
+      cards.forEach(function(cd,q){
+        var x=28+q*(cw+16),y=196;
+        g.fillStyle='#f4f5f7';g.fillRect(x,y,cw,76);g.strokeStyle='#e2e5ea';g.strokeRect(x+.5,y+.5,cw-1,75);
+        T(cd[0],x+16,y+22,{sz:16,c:GREY});
+        T(fmt2(cd[1]),x+16,y+52,{b:1,sz:32,c:cd[1]<0?RED:'#1b1f24'});
+      });
+    }else T(fd(m.date)+' — cash book continued',28,92,{b:1,sz:22});
+    var y0=headH;
+    g.fillStyle='#eef0f4';g.fillRect(0,y0,W,40);
+    T('#',X.n,y0+20,{b:1,sz:18,c:GREY});T('Code',X.code,y0+20,{b:1,sz:18,c:GREY});T('Narration',X.narr,y0+20,{b:1,sz:18,c:GREY});
+    T('OUT',X.o,y0+20,{b:1,sz:18,c:GREY,a:'right'});T('IN',X.i,y0+20,{b:1,sz:18,c:GREY,a:'right'});
+    if(hasC){T('Comm R',X.cr,y0+20,{b:1,sz:18,c:GREY,a:'right'});T('Comm I',X.ci,y0+20,{b:1,sz:18,c:GREY,a:'right'})}
+    var y=y0+40;
+    pl.forEach(function(ln){
+      g.strokeStyle='#e2e5ea';g.beginPath();g.moveTo(0,y+rowH-.5);g.lineTo(W,y+rowH-.5);g.stroke();
+      if(ln.t==='sec'){g.fillStyle='#f7ecd2';g.fillRect(0,y,W,rowH);T(ln.x,X.n,y+20,{b:1,sz:18,c:GREY})}
+      else if(ln.t==='msg')T(ln.x,X.narr,y+20,{c:GREY});
+      else if(ln.t==='r'){
+        var r=ln.r;if(ln.k%2===1){g.fillStyle='#eef3fd';g.fillRect(0,y,W,rowH)}
+        T(String(ln.k),X.n,y+20,{sz:18,c:GREY});
+        var nc=!r.c;T(nc?'?':r.c,X.code,y+20,{b:1,sz:20,c:nc?RED:'#1b1f24'});
+        g.font='21px '+FONT;T(fit(g,r.n,X.nw),X.narr,y+20);
+        if(r.o)T(fmt2(r.o),X.o,y+20,{a:'right',c:RED});
+        if(r.i)T(fmt2(r.i),X.i,y+20,{a:'right',c:GRN});
+        if(hasC){if(r.cr)T(fmt2(r.cr),X.cr,y+20,{a:'right',sz:19});if(r.ci)T(fmt2(r.ci),X.ci,y+20,{a:'right',sz:19})}
+      }else if(ln.t==='d'){
+        var d=ln.d;if(ln.k%2===1){g.fillStyle='#eef3fd';g.fillRect(0,y,W,rowH)}
+        T(String(ln.k),X.n,y+20,{sz:18,c:GREY});T(d.c||'?',X.code,y+20,{b:1,sz:20,c:d.c?'#1b1f24':RED});
+        g.font='21px '+FONT;T(fit(g,d.n,X.nw),X.narr,y+20);
+        if(d.ps==='S')T(fmt2(d.inr),X.o,y+20,{a:'right',c:RED});else T(fmt2(d.inr),X.i,y+20,{a:'right',c:GRN});
+      }
+      y+=rowH;
+    });
+    if(last){
+      g.strokeStyle='#1b1f24';g.lineWidth=2;g.beginPath();g.moveTo(0,y+4);g.lineTo(W,y+4);g.stroke();g.lineWidth=1;
+      T('Cash book total',X.narr,y+30,{b:1,sz:22});
+      T(fmt2(to),X.o,y+30,{a:'right',b:1,sz:20,c:RED});T(fmt2(ti),X.i,y+30,{a:'right',b:1,sz:20,c:GRN});
+      var yy=y+30;
+      if(hasC){yy+=30;T('Commission',X.narr,yy,{sz:19,c:GREY});T(fmt2(tcr),X.cr,yy,{a:'right',sz:19,c:GREY});T(fmt2(tci),X.ci,yy,{a:'right',sz:19,c:GREY})}
+      if(m.deals.length){yy+=36;T('Deals profit (sales − purchases)',X.narr,yy,{sz:20,c:GREY});T(signed(dp.profit),X.i,yy,{a:'right',b:1,sz:21,c:dp.profit<0?RED:'#1b1f24'})}
+      yy+=52;
+      T('Opening '+fmt2(m.open)+'  +  IN '+fmt2(ti)+'  −  OUT '+fmt2(to),28,yy,{sz:19,c:GREY});
+      T('Closing cash '+fmt2(m.close),W-28,yy,{a:'right',b:1,sz:26});
+    }
+    if(np>1)T('Page '+(pi+1)+' of '+np,W-28,c.height-24,{a:'right',sz:16,c:GREY});
+    out.push(c);
+  });
+  return out;
+}
+function sendDayImage(m){
+  if(!m.rows.length&&!m.deals.length){toast('Nothing to send yet');return}
+  shareImages(dayCanvases(m),'cash-book-'+m.date,'Cash book '+fd(m.date),'Cash book');
+}
+$('shareImg').onclick=function(){sendDayImage(dayModelToday())};
 
 // ===== account types and month summary =====
 var TYPES=['Customer','Correspondent','Internal','Expense'];
@@ -1414,7 +1511,7 @@ function renderDayView(){
   h+='<tr class="vh"><td colspan="2">Total</td><td class="num">'+fmt2(o)+'</td><td class="num">'+fmt2(i)+'</td></tr></table>';
   if(cr||ci)h+='<div class="mute">Commission R '+fmt2(cr)+' · Commission I '+fmt2(ci)+'</div>';
   h+='<div class="two" style="margin-top:10px"><button class="btn sec sm" id="vwPrev"'+(ix>0?'':' disabled')+'>◀ Earlier day</button><button class="btn sec sm" id="vwNext"'+(ix<sd.length-1?'':' disabled')+'>Later day ▶</button></div>';
-  h+='<div style="margin-top:8px"><button class="btn sec" id="vwCopy">Copy this day\'s rows</button></div><div class="mute" style="margin-top:6px">This is a read-only view. To change a day, reopen it from “Posted days”.</div>';
+  h+='<div style="margin-top:8px"><button class="btn sec" id="vwCopy">Copy this day\'s rows</button></div><div style="margin-top:8px"><button class="btn" id="vwImg">Send cash book picture</button></div><div class="mute" style="margin-top:6px">This is a read-only view. To change a day, reopen it from “Posted days”.</div>';
   c.innerHTML=h;c.style.display='';
 }
 function openDayView(id,hl){f.vw=id;f.hl=hl==null?null:hl;renderDayView();var c=$('dayViewCard');c.scrollIntoView({behavior:'smooth',block:'start'});var hit=c.querySelector('.hit');if(hit)setTimeout(function(){hit.scrollIntoView({block:'center'})},50)}
@@ -1424,6 +1521,7 @@ $('dayViewCard').onclick=function(e){
   if(id==='vwClose'){f.vw=null;renderDayView()}
   else if(id==='vwPrev'&&ix>0){f.vw=sd[ix-1].id;f.hl=null;renderDayView()}
   else if(id==='vwNext'&&ix<sd.length-1){f.vw=sd[ix+1].id;f.hl=null;renderDayView()}
+  else if(id==='vwImg'){sendDayImage(dayModelPosted(d))}
   else if(id==='vwCopy'){copyText((d.ent||[]).slice().sort(function(a,b){return a.s-b.s}).map(function(e){return[e.c,e.n,e.o||'',e.i||'',e.cr||'',e.ci||''].join('\t')}).join('\n'),'Rows copied')}
 };
 function findEntries(q){
