@@ -179,6 +179,10 @@ input[type=date]{width:100%;font-size:16px;padding:9px;border:1px solid var(--li
   <div class="mute" style="margin-top:6px">Copy the rows for Excel first if you are still using it. Rows with no account code are not lost: they move to “Waiting for code” in the Ledger tab and join the ledger once you give them a code. Posted days can be reopened from the Ledger tab.</div>
 </div>
 
+<div class="card" id="profCard">
+  <h2>Profit this month</h2>
+  <div id="profBody"></div>
+</div>
 <div class="card"><details id="bakBox" open><summary>Backup, restore and export</summary>
   <div id="ledBak" class="mute" style="margin:6px 0"></div>
   <div style="margin-bottom:8px"><button class="btn" id="ledShare">Back up the whole ledger</button></div>
@@ -198,6 +202,8 @@ input[type=date]{width:100%;font-size:16px;padding:9px;border:1px solid var(--li
     <div style="margin-top:8px"><button class="btn sec" id="drForget">Disconnect Google Drive</button></div>
   </details>
   <div style="margin:8px 0"><button class="btn sec" id="ledCsv">Export ledger (.csv)</button></div>
+  <div style="margin:8px 0"><button class="btn sec" id="xlsExp">Export for the Excel master (3 files)</button></div>
+  <div id="xlsNote" class="mute" style="margin-bottom:8px"></div>
   <div class="mute" style="margin:10px 0 4px">Safety copies kept inside the app (last 5, made before every post, reopen or restore)</div>
   <div id="snapList"></div>
   <div class="mute" style="margin:10px 0 4px">Restore from a backup file (the file picker can open your Google Drive folder too)</div>
@@ -349,7 +355,7 @@ input[type=date]{width:100%;font-size:16px;padding:9px;border:1px solid var(--li
 <script>
 (function(){
 var DEFAULT_CODES=[];
-var APP_VERSION='2026-10-23.1';
+var APP_VERSION='2026-10-23.2';
 var NARRS=ls('cashentry.narrs')||[];
 var EXPCODE=ls('cashentry.expcode')||'SHOP-EXP';
 var BIZ=ls('cashentry.biz')||'';
@@ -761,7 +767,7 @@ function setView(v){
   ['Cash','Deals','Ledger','Day','Settings'].forEach(function(n){$('view'+n).style.display=(v===n.toLowerCase())?'':'none'});
   $('cashTop').style.display=v==='cash'?'':'none';
   ['Cash','Deals','Ledger','Day'].forEach(function(n){$('tab'+n).classList.toggle('on',v===n.toLowerCase())});
-  if(v==='deals')renderDeals();if(v==='ledger')renderLedger();if(v==='day'){renderClose();renderPaper();renderLedBak();renderSnaps();renderDrive()}
+  if(v==='deals')renderDeals();if(v==='ledger')renderLedger();if(v==='day'){renderClose();renderPaper();renderLedBak();renderSnaps();renderDrive();renderXlsNote()}
   window.scrollTo(0,0);
 }
 $('tabDay').onclick=function(){setView('day')};
@@ -1128,9 +1134,29 @@ function renderLedBak(){
   el.className='flag '+(L.days.length&&L.chg>L.bak?'warn':'okf');
   el.textContent=L.days.length+' days · '+n+' entries. '+(L.bak?'Last backup '+new Date(L.bak).toLocaleString():'Never backed up.')+(L.days.length&&L.chg>L.bak?' Changes since then are NOT backed up.':'');
 }
+
+function renderProf(){
+  var el=$('profBody');if(!el||!L)return;
+  var m=(S.date||today()).slice(0,7),r=monthSummary(m),t=totals(),dl=S.deals||[];
+  var tdp=dealsProfit(dl).profit,tcm=r2(t.cr-t.ci),tex=0;
+  rows().forEach(function(x){if(x.code&&typeOf(x.code)==='Expense')tex+=x.out-x.inn});tex=r2(tex);
+  var posted=L.days.some(function(d){return d.date===S.date});
+  var has=(rows().length||dl.length)&&!posted;
+  function row(l,a,b,c,cl){return'<tr><td>'+l+'</td><td class="n">'+a+'</td><td class="n">'+b+'</td><td class="n '+(cl||'')+'">'+c+'</td></tr>'}
+  var h='<table class="stmt"><tr><th></th><th class="n">Posted</th><th class="n">Today’s sheet</th><th class="n">Total</th></tr>';
+  var X=has?1:0;
+  h+=row('Currency profit',signed(r.dp),X?signed(tdp):'—',signed(r2(r.dp+(X?tdp:0))));
+  h+=row('Commission',signed(r.cm),X?signed(tcm):'—',signed(r2(r.cm+(X?tcm:0))));
+  h+=row('Expenses',signed(r.ex),X?signed(tex):'—',signed(r2(r.ex+(X?tex:0))));
+  var net=r2(r.dp+r.cm-r.ex+(X?tdp+tcm-tex:0));
+  h+='<tr class="tot"><td>Net profit</td><td class="n">'+signed(r.net)+'</td><td class="n">'+(X?signed(r2(tdp+tcm-tex)):'—')+'</td><td class="n '+(net<0?'oo':'ii')+'">'+signed(net)+'</td></tr></table>';
+  h+='<div class="mute" style="margin-top:6px">'+fd(m+'-01').slice(3)+'. “Posted” is the days already closed; “Today’s sheet” is what you have entered but not posted yet. Same rules as the Month summary in the Ledger tab.</div>';
+  el.innerHTML=h;
+}
 function renderClose(){
   if(!$('closeInfo'))return;
   var t=totals(),rs=rows(),dl=S.deals||[];
+  try{renderProf()}catch(e){}
   $('closeBal').textContent=fmt(t.bal);
   if(document.activeElement!==$('dayDate'))$('dayDate').value=S.date||'';
   var h='',unk=[];
@@ -1579,6 +1605,7 @@ function renderDayView(){
   });
   h+='<tr class="vh"><td colspan="2">Total</td><td class="num">'+fmt2(o)+'</td><td class="num">'+fmt2(i)+'</td><td></td></tr></table>';
   if(cr||ci)h+='<div class="mute">Commission R '+fmt2(cr)+' · Commission I '+fmt2(ci)+'</div>';
+  if((d.deals||[]).length){var dpf=dealsProfit(d.deals.map(function(x){return{ps:x.ps,inr:x.inr}}));h+='<div class="mute">Deals profit that day: <b class="'+(dpf.profit<0?'oo':'ii')+'">'+signed(dpf.profit)+'</b></div>'}
   h+='<div class="two" style="margin-top:10px"><button class="btn sec sm" id="vwPrev"'+(ix>0?'':' disabled')+'>◀ Earlier day</button><button class="btn sec sm" id="vwNext"'+(ix<sd.length-1?'':' disabled')+'>Later day ▶</button></div>';
   h+='<div style="margin-top:8px"><button class="btn sec" id="vwCopy">Copy this day\'s rows</button></div><div style="margin-top:8px"><button class="btn" id="vwImg">Send cash book picture</button></div><div class="mute" style="margin-top:6px">Tap “edit” on a row to correct it. Deals are changed by reopening the day from “Posted days”.</div>';
   c.innerHTML=h;c.style.display='';
@@ -1845,6 +1872,53 @@ $('driveBtn').onclick=function(){driveBackup(true)};
 $('drCid').onchange=function(){var c=drCfg();c.cid=this.value.replace(/\s+/g,'');this.value=c.cid;if(!c.cid){c.folder=null;c.files={}}DT=null;drSave(c);renderDrive();if(c.cid&&!/^\d+-[A-Za-z0-9_]+\.apps\.googleusercontent\.com$/.test(c.cid)){toast('That does not look like a Client ID. It should look like 1234567890-abc123.apps.googleusercontent.com')}else if(c.cid){toast('Client ID saved. Now tap “Back up to Google Drive”');$('driveBtn').scrollIntoView({behavior:'smooth',block:'center'})}};
 $('drAuto').onchange=function(){var c=drCfg();c.auto=this.checked;drSave(c)};
 $('drForget').onclick=function(){drSave({});DT=null;renderDrive();toast('Google Drive disconnected (files already in Drive stay there)')};
+
+// ---- export in the Excel master's own layout
+function shareFilesGen(list,title,done){
+  try{
+    var files=list.map(function(x){return new File([x.txt],x.name,{type:x.mime})});
+    if(navigator.canShare&&navigator.canShare({files:files})){
+      navigator.share({files:files,title:title}).then(done).catch(function(e){if(e&&e.name!=='AbortError'){list.forEach(function(x){downloadText(x.name,x.txt)});done();toast('Sharing not available — files downloaded')}});
+      return;
+    }
+  }catch(e){}
+  list.forEach(function(x,i){setTimeout(function(){downloadText(x.name,x.txt)},i*400)});done();toast('Files downloaded — open them from your Files app');
+}
+function xlsData(){
+  var cash=[],deals=[];
+  L.days.forEach(function(d){
+    (d.ent||[]).forEach(function(e){cash.push({d:d.date,s:e.s,c:e.c,n:e.n,o:e.o,i:e.i,cr:e.cr,ci:e.ci})});
+    (d.deals||[]).forEach(function(x){deals.push({d:d.date,s:x.s,c:x.c,v:x.v,op:x.op,r:x.r,ps:x.ps})});
+  });
+  (L.late||[]).forEach(function(e){cash.push({d:e.d,s:1e9+e.s,c:e.c,n:e.n,o:e.o,i:e.i,cr:e.cr,ci:e.ci})});
+  (L.wait||[]).forEach(function(w){cash.push({d:w.d,s:2e9,c:'',n:w.n,o:w.o,i:w.i,cr:w.cr,ci:w.ci})});
+  function by(a,b){return a.d<b.d?-1:a.d>b.d?1:a.s-b.s}
+  cash.sort(by);deals.sort(by);
+  return{cash:cash,deals:deals};
+}
+function xlsDated(list,mk){
+  var prev=null;
+  return list.map(function(x){var dt=x.d!==prev?x.d:'';prev=x.d;return mk(dt,x)});
+}
+function renderXlsNote(){
+  var el=$('xlsNote');if(!el||!L)return;
+  var d=null;L.days.forEach(function(x){if(!d||x.date<d.date)d=x});
+  el.textContent=d?'Shop cash opening for Daily Cash Book cell D3 (first posted day, '+fd(d.date)+'): '+fmt2(d.open)+'. Date is filled only on the first row of each day, as in your sheet.':'Nothing posted yet.';
+}
+$('xlsExp').onclick=function(){
+  if(!L||!L.days.length){toast('Nothing posted yet');return}
+  var x=xlsData(),st=today(),bom='﻿',nl='\r\n';
+  var cashRows=xlsDated(x.cash,function(dt,e){return[dt,e.c,e.n,plain(e.o),plain(e.i),plain(e.cr),plain(e.ci)].map(csvCell).join(',')});
+  var dealRows=xlsDated(x.deals,function(dt,e){return[dt,e.c,e.v,e.op,e.r,e.ps].map(csvCell).join(',')});
+  var obRows=[];
+  if(L.ob)Object.keys(L.ob.rows).sort().forEach(function(c){var r=L.ob.rows[c];obRows.push([c,typeOf(c),plain(r[0]),plain(r[1]),L.ob.date].map(csvCell).join(','))});
+  var list=[
+   {name:'excel-1-daily-cash-book-'+st+'.csv',mime:'text/csv',txt:bom+['Date','Account Code','Narration','OUT','IN','Commission R','Commission I'].join(',')+nl+cashRows.join(nl)+nl},
+   {name:'excel-2-currency-purchase-sales-'+st+'.csv',mime:'text/csv',txt:bom+['Date','Account Code','Volume','Op','Rate','P/S'].join(',')+nl+dealRows.join(nl)+nl},
+   {name:'excel-3-chart-of-accounts-opening-'+st+'.csv',mime:'text/csv',txt:bom+['Account Code','Account Type','Opening OUT','Opening IN','Opening Balance Date'].join(',')+nl+obRows.join(nl)+nl}
+  ];
+  shareFilesGen(list,'Excel master export '+st,function(){});
+};
 $('ledShare').onclick=function(){
   if(!L)return;
   var txt=JSON.stringify({app:'cashentry-ledger',v:1,biz:BIZ,at:new Date().toISOString(),L:L});
