@@ -140,6 +140,13 @@ input[type=date]{width:100%;font-size:16px;padding:9px;border:1px solid var(--li
   <div style="margin-top:8px;display:none" id="cancelRow"><button class="btn sec" id="cancelEdit">Cancel edit</button></div>
 </div>
 
+<div class="card" id="dayCard">
+  <h2>Today's sheet</h2>
+  <div id="dayTable"></div>
+  <div id="warnLine"></div>
+  <div id="dealsLink" style="margin-top:8px"></div>
+</div>
+
 <div class="card" id="expCard">
   <h2>Small expenses <span id="expCodeLbl"></span></h2>
   <div class="two"><input id="exLabel" type="text" placeholder="Tea, auto…"><input id="exAmt" type="number" inputmode="decimal" placeholder="Amount"></div>
@@ -151,12 +158,6 @@ input[type=date]{width:100%;font-size:16px;padding:9px;border:1px solid var(--li
   <div class="mute" style="margin-top:6px">Tick “own row” on a line to send it as its own row. For rent, EB and other bigger expenses use the entry form above. DAILY BANK is a normal entry above — tap its chip.</div>
 </div>
 
-<div class="card" id="dayCard">
-  <h2>Today's sheet</h2>
-  <div id="dayTable"></div>
-  <div id="warnLine"></div>
-  <div id="dealsLink" style="margin-top:8px"></div>
-</div>
 
 </div>
 <div class="wrap" id="viewDay" style="display:none">
@@ -172,11 +173,32 @@ input[type=date]{width:100%;font-size:16px;padding:9px;border:1px solid var(--li
   <h2>Close day — post to the ledger</h2>
   <div class="two"><div><div class="mute">Date of this sheet</div><input type="date" id="dayDate"></div><div><div class="mute">Cash in hand at close</div><div class="bigbal" id="closeBal" style="font-size:22px;padding-top:6px">0</div></div></div>
   <div id="lastCloseNote" class="mute" style="margin-top:6px"></div>
+  <div id="lastImgRow" style="margin-top:6px;display:none"><button class="btn sec" id="sendLastImg"></button></div>
   <div id="closeInfo" style="margin-top:8px"></div>
   <div id="reviewBox" style="display:none"></div>
   <div style="margin-top:8px"><button class="btn" id="closeDay">Review and post day</button></div>
   <div style="margin-top:8px"><button class="btn sec" id="undoClose" style="display:none"></button></div>
-  <div class="mute" style="margin-top:6px">Copy the rows for Excel first if you are still using it. Rows with no account code are not lost: they move to “Waiting for code” in the Ledger tab and join the ledger once you give them a code. Posted days can be reopened from the Ledger tab.</div>
+  <div class="mute" style="margin-top:6px">Send the picture to the boss and copy the rows for Excel before you post. Rows with no account code wait in the Ledger tab until you give them a code. Posted days can be reopened from the Ledger tab.</div>
+</div>
+
+<div class="card">
+  <h2>Share today's sheet</h2>
+  <div style="margin-bottom:8px"><button class="btn" id="shareImg">Send cash book picture (for the boss)</button></div>
+  <div style="margin-bottom:8px"><button class="btn sec" id="shareFile">Share day file (with data, for backup)</button></div>
+  <div id="bakNote" class="mute" style="margin-bottom:8px"></div>
+  <details id="moreShare"><summary>Other ways: Excel file, message, clear the day</summary>
+    <div style="margin:8px 0"><button class="btn sec" id="shareCsv">Export for Excel (.csv)</button></div>
+    <div style="margin-bottom:8px"><button class="btn sec" id="shareText">Share day as message</button></div>
+    <div style="margin-bottom:8px"><button class="btn danger" id="clear">Clear day</button></div>
+    <div id="restoreRow" style="display:none"><button class="btn sec" id="restore">Restore last cleared day</button></div>
+  </details>
+</div>
+
+<div class="card">
+  <h2>Copy for Excel</h2>
+  <div class="mute" style="margin-bottom:8px">Type the date in column B, click column C of the first empty row, then paste. Columns: Code · Narration · OUT · IN · Comm R · Comm I</div>
+  <button class="btn" id="copy">Copy all rows</button>
+  <div style="margin-top:8px"><textarea id="copyBox" rows="5" readonly></textarea></div>
 </div>
 
 <div class="card" id="profCard">
@@ -211,26 +233,6 @@ input[type=date]{width:100%;font-size:16px;padding:9px;border:1px solid var(--li
   <div id="ledRInfo"></div>
   <div style="margin-top:8px"><button class="btn sec" id="ledRestore" disabled>Replace the ledger with this backup</button></div>
 </details></div>
-<div class="card">
-  <h2>Copy for Excel</h2>
-  <div class="mute" style="margin-bottom:8px">Type the date in column B, click column C of the first empty row, then paste. Columns: Code · Narration · OUT · IN · Comm R · Comm I</div>
-  <button class="btn" id="copy">Copy all rows</button>
-  <div style="margin-top:8px"><textarea id="copyBox" rows="5" readonly></textarea></div>
-</div>
-
-<div class="card">
-  <h2>Share today's sheet</h2>
-  <div style="margin-bottom:8px"><button class="btn" id="shareImg">Send cash book picture (for the boss)</button></div>
-  <div style="margin-bottom:8px"><button class="btn sec" id="shareFile">Share day file (with data, for backup)</button></div>
-  <div id="bakNote" class="mute" style="margin-bottom:8px"></div>
-  <details id="moreShare"><summary>Other ways: Excel file, message, clear the day</summary>
-    <div style="margin:8px 0"><button class="btn sec" id="shareCsv">Export for Excel (.csv)</button></div>
-    <div style="margin-bottom:8px"><button class="btn sec" id="shareText">Share day as message</button></div>
-    <div style="margin-bottom:8px"><button class="btn danger" id="clear">Clear day</button></div>
-    <div id="restoreRow" style="display:none"><button class="btn sec" id="restore">Restore last cleared day</button></div>
-  </details>
-</div>
-
 <div class="card">
   <details id="recvBox"><summary>Receive a shared day</summary>
     <div class="mute" style="margin:6px 0">Open a day file someone sent you, or paste a backup text. Nothing changes until you tap Add or Replace.</div>
@@ -307,13 +309,6 @@ input[type=date]{width:100%;font-size:16px;padding:9px;border:1px solid var(--li
   <div class="sug" id="stSug"></div>
   <div id="stOut"></div>
 </div>
-<div class="card">
-  <h2>All accounts</h2>
-  <div class="chips" id="typeBar" style="margin-top:0"></div>
-  <div class="chips" style="margin-top:0"><button class="chip on" id="srtAZ">A–Z</button><button class="chip" id="srtBig">Largest first</button><button class="chip on" id="hideZero">Hide zero</button></div>
-  <div id="balList"></div>
-  <div style="margin-top:10px"><button class="btn sec" id="sendTb">Send trial balance picture</button></div>
-</div>
 <div class="card" id="monthCard">
   <h2>Month summary</h2>
   <input type="month" id="monthIn">
@@ -322,6 +317,14 @@ input[type=date]{width:100%;font-size:16px;padding:9px;border:1px solid var(--li
   <input id="reserveCode" type="text" style="margin-top:4px;text-transform:uppercase">
   <div style="margin-top:10px"><button class="btn sec" id="monthCopy">Copy next month's opening balances</button></div>
   <div class="mute" id="monthNote" style="margin-top:6px"></div>
+<div class="card">
+  <h2>All accounts</h2>
+  <div class="chips" id="typeBar" style="margin-top:0"></div>
+  <div class="chips" style="margin-top:0"><button class="chip on" id="srtAZ">A–Z</button><button class="chip" id="srtBig">Largest first</button><button class="chip on" id="hideZero">Hide zero</button></div>
+  <div id="balList"></div>
+  <div id="balMore" style="margin-top:8px"></div>
+  <div style="margin-top:10px"><button class="btn sec" id="sendTb">Send trial balance picture</button></div>
+</div>
 </div>
 <div class="card" id="waitCard" style="display:none"><h2>Waiting for account code</h2><div id="waitList"></div></div>
 <div class="card"><details id="postedBox" open><summary>Posted days</summary><div id="postedList" style="margin-top:8px"></div></details></div>
@@ -342,18 +345,18 @@ input[type=date]{width:100%;font-size:16px;padding:9px;border:1px solid var(--li
   <div style="margin-top:8px"><button class="btn sec" id="obSave" disabled>Save opening balances</button></div>
   <div class="mute" id="obCur" style="margin-top:6px"></div>
 </details></div>
-<div class="card"><details id="cmpBox"><summary>Compare with Excel trial balance</summary>
-  <div class="mute" style="margin:6px 0">In Excel's Monthly Summary copy Account Code · OUT · IN of the trial balance and paste here. Accounts where the tool and Excel differ are listed.</div>
-  <div class="mute">Excel Crown AED net volume held (Currency Purchase &amp; Sales, cell P3) — optional</div><input type="text" id="cmpCrown" inputmode="decimal" style="margin:4px 0 8px">
-  <textarea id="cmpText" rows="6" placeholder="paste here"></textarea>
-  <div id="cmpOut" style="margin-top:8px"></div>
-</details></div>
-<div class="card"><details id="xlBox"><summary>Import a whole Excel workbook and compare</summary>
+<div class="card"><details id="xlBox"><summary>Compare with Excel (import the workbook)</summary>
   <div class="mute" style="margin:6px 0">Pick your month's master workbook (.xlsx). The app reads Chart of Accounts, Daily Cash Book, Currency Purchase &amp; Sales, Monthly Summary and Customer Ledger and compares everything with its own figures. Nothing is changed until you tap “Load”. The file must not have an open-password: save a copy without one first. The workbook must have been saved in Excel after its last change so the figures are stored in it.</div>
   <input type="file" id="xlFile" accept=".xlsx,.xlsm,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" style="width:100%;margin-bottom:8px">
   <div id="xlInfo"></div>
   <div id="xlOut" style="margin-top:8px"></div>
   <div style="margin-top:8px"><button class="btn sec" id="xlLoad" disabled>Load this workbook into the app (replaces the ledger)</button></div>
+  <details id="cmpBox" style="margin-top:12px"><summary>Or compare by pasting the trial balance</summary>
+  <div class="mute" style="margin:6px 0">In Excel's Monthly Summary copy Account Code · OUT · IN of the trial balance and paste here. Accounts where the tool and Excel differ are listed.</div>
+  <div class="mute">Excel Crown AED net volume held (Currency Purchase &amp; Sales, cell P3) — optional</div><input type="text" id="cmpCrown" inputmode="decimal" style="margin:4px 0 8px">
+  <textarea id="cmpText" rows="6" placeholder="paste here"></textarea>
+  <div id="cmpOut" style="margin-top:8px"></div>
+</details>
 </details></div>
 </div>
 <div class="bnav" id="navBar"><button id="tabCash" class="on"><i>✎</i>Cash</button><button id="tabDeals"><i>⇄</i>Deals</button><button id="tabLedger"><i>☰</i>Ledger</button><button id="tabDay"><i>✓</i>Day</button></div>
@@ -362,7 +365,7 @@ input[type=date]{width:100%;font-size:16px;padding:9px;border:1px solid var(--li
 <script>
 (function(){
 var DEFAULT_CODES=[];
-var APP_VERSION='2026-10-23.3';
+var APP_VERSION='2026-10-23.5';
 var NARRS=ls('cashentry.narrs')||[];
 var EXPCODE=ls('cashentry.expcode')||'SHOP-EXP';
 var BIZ=ls('cashentry.biz')||'';
@@ -425,7 +428,7 @@ function renderTop(){
 }
 function renderNarr(){
   var cur=$('narr').value.trim().toUpperCase();
-  $('narrChips').innerHTML=!NARRS.length?'':NARRS.map(function(n){return'<button class="chip'+(cur===n?' on':'')+'" data-n="'+n+'">'+n+'</button>'}).join('');
+  $('narrChips').innerHTML=!NARRS.length?'':NARRS.map(function(n){return'<button class="chip'+(cur===n?' on':'')+'" data-n="'+esc(n)+'">'+esc(n)+'</button>'}).join('');
 }
 function renderForm(){
   $('setupCard').style.display=codes.length?'none':'block';
@@ -1103,10 +1106,12 @@ function renderBalList(){
   var to=0,ti=0;
   keys.forEach(function(k){var v=net[k]||0;if(v<0)to-=v;else ti+=v});
   var h='<table class="stmt"><tr><th>Account</th><th class="n">OUT (they owe us)</th><th class="n">IN (we owe them)</th></tr>';
-  keys.forEach(function(k){var v=net[k]||0;h+='<tr class="arow" data-c="'+esc(k)+'"><td><b>'+esc(k)+'</b></td><td class="n oo">'+(v<0?fmt2(-v):'')+'</td><td class="n ii">'+(v>0?fmt2(v):'')+'</td></tr>'});
+  var shown=f.allRows?keys:keys.slice(0,15);
+  shown.forEach(function(k){var v=net[k]||0;h+='<tr class="arow" data-c="'+esc(k)+'"><td><b>'+esc(k)+'</b></td><td class="n oo">'+(v<0?fmt2(-v):'')+'</td><td class="n ii">'+(v>0?fmt2(v):'')+'</td></tr>'});
   h+='<tr class="tot"><td>Total ('+keys.length+')</td><td class="n oo">'+fmt2(to)+'</td><td class="n ii">'+fmt2(ti)+'</td></tr></table>';
   h+='<div class="mute" style="margin-top:6px">Difference OUT − IN: '+fmt2(r2(to-ti))+(L.ob||L.days.length?'':' · nothing loaded yet')+'. Tap an account to open its statement.</div>';
   $('balList').innerHTML=h;
+  $('balMore').innerHTML=keys.length>15?'<button class="btn sec" id="balToggle">'+(f.allRows?'Show fewer':'Show all '+keys.length+' accounts')+'</button>':'';
   $('srtAZ').classList.toggle('on',!f.big);$('srtBig').classList.toggle('on',!!f.big);$('hideZero').classList.toggle('on',!!f.hz);
 }
 function renderWait(){
@@ -1177,8 +1182,14 @@ function renderClose(){
     if(nc)h+='<div class="flag warn">'+nc+' row(s) have no account code. They are posted to the cash balance but wait in “Waiting for code” until you give them a code.</div>';
     if(!L.ob)h+='<div class="flag warn">No opening balances loaded yet — balances will be wrong until you load them (Ledger tab).</div>';
     var last=L.days.slice().sort(function(a,b){return a.date<b.date?1:-1})[0];
+    (function(){var ld=latestDay(),r=$('lastImgRow');if(r){r.style.display=ld?'':'none';if(ld)$('sendLastImg').textContent='Send picture of last posted day ('+fd(ld.date)+')'}})();
     $('lastCloseNote').textContent=last?'Last posted: '+fd(last.date)+' · cash at close '+fmt(last.close)+(L.chg>L.bak?' · ledger not backed up yet':''):'No day posted yet.';
-    if(last&&S.open!==''&&Math.abs(num(S.open)-last.close)>=0.005)h+='<div class="flag warn">Opening cash '+fmt(num(S.open))+' differs from the last closing cash '+fmt(last.close)+' ('+fd(last.date)+').</div>';
+    var before=null;L.days.forEach(function(d){if(S.date&&d.date<S.date&&(!before||d.date>before.date))before=d});
+    if(before&&S.open!==''&&Math.abs(num(S.open)-before.close)>=0.005)h+='<div class="flag warn">Opening cash '+fmt(num(S.open))+' differs from the closing cash of the previous posted day '+fmt(before.close)+' ('+fd(before.date)+').</div>';
+    var after=null;L.days.forEach(function(d){if(S.date&&d.date>S.date&&(!after||d.date<after.date))after=d});
+    if(after&&(rs.length||dl.length))h+='<div class="flag warn">Days after this date are already posted (up to '+fd(last.date)+'). Their opening and closing cash will not change by themselves.</div>';
+    if(S.date&&S.date>addDay(today(),1))h+='<div class="flag warn">This date is in the future ('+fd(S.date)+'). Check the date.</div>';
+    if(S.date&&S.date<addDay(today(),-45)&&(rs.length||dl.length))h+='<div class="flag warn">This date is more than 45 days ago ('+fd(S.date)+'). Check the date.</div>';
     if(rs.length||dl.length)h+='<div class="mute">'+rs.length+' cash rows'+(dl.length?' · '+dl.length+' deals':'')+' ready for '+(S.date?fd(S.date):'(pick a date)')+'.</div>';
   }
   $('closeInfo').innerHTML=h;
@@ -1372,6 +1383,7 @@ function sendDayImage(m){
   if(!m.rows.length&&!(m.exp||[]).length){toast('Nothing to send yet');return}
   shareImages(dayCanvases(m),'cash-book-'+m.date,'Cash book '+fd(m.date),'Cash book');
 }
+$('sendLastImg').onclick=function(){var d=latestDay();if(d)sendDayImage(dayModelPosted(d))};
 $('shareImg').onclick=function(){sendDayImage(dayModelToday())};
 
 
@@ -1526,6 +1538,7 @@ $('stOut').onclick=function(e){
   else if(t.getAttribute&&t.getAttribute('data-per')){f.per=t.getAttribute('data-per');f.stAll=false;renderStatement()}
 };
 $('stOut').onchange=function(e){var t=e.target;if(t.id==='pf'){f.pf=t.value;renderStatement()}else if(t.id==='pt'){f.pt=t.value;renderStatement()}};
+$('balMore').onclick=function(e){if(e.target.id==='balToggle'){f.allRows=!f.allRows;renderBalList()}};
 $('balList').onclick=function(e){var tr=e.target.closest&&e.target.closest('tr[data-c]');if(tr){var c=tr.getAttribute('data-c');$('stIn').value=c;f.stCode=c;f.stAll=false;renderStatement();$('stIn').scrollIntoView({behavior:'smooth',block:'start'})}};
 $('srtAZ').onclick=function(){f.big=false;renderBalList()};$('srtBig').onclick=function(){f.big=true;renderBalList()};
 $('hideZero').onclick=function(){f.hz=!f.hz;renderBalList()};
@@ -1958,7 +1971,6 @@ function zipRead(b,map,name){
   return new Response(ds.readable).arrayBuffer().then(function(ab){return new TextDecoder().decode(ab)});
 }
 function xmlDoc(t){return new DOMParser().parseFromString(t,'application/xml')}
-function colNum(c){var n=0;for(var i=0;i<c.length;i++)n=n*26+c.charCodeAt(i)-64;return n}
 function readXlsx(buf){
   var b=new Uint8Array(buf);
   if(b[0]===0xD0&&b[1]===0xCF)return Promise.reject(new Error('This workbook has an open-password (it is encrypted). In Excel: File → Info → Protect Workbook → Encrypt with Password, clear the password, save a copy, then pick that copy.'));
@@ -2140,9 +2152,10 @@ $('xlLoad').onclick=function(){
     xlB.codes.forEach(function(c){if(codes.indexOf(c)<0)codes.push(c)});codes.sort();ls(CKEY,codes);$('codesBox').value=codes.join('\n');
     ldPut(function(ok){
       if(!ok){L=prev;CACHE=null;return}
-      var lc=xlB.stats.lastClose;xlB=null;b.disabled=true;$('xlFile').value='';
+      var lc=xlB.stats.lastClose,ld=xlB.stats.to;xlB=null;b.disabled=true;$('xlFile').value='';
+      if(!S.entries.length&&!S.exp.length&&!(S.deals&&S.deals.length)){S.open=String(lc);if(ld){var nd=addDay(ld,1),td=today();S.date=nd>td?nd:td}save();resetForm();all()}
       renderLedger();renderClose();
-      toast('Workbook loaded. Today’s opening cash should be '+fmt2(lc));
+      toast('Workbook loaded. Today’s sheet now opens with '+fmt2(lc));
     });
   });
 };
