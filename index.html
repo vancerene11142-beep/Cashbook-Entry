@@ -319,13 +319,6 @@ input[type=date]{width:100%;font-size:16px;padding:9px;border:1px solid var(--li
   <input id="reserveCode" type="text" style="margin-top:4px;text-transform:uppercase">
   <div style="margin-top:10px"><button class="btn sec" id="monthCopy">Copy next month's opening balances</button></div>
   <div class="mute" id="monthNote" style="margin-top:6px"></div>
-<div class="card" id="cmCard">
-  <h2>Commission report</h2>
-  <div class="chips" id="cmBar" style="margin-top:0"></div>
-  <div class="two" id="cmCustom" style="display:none;margin-bottom:8px"><input type="date" id="cmFrom"><input type="date" id="cmTo"></div>
-  <div id="cmBody"></div>
-  <div class="two" style="margin-top:10px"><button class="btn sec" id="cmCopy">Copy</button><button class="btn sec" id="cmImg">Send picture</button></div>
-</div>
 <div class="card">
   <h2>All accounts</h2>
   <div class="chips" id="typeBar" style="margin-top:0"></div>
@@ -374,7 +367,7 @@ input[type=date]{width:100%;font-size:16px;padding:9px;border:1px solid var(--li
 <script>
 (function(){
 var DEFAULT_CODES=[];
-var APP_VERSION='2026-10-23.8';
+var APP_VERSION='2026-10-24.1';
 var NARRS=ls('cashentry.narrs')||[];
 var EXPCODE=ls('cashentry.expcode')||'SHOP-EXP';
 var BIZ=ls('cashentry.biz')||'';
@@ -1067,7 +1060,7 @@ function renderCrown(){
 }
 function renderLedger(){
   if(!L){$('ledBanner').innerHTML='<div class="card"><div class="mute">Opening the ledger…</div></div>';return}
-  renderLedBanner();renderCrown();renderStatement();renderTypeBar();renderBalList();renderMonth();renderAccts();renderWait();renderPosted();renderOb();renderLedBak();renderComm();renderDayView();if($('fqIn').value)renderFind();
+  renderLedBanner();renderCrown();renderStatement();renderTypeBar();renderBalList();renderMonth();renderAccts();renderWait();renderPosted();renderOb();renderLedBak();renderDayView();if($('fqIn').value)renderFind();
 }
 function renderLedBanner(){
   var h='';
@@ -1160,6 +1153,7 @@ function renderProf(){
   var el=$('profBody');if(!el||!L)return;
   var m=(S.date||today()).slice(0,7),r=monthSummary(m),t=totals(),dl=S.deals||[];
   var tdp=dealsProfit(dl).profit,tcm=r2(t.cr-t.ci),tex=0;
+  rows().forEach(function(x){if(L.commCode&&x.code===L.commCode)tcm=r2(tcm+x.inn-x.out)});
   rows().forEach(function(x){if(x.code&&typeOf(x.code)==='Expense')tex+=x.out-x.inn});tex=r2(tex);
   var posted=L.days.some(function(d){return d.date===S.date});
   var has=(rows().length||dl.length)&&!posted;
@@ -1455,89 +1449,6 @@ function tbCanvases(){
 }
 $('sendTb').onclick=function(){if(!L)return;shareImages(tbCanvases(),'trial-balance-'+today(),'Trial balance '+fd(today()),'Trial balance')};
 
-// ===== commission report =====
-function commData(){
-  var rg=perRange(f.cmk||'month',f.cmf,f.cmt),by={},tr=0,ti=0,n=0;
-  function add(c,d,cr,ci){
-    if(!(cr||ci))return;if(rg[0]&&d<rg[0])return;if(rg[1]&&d>rg[1])return;
-    var o=by[c]||(by[c]={c:c,r:0,i:0,n:0});o.r+=cr||0;o.i+=ci||0;o.n++;tr+=cr||0;ti+=ci||0;n++;
-  }
-  events().forEach(function(e){add(e.c,e.d,e.cr,e.ci)});
-  L.wait.forEach(function(w){add('(no code)',String(w.d),w.cr,w.ci)});
-  var list=Object.keys(by).map(function(k){var o=by[k];o.r=r2(o.r);o.i=r2(o.i);o.net=r2(o.r-o.i);return o});
-  list.sort(function(a,b){return Math.abs(b.net)-Math.abs(a.net)||(a.c<b.c?-1:1)});
-  return{rg:rg,list:list,tr:r2(tr),ti:r2(ti),net:r2(tr-ti),n:n};
-}
-function renderComm(){
-  if(!L||!$('cmBar'))return;
-  var k=f.cmk||'month';
-  function pc(x,l){return'<button class="chip'+(k===x?' on':'')+'" data-cm="'+x+'">'+l+'</button>'}
-  $('cmBar').innerHTML=pc('month','This month')+pc('last','Last month')+pc('30','Last 30 days')+pc('all','All')+pc('custom','Custom');
-  $('cmCustom').style.display=k==='custom'?'':'none';
-  if(k==='custom'){if(document.activeElement!==$('cmFrom'))$('cmFrom').value=f.cmf||'';if(document.activeElement!==$('cmTo'))$('cmTo').value=f.cmt||''}
-  var d=commData(),h='';
-  if(!d.list.length){$('cmBody').innerHTML='<div class="mute">No commission in '+esc(perLabel(d.rg))+'.</div>';return}
-  h+='<div class="mute">'+esc(perLabel(d.rg))+' · '+d.n+' commission entries</div>';
-  h+='<table class="stmt" style="margin-top:6px"><tr><th>Account</th><th class="n">Comm R (receive)</th><th class="n">Comm I (issue)</th><th class="n">Net</th></tr>';
-  d.list.forEach(function(o){h+='<tr><td><b>'+esc(o.c)+'</b></td><td class="n ii">'+(o.r?fmt2(o.r):'')+'</td><td class="n oo">'+(o.i?fmt2(o.i):'')+'</td><td class="n">'+signed(o.net)+'</td></tr>'});
-  h+='<tr class="tot"><td>Total ('+d.list.length+')</td><td class="n ii">'+fmt2(d.tr)+'</td><td class="n oo">'+fmt2(d.ti)+'</td><td class="n">'+signed(d.net)+'</td></tr></table>';
-  h+='<div class="mute" style="margin-top:6px">Net = received minus issued. For a whole month it equals “Commission profit” in the Month summary.</div>';
-  $('cmBody').innerHTML=h;
-}
-$('cmBar').onclick=function(e){var k=e.target.getAttribute&&e.target.getAttribute('data-cm');if(!k)return;f.cmk=k;renderComm()};
-$('cmFrom').onchange=function(){f.cmf=this.value;renderComm()};$('cmTo').onchange=function(){f.cmt=this.value;renderComm()};
-$('cmCopy').onclick=function(){
-  var d=commData();if(!d.list.length){toast('Nothing to copy');return}
-  copyText(['Account\tComm R\tComm I\tNet'].concat(d.list.map(function(o){return[o.c,plain(o.r),plain(o.i),plain(o.net)].join('\t')})).concat([['Total',plain(d.tr),plain(d.ti),plain(d.net)].join('\t')]).join('\n'),'Commission report copied');
-};
-function commCanvases(){
-  var d=commData(),W=900,rowH=40,PER=40,FONT='system-ui,Arial,sans-serif',RED='#c0392b',GRN='#1e8e4e',GREY='#6b7280',pages=[],i;
-  for(i=0;i<d.list.length;i+=PER)pages.push(d.list.slice(i,i+PER));if(!pages.length)pages=[[]];
-  var np=pages.length,out=[];
-  pages.forEach(function(pr,pi){
-    var first=pi===0,isLast=pi===np-1,headH=first?290:110,footH=isLast?120:60;
-    var c=document.createElement('canvas');c.width=W;c.height=headH+40+pr.length*rowH+footH;
-    var g=c.getContext('2d');
-    function T(t,x,y,o){o=o||{};g.font=(o.b?'bold ':'')+(o.sz||21)+'px '+FONT;g.fillStyle=o.c||'#1b1f24';g.textAlign=o.a||'left';g.textBaseline='middle';g.fillText(t,x,y)}
-    g.fillStyle='#fff';g.fillRect(0,0,W,c.height);
-    g.fillStyle='#1f4fd8';g.fillRect(0,0,W,first?96:70);
-    T(BIZ||'Commission report',28,first?48:35,{b:1,sz:32,c:'#fff'});
-    if(first){
-      T('COMMISSION REPORT',28,128,{sz:18,c:GREY});
-      T(perLabel(d.rg),28,166,{b:1,sz:30});
-      T(d.list.length+' accounts · '+d.n+' entries',W-28,128,{a:'right',sz:20,c:GREY});
-      var cw=(W-56-32)/3,cards=[['RECEIVED (R)',fmt2(d.tr),GRN],['ISSUED (I)',fmt2(d.ti),RED],['NET',signed(d.net),d.net<0?RED:GRN]];
-      cards.forEach(function(cd,q){
-        var x=28+q*(cw+16),y=196;
-        g.fillStyle='#f4f5f7';g.fillRect(x,y,cw,76);g.strokeStyle='#e2e5ea';g.strokeRect(x+.5,y+.5,cw-1,75);
-        T(cd[0],x+14,y+22,{sz:16,c:GREY});T(cd[1],x+14,y+52,{b:1,sz:28,c:cd[2]});
-      });
-    }else T('Commission report continued',28,92,{b:1,sz:22});
-    var y0=headH;
-    g.fillStyle='#eef0f4';g.fillRect(0,y0,W,40);
-    T('#',28,y0+20,{b:1,sz:18,c:GREY});T('Account',90,y0+20,{b:1,sz:18,c:GREY});T('Comm R',520,y0+20,{b:1,sz:18,c:GREY,a:'right'});T('Comm I',690,y0+20,{b:1,sz:18,c:GREY,a:'right'});T('Net',W-28,y0+20,{b:1,sz:18,c:GREY,a:'right'});
-    var y=y0+40;
-    pr.forEach(function(o,ix){
-      var gi=pi*PER+ix;
-      if(gi%2===0){g.fillStyle='#eef3fd';g.fillRect(0,y,W,rowH)}
-      g.strokeStyle='#e2e5ea';g.beginPath();g.moveTo(0,y+rowH-.5);g.lineTo(W,y+rowH-.5);g.stroke();
-      T(String(gi+1),28,y+20,{sz:18,c:GREY});T(o.c,90,y+20,{b:1});
-      if(o.r)T(fmt2(o.r),520,y+20,{a:'right',c:GRN});if(o.i)T(fmt2(o.i),690,y+20,{a:'right',c:RED});
-      T(signed(o.net),W-28,y+20,{a:'right',b:1,c:o.net<0?RED:'#1b1f24'});
-      y+=rowH;
-    });
-    if(!d.list.length){T('No commission in this period.',90,y+24,{c:GREY});y+=rowH}
-    if(isLast){
-      g.strokeStyle='#1b1f24';g.lineWidth=2;g.beginPath();g.moveTo(0,y+4);g.lineTo(W,y+4);g.stroke();g.lineWidth=1;
-      T('Total',90,y+36,{b:1,sz:24});T(fmt2(d.tr),520,y+36,{a:'right',b:1,sz:22,c:GRN});T(fmt2(d.ti),690,y+36,{a:'right',b:1,sz:22,c:RED});T(signed(d.net),W-28,y+36,{a:'right',b:1,sz:24});
-    }
-    if(np>1)T('Page '+(pi+1)+' of '+np,W-28,c.height-24,{a:'right',sz:16,c:GREY});
-    out.push(c);
-  });
-  return out;
-}
-$('cmImg').onclick=function(){if(!L)return;var d=commData();if(!d.list.length){toast('No commission in this period');return}shareImages(commCanvases(),'commission-'+today(),'Commission report','Commission report')};
-
 // ===== account types and month summary =====
 var TYPES=['Customer','Correspondent','Internal','Expense'];
 function normType(t){t=String(t||'').trim().toLowerCase();for(var i=0;i<TYPES.length;i++)if(TYPES[i].toLowerCase()===t)return TYPES[i];return''}
@@ -1548,7 +1459,7 @@ function monthSummary(m){
   events().forEach(function(e){
     if(m&&e.d.slice(0,8)!==pre)return;
     if(e.k===0)dp+=e.o-e.i;
-    else{cm+=e.cr-e.ci;if(typeOf(e.c)==='Expense')ex+=e.o-e.i}
+    else{cm+=e.cr-e.ci;if(L.commCode&&e.c===L.commCode)cm+=e.i-e.o;if(typeOf(e.c)==='Expense')ex+=e.o-e.i}
   });
   L.wait.forEach(function(w){if(!m||String(w.d).slice(0,8)===pre)cm+=(w.cr||0)-(w.ci||0)});
   var net=r2(dp+cm-ex),bal=balances(end),res=bal[L.reserve||'RESERVE']||0,last=null;
@@ -1571,7 +1482,7 @@ function renderMonth(){
     +'<tr class="tot"><td>NET PROFIT FOR THE MONTH</td><td class="n '+(r.net<0?'oo':'ii')+'">'+signed(r.net)+'</td></tr>'
     +row('Current RESERVE balance',signed(r.res))
     +'<tr class="tot"><td>Suggested new RESERVE</td><td class="n">'+signed(r.sug)+'</td></tr></table>'
-    +'<div class="mute" style="margin-top:6px">Same rules as the Excel Monthly Summary. Expenses are accounts of type Expense'+(Object.keys(L.types||{}).length?'':' — <b>no account types loaded yet</b> (paste the Chart of Accounts under Opening balances, or set types under Accounts and types)')+'.</div>';
+    +'<div class="mute" style="margin-top:6px">Same rules as the Excel Monthly Summary. Commission profit = commission received minus issued, plus cash IN minus cash OUT on the commission account. Expenses are accounts of type Expense'+(Object.keys(L.types||{}).length?'':' — <b>no account types loaded yet</b> (paste the Chart of Accounts under Opening balances, or set types under Accounts and types)')+'.</div>';
 }
 $('monthIn').onchange=renderMonth;
 $('reserveCode').onchange=function(){if(!L)return;L.reserve=this.value.trim().toUpperCase()||'RESERVE';ldSave(function(){renderMonth()})};
