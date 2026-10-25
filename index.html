@@ -1,0 +1,2513 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<title>Cash Entry</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#1f4fd8">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+:root{--bg:#f4f5f7;--card:#fff;--ink:#1b1f24;--mute:#6b7280;--line:#e2e5ea;--out:#c0392b;--in:#1e8e4e;--acc:#1f4fd8;--warn:#b7791f;--warnbg:#fff6e0;--bad:#c0392b;--badbg:#fdeaea}
+@media(prefers-color-scheme:dark){:root{--bg:#111418;--card:#1b2026;--ink:#e8eaed;--mute:#9aa3ad;--line:#2c333b;--out:#ff7a6b;--in:#4cd08a;--acc:#7ea2ff;--warn:#f0b955;--warnbg:#3a2f14;--bad:#ff7a6b;--badbg:#3b1c1a}}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.35 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;padding-bottom:96px}
+.wrap{max-width:560px;margin:0 auto;padding:0 12px}
+.top{position:sticky;top:0;z-index:5;background:var(--card);border-bottom:1px solid var(--line);padding:8px 12px}
+.top .row{display:flex;gap:8px;align-items:center;max-width:560px;margin:0 auto}
+.top label{font-size:11px;color:var(--mute);display:block}
+.top input{width:100%;font-size:16px;padding:6px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink)}
+.bal{flex:1.3;text-align:right}
+.bal b{font-size:24px;display:block}
+.sub{display:flex;gap:14px;font-size:13px;color:var(--mute);max-width:560px;margin:4px auto 0}
+.sub .o{color:var(--out)}.sub .i{color:var(--in)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px;margin:12px 0}
+h2{font-size:14px;margin:0 0 8px;color:var(--mute);text-transform:uppercase;letter-spacing:.04em}
+input[type=text],input[type=number],input[type=search],textarea{width:100%;font-size:18px;padding:10px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink)}
+textarea{font-size:13px;font-family:ui-monospace,Menlo,monospace}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
+.chip{border:1px solid var(--line);background:var(--bg);color:var(--ink);padding:8px 11px;border-radius:999px;font-size:14px}
+.chip.on{background:var(--acc);color:#fff;border-color:var(--acc)}
+.btn{border:0;border-radius:12px;padding:13px;font-size:17px;font-weight:600;color:#fff;background:var(--acc);width:100%}
+.btn.sec{background:var(--bg);color:var(--ink);border:1px solid var(--line);font-weight:500;font-size:15px;padding:10px}
+.btn.danger{background:var(--bad)}
+.sides{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:8px 0}
+.side{padding:16px;font-size:20px;font-weight:700;border-radius:12px;border:2px solid var(--line);background:var(--bg);color:var(--mute)}
+.side.out.on{background:var(--out);border-color:var(--out);color:#fff}
+.side.in.on{background:var(--in);border-color:var(--in);color:#fff}
+.sides.small .side{padding:9px;font-size:14px;font-weight:600}
+.sides.small .side.on{background:var(--acc);border-color:var(--acc);color:#fff}
+.flag{font-size:13px;padding:6px 9px;border-radius:8px;margin:6px 0}
+.flag.bad{background:var(--badbg);color:var(--bad)}.flag.warn{background:var(--warnbg);color:var(--warn)}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.mute{color:var(--mute);font-size:13px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{font-weight:600;color:var(--mute);text-align:left;font-size:11px;border-bottom:1px solid var(--line);padding:4px 3px}
+td{padding:6px 3px;border-bottom:1px solid var(--line);vertical-align:top}
+td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
+.oo{color:var(--out)}.ii{color:var(--in)}
+tr.unc td{background:var(--warnbg)}
+tr.bad td{background:var(--badbg)}
+.tag{font-size:10px;padding:1px 5px;border-radius:6px;background:var(--warn);color:#fff;margin-left:4px}
+.tag.r{background:var(--bad)}
+.act button{border:0;background:none;color:var(--acc);font-size:13px;padding:3px 5px}
+.tot td{font-weight:700;border-top:2px solid var(--ink)}
+.toast{position:fixed;left:50%;bottom:84px;transform:translateX(-50%);background:#222;color:#fff;padding:10px 16px;border-radius:10px;font-size:14px;z-index:20;display:none;max-width:90%}
+table.vt{width:100%;border-collapse:collapse;font-size:14px}.vt td{padding:5px 4px;border-bottom:1px solid var(--line);vertical-align:top}.vt .num{text-align:right;white-space:nowrap}.vt .vh td{font-weight:600;color:var(--mute)}.vt tr.hit td{background:rgba(255,200,0,.25)}.fq{cursor:pointer}
+details summary{cursor:pointer;color:var(--mute);font-size:14px;padding:4px 0}
+.exrow{display:flex;gap:6px;align-items:center;padding:5px 0;border-bottom:1px solid var(--line);font-size:15px}
+.exrow span{flex:1}.exrow .own{font-size:12px;color:var(--mute)}
+.exrow button{border:0;background:none;color:var(--bad);font-size:16px}
+
+.nav{display:flex;gap:6px;max-width:560px;margin:0 auto 6px}
+.nav button{flex:1;padding:9px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--mute);font-size:15px;font-weight:600}
+.nav button.on{background:var(--acc);border-color:var(--acc);color:#fff}
+.drow{border:1px solid var(--line);border-left:5px solid var(--bad);border-radius:10px;padding:8px;margin:8px 0}
+.drow.ok{border-left-color:var(--in)}.drow.hold{border-left-color:var(--mute);opacity:.6}
+.dtop{display:flex;align-items:center;font-size:13px;margin-bottom:6px}
+.dgrid{display:grid;grid-template-columns:1.5fr 1.3fr .7fr 1.1fr .7fr;gap:5px}
+.dgrid label{font-size:10px;color:var(--mute);display:block}
+.dgrid input,.dgrid select{width:100%;font-size:15px;padding:7px 4px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink)}
+.flag.okf{background:rgba(30,142,78,.12);color:var(--in)}
+.own{font-size:12px;color:var(--mute)}
+
+.stmt{width:100%;border-collapse:collapse;font-size:13px}
+.stmt th{background:var(--bg)}
+.stmt tr.alt td{background:rgba(31,79,216,.06)}
+.stmt tr.pend td{background:rgba(245,166,35,.22)}
+.stmt tr.open td{background:rgba(183,121,31,.16);font-weight:600}
+.stmt td.dt{white-space:nowrap;color:var(--mute);font-size:12px}
+.bigbal{font-size:26px;font-weight:700;font-variant-numeric:tabular-nums}
+.neg{color:var(--bad)}.pos{color:var(--in)}
+.sug{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0}
+.arow{cursor:pointer}.arow td{padding:9px 3px}
+.arow:active td{background:var(--bg)}
+.sm{padding:8px 10px;font-size:14px;border-radius:10px;width:auto}
+input[type=date]{width:100%;font-size:16px;padding:9px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink)}
+.bcard{border:1px solid var(--line);border-radius:10px;padding:8px;margin:6px 0;font-size:14px}
+.hdr{display:flex;align-items:center;max-width:560px;margin:0 auto 4px}
+#bizName{flex:1;font-weight:700;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#gear{border:0;background:none;font-size:22px;color:var(--mute);padding:2px 6px;line-height:1}
+.bnav{position:fixed;left:0;right:0;bottom:0;z-index:9;display:flex;background:var(--card);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom)}
+.bnav button{flex:1;border:0;background:none;color:var(--mute);font-size:12px;font-weight:600;padding:8px 2px 9px;display:flex;flex-direction:column;align-items:center;gap:1px}
+.bnav button i{font-style:normal;font-size:20px;line-height:1.1}
+.bnav button.on{color:var(--acc)}
+.pill{display:inline-block;border:1px solid var(--line);background:var(--bg);border-radius:999px;padding:7px 12px;font-size:14px;color:var(--acc);font-weight:600}
+</style>
+</head>
+<body>
+<div class="top">
+  <div class="hdr"><div id="bizName">Cash Entry</div><button id="gear" aria-label="Settings">⚙</button></div>
+  <div id="cashTop">
+  <div class="row">
+    <div style="flex:1"><label>Opening cash</label><input id="open" type="number" inputmode="decimal" placeholder="0"></div>
+    <div class="bal"><label>Cash in hand now</label><b id="bal">0</b></div>
+  </div>
+  <div class="sub"><span class="o">OUT <b id="tout">0</b></span><span class="i">IN <b id="tin">0</b></span><span id="cnt"></span></div>
+  </div>
+</div>
+
+<div class="wrap" id="viewCash">
+<div id="bakNudge"></div>
+<div class="card" id="setupCard" style="display:none;border-color:var(--warn)">
+  <h2>First-time setup</h2>
+  <div style="font-size:15px">Load your account codes before you start, so typing mistakes get caught. Open <b>Settings</b> at the bottom of this page, pick your setup file or paste your codes, and tap <b>Save settings</b>.</div>
+  <div style="margin-top:8px"><button class="btn sec" id="openSet">Open settings</button></div>
+</div>
+
+<div class="card" id="entryCard">
+  <h2 id="entryTitle">New entry</h2>
+  <input id="code" type="search" autocapitalize="characters" autocomplete="off" autocorrect="off" spellcheck="false" placeholder="Account code (blank = unconfirmed)">
+  <div class="chips" id="codeSug" style="margin:6px 0 0"></div>
+  <div id="codeFlag"></div>
+
+  <div class="mute" style="margin-top:6px">Narration</div>
+  <div class="chips" id="narrChips"></div>
+  <input id="narr" type="text" autocomplete="off" placeholder="NARRATION / NAME (typed)" autocapitalize="characters" style="text-transform:uppercase">
+
+  <div class="sides">
+    <button class="side out" id="sOut">OUT</button>
+    <button class="side in" id="sIn">IN</button>
+  </div>
+  <input id="amt" type="number" inputmode="decimal" placeholder="Amount">
+
+  <div class="mute" style="margin-top:10px">Commission on the same row (optional)</div>
+  <div class="two" style="margin-top:4px">
+    <input id="comm" type="number" inputmode="decimal" placeholder="Commission">
+    <div class="sides small" style="margin:0"><button class="side" id="cR">R (receive)</button><button class="side" id="cI">I (issue)</button></div>
+  </div>
+
+  <div id="entryFlag"></div>
+  <div style="margin-top:10px"><button class="btn" id="add">Add entry</button></div>
+  <div style="margin-top:8px;display:none" id="cancelRow"><button class="btn sec" id="cancelEdit">Cancel edit</button></div>
+</div>
+
+<div class="card" id="dayCard">
+  <h2>Today's sheet</h2>
+  <div id="dayTable"></div>
+  <div id="warnLine"></div>
+  <div id="dealsLink" style="margin-top:8px"></div>
+</div>
+
+<div class="card" id="expCard">
+  <h2>Small expenses <span id="expCodeLbl"></span></h2>
+  <div class="two"><input id="exLabel" type="text" placeholder="Tea, auto…"><input id="exAmt" type="number" inputmode="decimal" placeholder="Amount"></div>
+  <div class="chips" id="exChips"></div>
+  <div style="margin-top:6px"><button class="btn sec" id="exAdd">Add expense line</button></div>
+  <div id="exList" style="margin-top:8px"></div>
+  <div class="mute" id="exNote"></div>
+  <div style="margin-top:6px"><button class="btn sec" id="exCopy">Copy expense breakdown</button></div>
+  <div class="mute" style="margin-top:6px">Tick “own row” on a line to send it as its own row. For rent, EB and other bigger expenses use the entry form above. DAILY BANK is a normal entry above — tap its chip.</div>
+</div>
+
+
+</div>
+<div class="wrap" id="viewDay" style="display:none">
+<div class="card" id="paperCard">
+  <h2>Paper book check</h2>
+  <div class="mute" style="margin-bottom:6px">Type the totals written in the paper book for this day. Nothing is blocked — it only tells you if they differ.</div>
+  <div class="two"><div><div class="mute">Cash book — OUT</div><input id="pcOut" type="text" inputmode="decimal"></div><div><div class="mute">Cash book — IN</div><input id="pcIn" type="text" inputmode="decimal"></div></div>
+  <div id="paperCash" style="margin-top:6px"></div>
+  <div id="paperDealsBox"><div class="two" style="margin-top:8px"><div><div class="mute">Deals — OUT (sales, INR)</div><input id="pdOut" type="text" inputmode="decimal"></div><div><div class="mute">Deals — IN (purchases, INR)</div><input id="pdIn" type="text" inputmode="decimal"></div></div>
+  <div id="paperDeals" style="margin-top:6px"></div></div>
+</div>
+<div class="card" id="closeCard">
+  <h2>Close day — post to the ledger</h2>
+  <div class="two"><div><div class="mute">Date of this sheet</div><input type="date" id="dayDate"></div><div><div class="mute">Cash in hand at close</div><div class="bigbal" id="closeBal" style="font-size:22px;padding-top:6px">0</div></div></div>
+  <div id="lastCloseNote" class="mute" style="margin-top:6px"></div>
+  <div id="lastImgRow" style="margin-top:6px;display:none"><button class="btn sec" id="sendLastImg"></button></div>
+  <div id="closeInfo" style="margin-top:8px"></div>
+  <div id="reviewBox" style="display:none"></div>
+  <div style="margin-top:8px"><button class="btn" id="closeDay">Review and post day</button></div>
+  <div style="margin-top:8px"><button class="btn sec" id="undoClose" style="display:none"></button></div>
+  <div class="mute" style="margin-top:6px">Send the picture to the boss and copy the rows for Excel before you post. Rows with no account code wait in the Ledger tab until you give them a code. Posted days can be reopened from the Ledger tab.</div>
+</div>
+
+<div class="card">
+  <h2>Share today's sheet</h2>
+  <div style="margin-bottom:8px"><button class="btn" id="shareImg">Send cash book picture (for the boss)</button></div>
+  <div style="margin-bottom:8px"><button class="btn sec" id="shareFile">Share day file (with data, for backup)</button></div>
+  <div id="bakNote" class="mute" style="margin-bottom:8px"></div>
+  <details id="moreShare"><summary>Other ways: Excel file, message, clear the day</summary>
+    <div style="margin:8px 0"><button class="btn sec" id="shareCsv">Export for Excel (.csv)</button></div>
+    <div style="margin-bottom:8px"><button class="btn sec" id="shareText">Share day as message</button></div>
+    <div style="margin-bottom:8px"><button class="btn danger" id="clear">Clear day</button></div>
+    <div id="restoreRow" style="display:none"><button class="btn sec" id="restore">Restore last cleared day</button></div>
+  </details>
+</div>
+
+<div class="card">
+  <h2>Copy for Excel</h2>
+  <div class="mute" style="margin-bottom:8px">Type the date in column B, click column C of the first empty row, then paste. Columns: Code · Narration · OUT · IN · Comm R · Comm I</div>
+  <button class="btn" id="copy">Copy all rows</button>
+  <div style="margin-top:8px"><textarea id="copyBox" rows="5" readonly></textarea></div>
+</div>
+
+<div class="card" id="profCard">
+  <h2>Profit this month</h2>
+  <div id="profBody"></div>
+</div>
+<div class="card"><details id="bakBox" open><summary>Backup, restore and export</summary>
+  <div id="ledBak" class="mute" style="margin:6px 0"></div>
+  <div style="margin-bottom:8px"><button class="btn" id="ledShare">Back up the whole ledger</button></div>
+  <div style="margin-bottom:8px"><button class="btn sec" id="driveBtn">Back up to Google Drive</button></div>
+  <div id="driveNote" class="mute" style="margin-bottom:8px"></div>
+  <details id="driveSet"><summary>Google Drive setup (one time)</summary>
+    <div class="mute" style="margin:6px 0">Your ledger goes only to your own Google Drive, into a folder this app creates (“Cash Entry backups”). The app cannot see any other file in your Drive. Google's sign-in script loads only when you use this.</div>
+    <ol class="mute" style="margin:6px 0 6px 18px;padding:0">
+      <li>On a computer, open console.cloud.google.com and create a project.</li>
+      <li>APIs &amp; Services → Library → enable “Google Drive API”.</li>
+      <li>OAuth consent screen → External → add your own Gmail as a test user.</li>
+      <li>Credentials → Create credentials → OAuth client ID → Web application. Under Authorised JavaScript origins add: <b id="drOrigin"></b></li>
+      <li>Copy the Client ID and paste it below.</li>
+    </ol>
+    <input id="drCid" type="text" autocomplete="off" placeholder="Client ID (ends with .apps.googleusercontent.com)">
+    <label style="display:flex;gap:8px;align-items:center;font-size:15px;margin-top:8px"><input type="checkbox" id="drAuto" style="width:20px;height:20px"> Also back up automatically after I post a day</label>
+    <div style="margin-top:8px"><button class="btn sec" id="drForget">Disconnect Google Drive</button></div>
+  </details>
+  <div style="margin:8px 0"><button class="btn sec" id="ledCsv">Export ledger (.csv)</button></div>
+  <div style="margin:8px 0"><button class="btn sec" id="xlsExp">Export for the Excel master (3 files)</button></div>
+  <div id="xlsNote" class="mute" style="margin-bottom:8px"></div>
+  <div class="mute" style="margin:10px 0 4px">Safety copies kept inside the app (last 5, made before every post, reopen or restore)</div>
+  <div id="snapList"></div>
+  <div class="mute" style="margin:10px 0 4px">Restore from a backup file (the file picker can open your Google Drive folder too)</div>
+  <input type="file" id="ledFile" accept=".json,.txt,application/json,text/plain" style="width:100%;margin-bottom:8px">
+  <div id="ledRInfo"></div>
+  <div style="margin-top:8px"><button class="btn sec" id="ledRestore" disabled>Replace the ledger with this backup</button></div>
+</details></div>
+<div class="card">
+  <details id="recvBox"><summary>Receive a shared day</summary>
+    <div class="mute" style="margin:6px 0">Open a day file someone sent you, or paste a backup text. Nothing changes until you tap Add or Replace.</div>
+    <input type="file" id="recvFile" accept=".txt,.json,text/plain,application/json" style="width:100%;margin-bottom:8px">
+    <textarea id="recvText" rows="4" placeholder="…or paste backup text here"></textarea>
+    <div id="recvInfo" style="margin-top:8px"></div>
+    <div class="two" style="margin-top:8px"><button class="btn sec" id="recvAdd" disabled>Add to my sheet</button><button class="btn sec" id="recvRep" disabled>Replace my sheet</button></div>
+  </details>
+</div>
+
+</div>
+<div class="wrap" id="viewSettings" style="display:none">
+<div class="card">
+  <details id="setBox" open><summary>Settings</summary>
+    <div class="mute" style="margin:6px 0">Load a setup file, or fill in below. Nothing is saved until you tap Save settings.</div>
+    <input type="file" id="setFile" accept=".txt,.csv,text/plain" style="width:100%;margin-bottom:8px">
+    <div class="mute">Business name</div>
+    <input id="bizIn" type="text" style="margin-top:4px" placeholder="e.g. Shop name">
+    <div class="mute" style="margin-top:8px">Features</div>
+    <label style="display:flex;gap:8px;align-items:center;font-size:15px;margin-top:4px"><input type="checkbox" id="modDeals" style="width:20px;height:20px"> Currency deals reader (WhatsApp tab)</label>
+    <label style="display:flex;gap:8px;align-items:center;font-size:15px;margin-top:6px"><input type="checkbox" id="modExp" style="width:20px;height:20px"> Small-expenses bundle</label>
+    <details id="codesDet" style="margin-top:8px"><summary>Account codes: bulk load for first-time setup</summary>
+      <div class="mute" style="margin:6px 0">One code per line. Day to day, add or change accounts in <b>Ledger → Accounts and types</b>. This box replaces the whole list, so use it only when setting up.</div>
+      <textarea id="codesBox" rows="8"></textarea>
+    </details>
+    <div class="mute" style="margin-top:8px">Narration shortcuts (one per line)</div>
+    <textarea id="narrsBox" rows="4"></textarea>
+    <div class="mute" style="margin-top:8px">Account code for small expenses</div>
+    <input id="expCode" type="text" style="margin-top:4px;text-transform:uppercase">
+    <div class="mute" style="margin-top:8px">Expense bundle row narration</div>
+    <input id="expNarr" type="text" style="margin-top:4px">
+    <div class="two" style="margin-top:10px"><button class="btn sec" id="saveCodes">Save settings</button><button class="btn sec" id="dlSetup">Download my setup file</button></div>
+    <div class="mute" style="margin-top:6px">The setup file holds only your settings (name, codes, shortcuts) — never entries. Use it to set up another phone or a copy of this tool.</div>
+    <div class="mute" style="margin-top:8px">Rate alert tolerance (% from the account's usual rate)</div><input id="tolRate" type="text" inputmode="decimal" style="margin-top:4px">
+    <div class="mute" style="margin-top:8px">Batch volume tolerance (% — purchases vs sales in one message)</div><input id="tolBatch" type="text" inputmode="decimal" style="margin-top:4px">
+    <div class="mute" style="margin-top:10px">Version <span id="verNote"></span></div>
+  </details>
+</div>
+
+</div>
+<div class="wrap" id="viewDeals" style="display:none">
+<div class="card" id="dealsTodayCard" style="display:none">
+  <h2>Today's deals on the sheet</h2>
+  <div id="dealsToday"></div>
+  <div id="dealsStats" style="margin-top:8px"></div>
+</div>
+<div class="card">
+  <h2>WhatsApp deals — one batch at a time</h2>
+  <textarea id="dealText" rows="9" placeholder="Paste the boss's message here&#10;Dora- 1000 @ 27.62&#10;&#10;FD- 2000 @ 27.65" style="font-size:15px;font-family:inherit"></textarea>
+  <div class="two" style="margin-top:8px"><button class="btn sec" id="dealPaste">Paste from clipboard</button><button class="btn sec" id="dealClear">Clear</button></div>
+  <div class="mute" style="margin-top:8px">First block (above the first blank line) = purchase, next block = sale, and so on. .V = purchase, .P = sale override the block. A blank or “bal” volume is worked out so purchases equal sales in that pair of blocks.</div>
+</div>
+<div class="card"><h2>Check each row</h2><div id="dealRows"></div><div id="dealSum" style="margin-top:8px"></div></div>
+<div class="card">
+  <h2>Copy for Currency Purchase &amp; Sales</h2>
+  <div class="mute" style="margin-bottom:8px">Type the date in column B of the first row, click column C of the first empty row, then paste. Columns: Code · Volume · Op · Rate · P/S. Only rows marked OK are copied.</div>
+  <label style="display:flex;gap:8px;align-items:center;margin-bottom:10px;font-size:15px"><input type="checkbox" id="dealChecked" style="width:22px;height:22px"> I checked every row against the message</label>
+  <button class="btn" id="dealCopy">Copy OK rows</button>
+  <div class="mute" id="dealCopyNote" style="margin-top:6px"></div>
+  <div style="margin-top:10px"><button class="btn sec" id="dealAdd">Add these deals to today's sheet (for the ledger)</button></div>
+  <div class="mute" style="margin-top:6px">Needs every row OK or skipped. The pasted message is cleared after adding.</div>
+</div>
+</div>
+<div class="wrap" id="viewLedger" style="display:none">
+<div id="ledBanner"></div>
+<div class="card" id="crownCard"><h2>Crown AED position</h2><div id="crownBody"></div></div>
+<div class="card" id="dayViewCard" style="display:none"></div>
+<div class="card">
+  <h2>Find an entry</h2>
+  <input id="fqIn" type="search" autocomplete="off" autocorrect="off" spellcheck="false" placeholder="Amount, narration or account code…">
+  <div id="fqOut" style="margin-top:8px"></div>
+</div>
+<div class="card">
+  <h2>Statement for account</h2>
+  <input id="stIn" type="search" autocapitalize="characters" autocomplete="off" autocorrect="off" spellcheck="false" placeholder="Type an account code…">
+  <div class="sug" id="stSug"></div>
+  <div id="stOut"></div>
+</div>
+<div class="card" id="monthCard">
+  <h2>Month summary</h2>
+  <input type="month" id="monthIn">
+  <div id="monthBody" style="margin-top:8px"></div>
+  <div class="mute" style="margin-top:10px">RESERVE account code</div>
+  <input id="reserveCode" type="text" style="margin-top:4px;text-transform:uppercase">
+  <div style="margin-top:10px"><button class="btn sec" id="monthCopy">Copy next month's opening balances</button></div>
+  <div class="mute" id="monthNote" style="margin-top:6px"></div>
+<div class="card">
+  <h2>All accounts</h2>
+  <div class="chips" id="typeBar" style="margin-top:0"></div>
+  <div class="chips" style="margin-top:0"><button class="chip on" id="srtAZ">A–Z</button><button class="chip" id="srtBig">Largest first</button><button class="chip on" id="hideZero">Hide zero</button></div>
+  <div id="balList"></div>
+  <div id="balMore" style="margin-top:8px"></div>
+  <div style="margin-top:10px"><button class="btn sec" id="sendTb">Send trial balance picture</button></div>
+</div>
+</div>
+<div class="card" id="waitCard" style="display:none"><h2>Waiting for account code</h2><div id="waitList"></div><div style="margin-top:8px"><button class="btn" id="waitSend">Send picture of waiting entries</button></div></div>
+<div class="card"><details id="postedBox" open><summary>Posted days</summary><div id="postedList" style="margin-top:8px"></div></details></div>
+<div class="card"><details id="acctBox"><summary>Accounts and types</summary>
+  <div class="mute" style="margin:6px 0">The type decides what counts as an expense in the month summary, and filters the account list. Types load from the Chart of Accounts paste.</div>
+  <div class="two"><input id="acNew" type="text" placeholder="New account code" autocapitalize="characters" style="text-transform:uppercase"><select id="acNewType"><option>Customer</option><option>Correspondent</option><option>Internal</option><option>Expense</option></select></div>
+  <div style="margin-top:6px"><button class="btn sec" id="acAdd">Add account</button></div>
+  <input id="acQ" type="search" placeholder="Find an account…" autocapitalize="characters" style="margin-top:10px">
+  <div id="acList" style="margin-top:6px"></div>
+</details></div>
+<div class="card"><details id="obBox"><summary>Opening balances</summary>
+  <div class="mute" style="margin:6px 0">Copy the Chart of Accounts columns Account Code · Type · Opening OUT · Opening IN (or just Code · OUT · IN) and paste here. Balances count only days dated on or after this date.</div>
+  <div class="mute">Balances start on</div><input type="date" id="obDate">
+  <div class="mute" style="margin-top:8px">Commission account code (all commission earned is credited here, as in the Excel Monthly Summary)</div><input type="text" id="commCode" style="margin-top:4px;text-transform:uppercase">
+  <div class="two" style="margin-top:8px"><div><div class="mute">Crown account code</div><input type="text" id="crownCode" style="text-transform:uppercase"></div><div><div class="mute">Opening AED volume held</div><input type="text" id="crownOpen" inputmode="decimal" placeholder="e.g. -743.43"></div></div>
+  <textarea id="obText" rows="6" placeholder="paste here" style="margin-top:8px"></textarea>
+  <div id="obInfo" style="margin-top:8px"></div>
+  <div style="margin-top:8px"><button class="btn sec" id="obSave" disabled>Save opening balances</button></div>
+  <div class="mute" id="obCur" style="margin-top:6px"></div>
+</details></div>
+<div class="card"><details id="xlBox"><summary>Compare with Excel (import the workbook)</summary>
+  <div class="mute" style="margin:6px 0">Pick your month's master workbook (.xlsx). The app reads Chart of Accounts, Daily Cash Book, Currency Purchase &amp; Sales, Monthly Summary and Customer Ledger and compares everything with its own figures. Nothing is changed until you tap “Load”. The file must not have an open-password: save a copy without one first. The workbook must have been saved in Excel after its last change so the figures are stored in it.</div>
+  <input type="file" id="xlFile" accept=".xlsx,.xlsm,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" style="width:100%;margin-bottom:8px">
+  <div id="xlInfo"></div>
+  <div id="xlOut" style="margin-top:8px"></div>
+  <div style="margin-top:8px"><button class="btn sec" id="xlLoad" disabled>Load this workbook into the app (replaces the ledger)</button></div>
+  <details id="cmpBox" style="margin-top:12px"><summary>Or compare by pasting the trial balance</summary>
+  <div class="mute" style="margin:6px 0">In Excel's Monthly Summary copy Account Code · OUT · IN of the trial balance and paste here. Accounts where the tool and Excel differ are listed.</div>
+  <div class="mute">Excel Crown AED net volume held (Currency Purchase &amp; Sales, cell P3) — optional</div><input type="text" id="cmpCrown" inputmode="decimal" style="margin:4px 0 8px">
+  <textarea id="cmpText" rows="6" placeholder="paste here"></textarea>
+  <div id="cmpOut" style="margin-top:8px"></div>
+</details>
+</details></div>
+</div>
+<div class="bnav" id="navBar"><button id="tabCash" class="on"><i>✎</i>Cash</button><button id="tabDeals"><i>⇄</i>Deals</button><button id="tabLedger"><i>☰</i>Ledger</button><button id="tabDay"><i>✓</i>Day</button></div>
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+var DEFAULT_CODES=[];
+var APP_VERSION='2026-10-25.2';
+var NARRS=ls('cashentry.narrs')||[];
+var EXPCODE=ls('cashentry.expcode')||'SHOP-EXP';
+var BIZ=ls('cashentry.biz')||'';
+var MODS=ls('cashentry.mods')||{deals:true,exp:true};
+var QUICK_EXP=['Tea','Auto','Food','Water','Tips','Parcel'];
+var KEY='cashentry.v1', CKEY='cashentry.codes', UKEY='cashentry.use', LKEY='cashentry.last';
+var $=function(i){return document.getElementById(i)};
+function ls(k,v){try{if(v===undefined){var s=localStorage.getItem(k);return s?JSON.parse(s):null}localStorage.setItem(k,JSON.stringify(v))}catch(e){return null}}
+function rm(k){try{localStorage.removeItem(k)}catch(e){}}
+var codes=ls(CKEY)||DEFAULT_CODES, use=ls(UKEY)||{};
+var S=ls(KEY)||{open:'',entries:[],exp:[],expNarr:'EXP',seq:1};
+if(!S.expNarr)S.expNarr='EXP';
+if(!Array.isArray(S.deals))S.deals=[];
+function newSid(){return's'+Date.now().toString(36)+Math.random().toString(36).slice(2,7)}
+if(!S.sid)S.sid=newSid();
+var SEEN=ls('cashentry.seen')||{};
+var TOL=ls('cashentry.tol')||{rate:4,batch:1};
+function markSeen(sid,at){if(!sid)return;var t=new Date(at).getTime()||Date.now();SEEN[sid]=Math.max(SEEN[sid]||0,t);var k=Object.keys(SEEN);if(k.length>300){k.sort(function(a,b){return SEEN[a]-SEEN[b]}).slice(0,k.length-300).forEach(function(x){delete SEEN[x]})}ls('cashentry.seen',SEEN)}
+if(!S.date){var _d=new Date();S.date=_d.getFullYear()+'-'+('0'+(_d.getMonth()+1)).slice(-2)+'-'+('0'+_d.getDate()).slice(-2)}
+var f={side:null,cs:null,editId:null,lastDel:null,confirmClear:false,dupOK:null};
+var META=ls('cashentry.meta')||{chg:0,bak:0};
+function save(){ls(KEY,S);META.chg=Date.now();ls('cashentry.meta',META);try{renderBak()}catch(e){}}
+function markBak(){META.bak=Date.now();ls('cashentry.meta',META);renderBak()}
+function renderBak(){
+  var el=$('bakNote');if(!el)return;
+  var has=S.entries.length||S.exp.length||(S.deals&&S.deals.length);
+  if(!has){el.className='mute';el.textContent=META.bak?'Last backup: '+new Date(META.bak).toLocaleString():'No backup yet.';return}
+  var stale=META.chg>META.bak;
+  el.className='flag '+(stale?'warn':'okf');
+  el.textContent=stale?(META.bak?'Changed since the last backup ('+new Date(META.bak).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})+'). Share the day file.':'Not backed up yet. Share the day file before you clear the day.'):'Backed up '+new Date(META.bak).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})+' — nothing new since.';
+}
+function r2(x){var g=x<0?-1:1;x=Math.abs(x);return(g*Math.round(parseFloat((x*100).toPrecision(15)))/100)+0}
+function num(v){if(v===''||v==null)return 0;var n=parseFloat(String(v).replace(/,/g,''));return isNaN(n)?0:r2(n)}
+function fmt(n){n=r2(n);return n.toLocaleString('en-IN',{minimumFractionDigits:(n%1?2:0),maximumFractionDigits:2})}
+function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
+function toast(m){var t=$('toast');t.textContent=m;t.style.display='block';clearTimeout(toast.h);toast.h=setTimeout(function(){t.style.display='none'},2200)}
+function known(c){return codes.length===0||codes.indexOf(c)>=0}
+function plain(n){return n?String(r2(n)):''}
+
+// rows that go to Excel
+function rows(){
+  var out=S.entries.map(function(e){return{code:e.code,narr:e.narr,out:e.out,inn:e.inn,cr:e.cr,ci:e.ci,id:e.id}});
+  var bundle=0,own=[];
+  S.exp.forEach(function(x){if(x.own)own.push(x);else bundle+=x.amt});
+  if(bundle>0)out.push({code:EXPCODE,narr:S.expNarr,out:r2(bundle),inn:0,cr:0,ci:0,bundle:true,ex:true});
+  own.forEach(function(x){out.push({code:EXPCODE,narr:x.label,out:x.amt,inn:0,cr:0,ci:0,ex:true})});
+  return out;
+}
+function totals(){
+  var o=0,i=0,cr=0,ci=0;
+  rows().forEach(function(r){o+=r.out;i+=r.inn;cr+=r.cr;ci+=r.ci});
+  return{o:r2(o),i:r2(i),cr:r2(cr),ci:r2(ci),bal:r2(num(S.open)+i-o)};
+}
+
+function renderTop(){
+  var t=totals();
+  $('tout').textContent=fmt(t.o);$('tin').textContent=fmt(t.i);
+  var b=$('bal');b.textContent=fmt(t.bal);b.style.color=t.bal<0?'var(--bad)':'';
+  var nr=rows().length;$('cnt').textContent=nr+(nr===1?' row':' rows')+(S.date?' · '+fd(S.date):'');
+}
+function renderNarr(){
+  var cur=$('narr').value.trim().toUpperCase();
+  $('narrChips').innerHTML=!NARRS.length?'':NARRS.map(function(n){return'<button class="chip'+(cur===n?' on':'')+'" data-n="'+esc(n)+'">'+esc(n)+'</button>'}).join('');
+}
+function codeSuggest(typed,max){
+  typed=(typed||'').trim().toUpperCase();max=max||8;
+  if(!typed)return Object.keys(use||{}).sort(function(x,y){return use[y]-use[x]}).slice(0,max);
+  var a=(typeof acctList==='function'&&L?acctList():codes.slice()).filter(function(c){return c.indexOf(typed)>=0});
+  a.sort(function(x,y){var px=x.indexOf(typed)===0?0:1,py=y.indexOf(typed)===0?0:1;return px-py||(use[y]||0)-(use[x]||0)||(x<y?-1:1)});
+  return a.slice(0,max);
+}
+function chipHtml(a,typed,attr){
+  typed=(typed||'').trim().toUpperCase();
+  if(typed&&a.length===1&&a[0]===typed)return'';
+  return a.map(function(c){return'<button class="chip" '+attr+'="'+esc(c)+'">'+esc(c)+'</button>'}).join('');
+}
+function renderForm(){
+  $('setupCard').style.display=codes.length?'none':'block';
+  $('sOut').classList.toggle('on',f.side==='out');$('sIn').classList.toggle('on',f.side==='in');
+  $('cR').classList.toggle('on',f.cs==='r');$('cI').classList.toggle('on',f.cs==='i');
+  var c=$('code').value.trim().toUpperCase(),h='';
+  if(!c)h='<div class="flag warn">No code — will be saved as UNCONFIRMED</div>';
+  else if(!known(c))h='<div class="flag bad">“'+esc(c)+'” is not in the Chart of Accounts</div>';
+  $('codeFlag').innerHTML=h;
+  $('codeSug').innerHTML=chipHtml(codeSuggest(c,8),c,'data-pc');
+  $('add').textContent=f.editId?'Save changes':(c&&!known(c)?'Add anyway (unknown code)':'Add entry');
+  $('entryTitle').textContent=f.editId?'Editing entry':'New entry';
+  $('cancelRow').style.display=f.editId?'block':'none';
+  renderNarr();
+}
+function renderExp(){
+  $('expCodeLbl').textContent='(one row — '+EXPCODE+')';
+  $('exChips').innerHTML=QUICK_EXP.map(function(n){return'<button class="chip" data-x="'+n+'">'+n+'</button>'}).join('');
+  $('exList').innerHTML=S.exp.map(function(x,i){return'<div class="exrow"><span>'+esc(x.label)+' <b>'+fmt(x.amt)+'</b></span><label class="own"><input type="checkbox" data-own="'+i+'"'+(x.own?' checked':'')+'> own row</label><button data-xd="'+i+'">✕</button></div>'}).join('');
+  var b=0;S.exp.forEach(function(x){if(!x.own)b+=x.amt});
+  $('exNote').textContent=b>0?('Bundle row: '+EXPCODE+' · '+S.expNarr+' · OUT '+fmt(b)):'';
+}
+function renderDay(){
+  var rs=rows();
+  if(!rs.length){$('dayTable').innerHTML='<div class="mute">No entries yet.</div>'+(f.lastDel?'<div style="margin-top:8px"><button class="btn sec" id="undo">Undo delete</button></div>':'');$('warnLine').innerHTML='';var u0=$('undo');if(u0)u0.onclick=function(){if(f.lastDel){S.entries.splice(Math.min(f.lastDel.i,S.entries.length),0,f.lastDel.e);f.lastDel=null;save();all()}};return}
+  var unc=0,bad=0;
+  var h='<table><tr><th>#</th><th>Code / narration</th><th class="n">OUT</th><th class="n">IN</th><th class="n">Cm</th><th></th></tr>';
+  rs.forEach(function(r,i){
+    var isUnc=!r.code,isBad=r.code&&!known(r.code);
+    if(isUnc)unc++;if(isBad)bad++;
+    var cm=r.cr?('R '+fmt(r.cr)):(r.ci?('I '+fmt(r.ci)):'');
+    h+='<tr class="'+(isUnc?'unc':isBad?'bad':'')+'"><td>'+(i+1)+'</td><td><b>'+esc(r.code||'—')+'</b>'+(isUnc?'<span class="tag">UNCONFIRMED</span>':'')+(isBad?'<span class="tag r">UNKNOWN</span>':'')+'<br><span class="mute">'+esc(r.narr)+'</span></td><td class="n oo">'+(r.out?fmt(r.out):'')+'</td><td class="n ii">'+(r.inn?fmt(r.inn):'')+'</td><td class="n">'+cm+'</td><td class="act">'+(r.id?'<button data-e="'+r.id+'">edit</button><button data-d="'+r.id+'"'+(f.delPending===r.id?' style="color:var(--bad);font-weight:700"':'')+'>'+(f.delPending===r.id?'sure?':'del')+'</button>':'')+'</td></tr>';
+  });
+  var t=totals();
+  h+='<tr class="tot"><td></td><td>Total</td><td class="n oo">'+fmt(t.o)+'</td><td class="n ii">'+fmt(t.i)+'</td><td class="n">'+(t.cr||t.ci?('R '+fmt(t.cr)+' / I '+fmt(t.ci)):'')+'</td><td></td></tr>';
+  h+='<tr><td></td><td>Opening</td><td colspan="4" class="n">'+fmt(num(S.open))+'</td></tr><tr class="tot"><td></td><td>Closing cash</td><td colspan="4" class="n">'+fmt(t.bal)+'</td></tr></table>';
+  if(f.lastDel)h+='<div style="margin-top:8px"><button class="btn sec" id="undo">Undo delete</button></div>';
+  $('dayTable').innerHTML=h;
+  var w='';
+  if(unc)w+='<div class="flag warn">'+unc+' unconfirmed row(s) — no account code yet</div>';
+  if(bad)w+='<div class="flag bad">'+bad+' row(s) with a code not in the Chart of Accounts</div>';
+  $('warnLine').innerHTML=w;
+  var u=$('undo');if(u)u.onclick=function(){if(f.lastDel){S.entries.splice(Math.min(f.lastDel.i,S.entries.length),0,f.lastDel.e);f.lastDel=null;save();all()}};
+}
+function renderCopy(){
+  var rs=rows();
+  var txt=rs.map(function(r){return[r.code,r.narr,plain(r.out),plain(r.inn),plain(r.cr),plain(r.ci)].join('\t')}).join('\n');
+  $('copyBox').value=txt;
+}
+function renderRestore(){
+  var l=ls(LKEY);var ok=l&&(Date.now()-l.t<86400000);
+  $('restoreRow').style.display=ok?'block':'none';
+  if(l&&!ok)rm(LKEY);
+}
+function all(){renderBakNudge();renderTop();renderForm();renderExp();renderDay();renderCopy();renderRestore();renderClose();renderPaper();$('open').value=S.open;$('expNarr').value=S.expNarr}
+
+function resetForm(){
+  $('code').value='';$('amt').value='';$('comm').value='';$('narr').value='';
+  f.side=null;f.cs=null;f.editId=null;f.dupOK=null;$('entryFlag').innerHTML='';renderForm();
+}
+function copyText(txt,msg){
+  function fb(){var ta=document.createElement('textarea');ta.value=txt;ta.style.position='fixed';ta.style.opacity='0';document.body.appendChild(ta);ta.focus();ta.select();var ok=false;try{ok=document.execCommand('copy')}catch(e){}document.body.removeChild(ta);toast(ok?msg:'Copy failed — select the text box and copy manually')}
+  if(navigator.clipboard&&window.isSecureContext){navigator.clipboard.writeText(txt).then(function(){toast(msg)},fb)}else fb();
+}
+
+// events
+$('open').oninput=function(){S.open=this.value;save();renderTop();renderDay();};
+$('codeSug').onclick=function(e){var c=e.target.getAttribute&&e.target.getAttribute('data-pc');if(c){$('code').value=c;f.dupOK=null;renderForm();var n=$('narr');if(n&&!n.value)n.focus()}};
+$('code').oninput=function(){this.value=this.value.toUpperCase();f.dupOK=null;renderForm()};
+$('narrChips').onclick=function(e){var n=e.target.getAttribute&&e.target.getAttribute('data-n');if(n){$('narr').value=($('narr').value.trim().toUpperCase()===n?'':n);renderNarr()}};
+$('narr').oninput=function(){var a=this.selectionStart,b=this.selectionEnd,u=this.value.toUpperCase();if(u!==this.value){this.value=u;try{this.setSelectionRange(a,b)}catch(x){}}renderNarr()};
+$('sOut').onclick=function(){f.side='out';f.dupOK=null;renderForm()};
+$('sIn').onclick=function(){f.side='in';f.dupOK=null;renderForm()};
+$('cR').onclick=function(){f.cs=f.cs==='r'?null:'r';renderForm()};
+$('cI').onclick=function(){f.cs=f.cs==='i'?null:'i';renderForm()};
+$('cancelEdit').onclick=resetForm;
+
+$('add').onclick=function(){
+  var code=$('code').value.trim().toUpperCase(),amt=num($('amt').value),cm=num($('comm').value),narr=$('narr').value.trim().toUpperCase();
+  var flag=$('entryFlag');
+  if(amt<=0&&cm<=0){flag.innerHTML='<div class="flag bad">Enter an amount.</div>';return}
+  if(amt>0&&!f.side){flag.innerHTML='<div class="flag bad">Tap OUT or IN.</div>';return}
+  if(cm>0&&!f.cs){flag.innerHTML='<div class="flag bad">Choose R or I for the commission.</div>';return}
+  var e={id:f.editId||('e'+(S.seq++)),code:code,narr:narr,out:amt>0&&f.side==='out'?amt:0,inn:amt>0&&f.side==='in'?amt:0,cr:f.cs==='r'?cm:0,ci:f.cs==='i'?cm:0};
+  if(!f.editId){
+    var dup=S.entries.some(function(x){return x.code===e.code&&x.out===e.out&&x.inn===e.inn&&x.cr===e.cr&&x.ci===e.ci});
+    var sig=JSON.stringify([e.code,e.out,e.inn,e.cr,e.ci]);
+    if(dup&&f.dupOK!==sig){f.dupOK=sig;flag.innerHTML='<div class="flag warn">Same code and amount already entered today. Tap Add again if this is a second entry.</div>';return}
+  }
+  if(f.editId){for(var i=0;i<S.entries.length;i++)if(S.entries[i].id===f.editId)S.entries[i]=e}
+  else{S.entries.push(e);if(code)use[code]=(use[code]||0)+1;ls(UKEY,use)}
+  var was=f.editId;save();resetForm();all();toast(was?'Saved':'Added');
+};
+
+$('dayTable').onclick=function(ev){
+  var ed=ev.target.getAttribute&&ev.target.getAttribute('data-e'),dl=ev.target.getAttribute&&ev.target.getAttribute('data-d');
+  if(ed){var e=S.entries.filter(function(x){return x.id===ed})[0];if(!e)return;
+    f.editId=ed;$('code').value=e.code;$('narr').value=String(e.narr||'').toUpperCase();
+    var a=e.out||e.inn;$('amt').value=a||'';f.side=e.out?'out':(e.inn?'in':null);
+    var c=e.cr||e.ci;$('comm').value=c||'';f.cs=e.cr?'r':(e.ci?'i':null);
+    renderForm();window.scrollTo({top:0,behavior:'smooth'});}
+  if(dl&&f.delPending!==dl){f.delPending=dl;renderDay();clearTimeout(f.dp);f.dp=setTimeout(function(){f.delPending=null;renderDay()},4000);return}
+  if(dl){f.delPending=null;clearTimeout(f.dp);for(var i=0;i<S.entries.length;i++)if(S.entries[i].id===dl){f.lastDel={e:S.entries[i],i:i};S.entries.splice(i,1);break}
+    save();all();toast('Deleted — Undo is under the table');}
+};
+
+// expenses
+function addExp(){
+  var l=$('exLabel').value.trim(),a=num($('exAmt').value);
+  if(!l||a<=0){toast('Enter a label and an amount');return}
+  S.exp.push({label:l,amt:a,own:false});save();$('exLabel').value='';$('exAmt').value='';all();$('exLabel').focus();
+}
+$('exAdd').onclick=addExp;
+$('exChips').onclick=function(e){var n=e.target.getAttribute&&e.target.getAttribute('data-x');if(n){$('exLabel').value=n;$('exAmt').focus()}};
+$('exList').onclick=function(e){var d=e.target.getAttribute&&e.target.getAttribute('data-xd');if(d!==null&&d!==undefined){S.exp.splice(+d,1);save();all()}};
+$('exList').onchange=function(e){var o=e.target.getAttribute&&e.target.getAttribute('data-own');if(o!==null&&o!==undefined){S.exp[+o].own=e.target.checked;save();all()}};
+$('exCopy').onclick=function(){
+  if(!S.exp.length){toast('No expense lines');return}
+  var t=0;var s=S.exp.map(function(x){t+=x.amt;return x.label+' '+plain(x.amt)}).join('\n');
+  copyText(s+'\nTotal '+plain(r2(t)),'Breakdown copied');
+};
+$('expNarr').oninput=function(){S.expNarr=this.value.trim()||'EXP';save();renderExp();renderDay();renderCopy()};
+
+// copy
+$('copy').onclick=function(){
+  var rs=rows();if(!rs.length){toast('Nothing to copy');return}
+  var u=rs.filter(function(r){return !r.code}).length;
+  copyText($('copyBox').value,rs.length+' rows copied'+(u?' ('+u+' unconfirmed)':''));
+  ls('cashentry.copied',Date.now());
+};
+$('clear').onclick=function(){
+  var b=$('clear');
+  if(!rows().length&&!S.open&&!S.deals.length){toast('Day is already empty');return}
+  if(!f.confirmClear){
+    var u=rows().filter(function(r){return !r.code}).length;
+    f.confirmClear=true;b.textContent=(META.chg>META.bak?'NOT backed up! ':'')+(u?u+' unconfirmed row(s)! ':'')+'Tap again to clear the day';
+    clearTimeout(f.cc);f.cc=setTimeout(function(){f.confirmClear=false;b.textContent='Clear day'},4000);return;
+  }
+  clearTimeout(f.cc);f.confirmClear=false;b.textContent='Clear day';
+  ls(LKEY,{t:Date.now(),s:S});
+  S={open:'',entries:[],exp:[],expNarr:S.expNarr,seq:1,deals:[],date:today(),sid:newSid()};save();f.lastDel=null;resetForm();all();toast('Day cleared — restore available for 24 hours');
+};
+$('restore').onclick=function(){var l=ls(LKEY);if(!l)return;S=l.s;save();rm(LKEY);all();toast('Restored')};
+function splitLines(t){return String(t).split(/\r?\n/).map(function(x){return x.trim()}).filter(Boolean)}
+function applyMods(){
+  document.title=BIZ||'Cash Entry';
+  var bn=$('bizName');bn.textContent=BIZ||'Cash Entry';
+  $('expCard').style.display=MODS.exp===false?'none':'';
+  var dealsOn=MODS.deals!==false;
+  $('tabDeals').style.display=dealsOn?'':'none';$('paperDealsBox').style.display=dealsOn?'':'none';
+  if(!dealsOn&&D.view==='deals')setView('cash');
+}
+$('saveCodes').onclick=function(){
+  var c=splitLines($('codesBox').value).map(function(x){return x.toUpperCase()});
+  var seen={};c=c.filter(function(x){return seen[x]?false:(seen[x]=1)});
+  codes=c;ls(CKEY,codes);
+  NARRS=splitLines($('narrsBox').value);ls('cashentry.narrs',NARRS);
+  EXPCODE=($('expCode').value.trim().toUpperCase())||'SHOP-EXP';ls('cashentry.expcode',EXPCODE);
+  BIZ=$('bizIn').value.trim();ls('cashentry.biz',BIZ);
+  S.expNarr=$('expNarr').value.trim()||'EXP';save();
+  MODS={deals:$('modDeals').checked,exp:$('modExp').checked};ls('cashentry.mods',MODS);
+  var tr=parseFloat($('tolRate').value),tb=parseFloat($('tolBatch').value);TOL={rate:tr>0?tr:4,batch:tb>0?tb:1};ls('cashentry.tol',TOL);HIST=null;
+  applyMods();toast('Settings saved: '+c.length+' codes, '+NARRS.length+' shortcuts');all();
+};
+$('tolRate').value=TOL.rate;$('tolBatch').value=TOL.batch;
+$('narrsBox').value=NARRS.join('\n');$('expCode').value=EXPCODE;$('bizIn').value=BIZ;$('modDeals').checked=MODS.deals!==false;$('modExp').checked=MODS.exp!==false;$('verNote').textContent=APP_VERSION;
+$('openSet').onclick=function(){setView('settings')};
+$('gear').onclick=function(){setView('settings')};
+// setup file: sections CODES / NARRATIONS, plus lines  NAME: x   EXPENSE: x   EXPNARR: x   DEALS: on|off   EXPENSES: on|off
+$('setFile').onchange=function(){
+  var fl=this.files&&this.files[0];if(!fl)return;
+  var r=new FileReader();r.onload=function(){
+    var cur='C',C=[],N=[],m;
+    String(r.result).replace(/^﻿/,'').split(/\r?\n/).forEach(function(l){
+      var t=l.trim();if(!t)return;
+      if(/^codes$/i.test(t)){cur='C';return}
+      if(/^narrations?$/i.test(t)){cur='N';return}
+      if((m=t.match(/^(NAME|EXPENSE|EXPNARR|DEALS|EXPENSES)\s*:\s*(.*)$/i))){
+        var k=m[1].toUpperCase(),v=m[2].trim();
+        if(k==='NAME')$('bizIn').value=v;
+        else if(k==='EXPENSE')$('expCode').value=v.toUpperCase();
+        else if(k==='EXPNARR')$('expNarr').value=v;
+        else if(k==='DEALS')$('modDeals').checked=!/^(off|no|false|0)$/i.test(v);
+        else if(k==='EXPENSES')$('modExp').checked=!/^(off|no|false|0)$/i.test(v);
+        return;
+      }
+      (cur==='C'?C:N).push(t);
+    });
+    if(C.length)$('codesBox').value=C.join('\n');
+    if(N.length)$('narrsBox').value=N.join('\n');
+    toast('Loaded '+C.length+' codes and '+N.length+' shortcuts — tap Save settings');
+  };r.readAsText(fl);
+};
+$('dlSetup').onclick=function(){
+  var L=[];
+  L.push('NAME: '+BIZ,'EXPENSE: '+EXPCODE,'EXPNARR: '+S.expNarr,'DEALS: '+(MODS.deals===false?'off':'on'),'EXPENSES: '+(MODS.exp===false?'off':'on'),'','CODES');
+  codes.forEach(function(c){L.push(c)});L.push('','NARRATIONS');NARRS.forEach(function(n){L.push(n)});
+  downloadText('cash-entry-setup'+(BIZ?'-'+BIZ.replace(/[^A-Za-z0-9]+/g,'-'):'')+'.txt',L.join('\n')+'\n');toast('Setup file downloaded');
+};
+$('codesBox').value=codes.join('\n');
+
+// ===== WhatsApp deals parser =====
+var DKEY='cashentry.deals';
+var D=ls(DKEY)||{text:'',ov:{},hold:{},checked:false,view:'cash'};
+D.ov=D.ov||{};D.hold=D.hold||{};
+function dsave(){ls(DKEY,D)}
+function normKey(s){return String(s).toUpperCase().replace(/[^A-Z0-9]/g,'')}
+function matchCode(name){
+  var u=name.trim().toUpperCase();
+  if(!u)return{code:'',note:''};
+  if(known(u))return{code:u,note:''};
+  var k=normKey(u),hits=codes.filter(function(c){return normKey(c)===k});
+  if(k&&hits.length===1)return{code:hits[0],note:'matched '+hits[0]};
+  return{code:u,note:''};
+}
+function parseNumStr(t){
+  if(t==null||t==='')return null;
+  if(/,/.test(t)&&!/^\d{1,3}(,\d{3})+(\.\d+)?$/.test(t))return null;
+  var n=parseFloat(String(t).replace(/,/g,''));
+  return(isNaN(n)||!/^[\d,]*\.?\d+$/.test(String(t).replace(/,/g,'')))?null:n;
+}
+function parseDeals(text){
+  var lines=text.replace(/️/g,'').replace(/ /g,' ').split(/\r?\n/);
+  var out=[],block=0,prevBlank=true;
+  lines.forEach(function(raw,idx){
+    var t=raw.trim();
+    if(!t){prevBlank=true;return}
+    if(prevBlank){block++;prevBlank=false}
+    var m=t.match(/^\[[^\]]*\]\s*[^:]*:\s*(.*)$/);if(m)t=m[1].trim();
+    var row={i:idx,raw:raw.trim(),block:block,pair:Math.ceil(block/2),deal:false};
+    var sm=t.match(/[@➗÷✖×]/);
+    if(!sm){
+      if(/\d/.test(t)){row.deal=true;row.noSep=true;row.name='';row.volText='';row.rateText='';row.sep='';row.divSep=false;row.iruppu=false;row.tag=null;out.push(row);return}
+      row.reason='not a deal line';out.push(row);return}
+    row.sep=sm[0];row.divSep=(sm[0]==='➗'||sm[0]==='÷');
+    var left=t.slice(0,sm.index).trim(),right=t.slice(sm.index+1).trim();
+    var nm=left.match(/^(.+?)\s*[-–—:](?:\s+|$)(.*)$/),name,vol;
+    if(nm){name=nm[1];vol=nm[2].trim()}
+    else{var parts=left.split(/\s+/);vol=parts.length>1?parts.pop():'';name=parts.join(' ')}
+    row.name=name.trim();row.volText=vol;
+    row.rateText=right.split(/\s+/)[0]||'';
+    var tag=row.rateText.match(/^iruppu(?:\.([vp]))?$/i);
+    row.iruppu=!!tag;row.tag=tag&&tag[1]?tag[1].toUpperCase():null;
+    row.deal=true;out.push(row);
+  });
+  return out;
+}
+function computeDeals(rows){
+  var deals=rows.filter(function(r){return r.deal});
+  deals.forEach(function(r){
+    var ov=D.ov[r.i]||{};r.ov=ov;
+    var mc=matchCode(r.name);r.autoCode=mc.code;r.note=mc.note?[mc.note]:[];
+    r.code=ov.code!=null&&ov.code!==''?ov.code.toUpperCase():r.autoCode;
+    if(ov.code&&!known(r.code)){var m2=matchCode(r.code);r.code=m2.code}
+    r.ps=ov.ps||(r.tag==='V'?'P':r.tag==='P'?'S':(r.block%2?'P':'S'));
+    var bal=!r.noSep&&!r.divSep&&(r.volText===''||/^bal$/i.test(r.volText));
+    r.bal=bal;
+    var vn=parseNumStr(r.volText);r.vol=ov.vol!=null&&ov.vol!==''?parseNumStr(ov.vol):(bal?null:vn);
+    r.rate=null;
+    if(ov.rate!=null&&ov.rate!=='')r.rate=parseNumStr(ov.rate);
+    else if(!r.iruppu)r.rate=parseNumStr(r.rateText);
+  });
+  // iruppu rate: copy when every other rate on that side in the pair agrees
+  deals.forEach(function(r){
+    if(r.iruppu&&r.rate==null){
+      var rs=deals.filter(function(x){return x!==r&&x.pair===r.pair&&x.ps===r.ps&&!x.divSep&&!x.iruppu&&x.rate!=null&&x.rate>=10&&!D.hold[x.i]}).map(function(x){return x.rate});
+      if(rs.length&&rs.every(function(v){return Math.abs(v-rs[0])<1e-9})){r.rate=rs[0];r.note.push('rate copied from batch')}
+    }
+  });
+  // balancing volumes, one blank per pair
+  var pairs={};deals.forEach(function(r){if(!r.divSep)(pairs[r.pair]=pairs[r.pair]||[]).push(r)});
+  Object.keys(pairs).forEach(function(k){
+    var g=pairs[k],blanks=g.filter(function(r){return r.bal&&!(r.ov.vol!=null&&r.ov.vol!=='')});
+    if(!blanks.length)return;
+    if(blanks.length>1){blanks.forEach(function(r){r.balErr='two blank volumes in this pair — type one'});return}
+    var b=blanks[0],ps=0,ss=0,bad=false;
+    g.forEach(function(r){if(r===b||D.hold[r.i]||(r.rate!=null&&r.rate>0&&r.rate<10))return;if(r.vol==null){bad=true;return}if(r.ps==='P')ps+=r.vol;else ss+=r.vol});
+    if(bad){b.balErr='another volume in this pair is unreadable';return}
+    var v=r2(b.ps==='P'?ss-ps:ps-ss);
+    if(v>0){b.vol=v;b.note.push('balancing volume')}else b.balErr='balance is not positive — type the volume';
+  });
+  // op + flags
+  var byOp={'*':[],'/':[]};
+  deals.forEach(function(r){
+    r.op=ov(r,'op')||(r.divSep?'/':(r.sep==='✖'||r.sep==='×'?'*':(r.rate!=null&&r.rate<10?'/':'*')));
+  });
+  function ov(r,k){return r.ov[k]||''}
+  deals.forEach(function(r){if(r.rate!=null&&r.rate>=10&&r.op==='*'&&!D.hold[r.i])byOp['*'].push(r.rate)});
+  function med(a){a=a.slice().sort(function(x,y){return x-y});var n=a.length;return n?(n%2?a[(n-1)/2]:(a[n/2-1]+a[n/2])/2):null}
+  var meds={'*':byOp['*'].length>=3?med(byOp['*']):null,'/':byOp['/'].length>=3?med(byOp['/']):null};
+  var sheetK={},postK={},batchK={};
+  function dk(c,v,op,rt,ps){return[c,r2(v),op,rt,ps].join('|')}
+  (S.deals||[]).forEach(function(x){sheetK[dk(x.code,x.vol,x.op,x.rate,x.ps)]=1});
+  if(L)L.days.forEach(function(d){if(d.date===S.date)(d.deals||[]).forEach(function(x){postK[dk(x.c,x.v,x.op,x.r,x.ps)]=1})});
+  deals.forEach(function(r){
+    var f=[];
+    if(r.noSep&&!(r.code&&r.ov.vol&&r.ov.rate))f.push('NO @ FOUND — has numbers, fill code/volume/rate or tick skip');
+    if(!r.code)f.push('CODE?');else if(!known(r.code))f.push('CODE? not in list');
+    if(r.vol==null||!(r.vol>0))f.push(r.balErr?'VOLUME? '+r.balErr:'VOLUME?');
+    if(r.rate==null||!(r.rate>0))f.push(r.iruppu?'RATE? iruppu — type the rate':'RATE?');
+    else if(!(r.ov.rate!=null&&r.ov.rate!=='')&&r.op==='*'&&r.rate>=10&&meds['*']&&Math.abs(r.rate-meds['*'])>meds['*']*0.02)f.push('RATE far from others');
+    if(!r.ov.op&&!r.divSep&&r.rate!=null&&r.rate<10)f.push('OP? small rate, confirm / or *');
+    r.dupWhy='';
+    if(r.code&&r.vol>0&&r.rate>0&&!D.hold[r.i]){
+      var k=dk(r.code,r.vol,r.op,r.rate,r.ps),why=batchK[k]?'same as an earlier row in this message':sheetK[k]?'already on today\'s sheet':postK[k]?'already posted for '+fd(S.date):'';
+      batchK[k]=1;
+      if(why){r.dupWhy=why;if(!(r.ov&&r.ov.allow))f.push('DUPLICATE — '+why)}
+    }
+    r.flags=f;r.ok=!f.length&&!D.hold[r.i];
+  });
+  return rows;
+}
+function renderDeals(){
+  var rows=computeDeals(parseDeals(D.text)),deals=rows.filter(function(r){return r.deal});
+  var box=$('dealRows');
+  if(!deals.length){box.innerHTML='<div class="mute">'+(D.text.trim()?'No deal lines found (each needs @ or ➗ ).':'Paste one batch of the WhatsApp message above.')+'</div>';$('dealSum').innerHTML='';$('dealCopyNote').textContent='';return}
+  var pv=0,sv=0,okn=0;
+  var h='';
+  rows.forEach(function(r){
+    if(!r.deal){h+='<div class="mute" style="padding:3px 0">Skipped: “'+esc(r.raw)+'” (not a deal line)</div>';return}
+    if(r.ok)okn++;
+    if(!r.divSep&&r.vol>0&&r.rate!=null){if(r.ps==='P')pv+=r.vol;else sv+=r.vol}
+    var held=D.hold[r.i];
+    h+='<div class="drow '+(held?'hold':r.ok?'ok':'bad')+'"><div class="dtop"><b>Block '+r.block+' · '+(r.ps==='P'?'Purchase':'Sale')+'</b><span class="mute" style="flex:1;margin:0 6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(r.raw)+'</span><label class="own"><input type="checkbox" data-hold="'+r.i+'"'+(held?' checked':'')+'> skip</label></div>'
+     +'<div class="dgrid"><div><label>Code</label><input type="text" data-f="code" data-i="'+r.i+'" value="'+esc(r.code)+'" autocapitalize="characters" autocomplete="off"></div>'
+     +'<div><label>Volume</label><input type="text" inputmode="decimal" data-f="vol" data-i="'+r.i+'" value="'+(r.vol!=null?r2(r.vol):'')+'"></div>'
+     +'<div><label>Op</label><select data-f="op" data-i="'+r.i+'"><option'+(r.op==='*'?' selected':'')+'>*</option><option'+(r.op==='/'?' selected':'')+'>/</option></select></div>'
+     +'<div><label>Rate</label><input type="text" inputmode="decimal" data-f="rate" data-i="'+r.i+'" value="'+(r.rate!=null?r.rate:'')+'"></div>'
+     +'<div><label>P/S</label><select data-f="ps" data-i="'+r.i+'"><option'+(r.ps==='P'?' selected':'')+'>P</option><option'+(r.ps==='S'?' selected':'')+'>S</option></select></div></div>'
+     +(r.dupWhy&&!held?'<label class="own" style="display:block;margin-top:4px"><input type="checkbox" data-allow="'+r.i+'"'+(r.ov&&r.ov.allow?' checked':'')+'> This really is a second deal — allow it</label>':'')
+     +(held?'<div class="flag warn">Skipped — will not be copied</div>':r.flags.length?'<div class="flag bad">'+esc(r.flags.join(' · '))+'</div>':'<div class="flag okf">OK'+(r.note.length?' — '+esc(r.note.join(', ')):'')+'</div>')
+     +'</div>';
+  });
+  box.innerHTML=h;
+  var bad=deals.filter(function(r){return !r.ok&&!D.hold[r.i]}).length;
+  $('dealSum').innerHTML='<div class="two"><div>Purchase vol <b>'+fmt(pv)+'</b></div><div>Sale vol <b>'+fmt(sv)+'</b></div></div><div class="mute">'+okn+' ready · '+bad+' need attention · '+Object.keys(D.hold).filter(function(k){return D.hold[k]}).length+' skipped. Volume totals are for information (stock kept with Crown need not match).</div>';
+  $('dealChecked').checked=!!D.checked;
+  $('dealCopyNote').textContent=okn+' of '+deals.length+' rows will be copied';
+}
+function dealTSV(){
+  var rows=computeDeals(parseDeals(D.text)).filter(function(r){return r.deal&&r.ok});
+  return rows.map(function(r){return[r.code,String(r2(r.vol)),r.op,String(r.rate),r.ps].join('\t')}).join('\n');
+}
+function setView(v){
+  if(['cash','deals','ledger','day','settings'].indexOf(v)<0)v='cash';
+  if(v==='deals'&&MODS.deals===false)v='cash';
+  D.view=v;dsave();
+  ['Cash','Deals','Ledger','Day','Settings'].forEach(function(n){$('view'+n).style.display=(v===n.toLowerCase())?'':'none'});
+  $('cashTop').style.display=v==='cash'?'':'none';
+  ['Cash','Deals','Ledger','Day'].forEach(function(n){$('tab'+n).classList.toggle('on',v===n.toLowerCase())});
+  if(v==='deals')renderDeals();if(v==='ledger')renderLedger();if(v==='day'){renderClose();renderPaper();renderLedBak();renderSnaps();renderDrive();renderXlsNote()}
+  window.scrollTo(0,0);
+}
+$('tabDay').onclick=function(){setView('day')};
+$('tabCash').onclick=function(){setView('cash')};$('tabDeals').onclick=function(){setView('deals')};
+$('dealText').value=D.text;
+$('dealText').onchange=$('dealText').oninput=function(){if(D.text!==this.value){D.text=this.value;D.ov={};D.hold={};D.checked=false;dsave();renderDeals()}};
+$('dealPaste').onclick=function(){
+  if(navigator.clipboard&&navigator.clipboard.readText){navigator.clipboard.readText().then(function(t){$('dealText').value=t;$('dealText').oninput()},function(){toast('Paste blocked — long-press the box and paste')})}
+  else toast('Long-press the box and paste');
+};
+$('dealClear').onclick=function(){
+  if(!f.dealConfirm){f.dealConfirm=true;this.textContent='Tap again to clear';var b=this;clearTimeout(f.dcT);f.dcT=setTimeout(function(){f.dealConfirm=false;b.textContent='Clear'},3500);return}
+  f.dealConfirm=false;this.textContent='Clear';D.text='';D.ov={};D.hold={};D.checked=false;dsave();$('dealText').value='';renderDeals();
+};
+$('dealRows').onchange=function(e){
+  var t=e.target,i=t.getAttribute('data-i'),fl=t.getAttribute('data-f'),h=t.getAttribute('data-hold');
+  if(h!==null){D.hold[h]=t.checked;D.checked=false;dsave();renderDeals();return}
+  var al=t.getAttribute('data-allow');if(al!==null){var o2=D.ov[al]=D.ov[al]||{};o2.allow=t.checked;D.checked=false;dsave();renderDeals();return}
+  if(fl){var o=D.ov[i]=D.ov[i]||{};o[fl]=t.value.trim();if(fl==='code')o.code=o.code.toUpperCase();D.checked=false;dsave();renderDeals()}
+};
+$('dealChecked').onchange=function(){D.checked=this.checked;dsave()};
+$('dealCopy').onclick=function(){
+  var rows=computeDeals(parseDeals(D.text)).filter(function(r){return r.deal});
+  if(!rows.length){toast('Nothing to copy');return}
+  if(!$('dealChecked').checked){toast('Tick "I checked every row against the message" first');return}
+  var txt=dealTSV(),n=txt?txt.split('\n').length:0,held=rows.length-n;
+  if(!n){toast('No rows are ready');return}
+  copyText(txt,n+' rows copied'+(held?' ('+held+' held back)':''));
+};
+
+// ===== share / receive a day =====
+function dayStamp(){if(S&&S.date)return S.date;var d=new Date();function p(n){return(n<10?'0':'')+n}return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())}
+function payload(){
+  return summaryText()+'\n\n'+'-----------------------------------------\nCASHENTRY-DATA v1  (used by the tool to reload this day - do not edit below)\n'+JSON.stringify({app:'cashentry',v:1,biz:BIZ,at:new Date().toISOString(),sid:S.sid,S:S})}
+function csvCell(v){v=String(v==null?'':v);return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v}
+function dayCSV(){
+  var L=[['Date','Account Code','Narration','OUT','IN','Commission R','Commission I'].join(',')],d=dayStamp();
+  rows().forEach(function(r){L.push([d,r.code,r.narr,plain(r.out),plain(r.inn),plain(r.cr),plain(r.ci)].map(csvCell).join(','))});
+  return '\ufeff'+L.join('\r\n')+'\r\n';
+}
+function summaryText(){
+  var rs=rows(),t=totals();
+  var L=['Cash day '+dayStamp()+(BIZ?' - '+BIZ:''),'Opening '+fmt(num(S.open))];
+  rs.forEach(function(r,i){
+    var cm=r.cr?(' | R '+plain(r.cr)):(r.ci?(' | I '+plain(r.ci)):'');
+    L.push((i+1)+'. '+(r.code||'(NO CODE)')+' | '+(r.narr||'-')+' | '+(r.out?'OUT '+plain(r.out):'IN '+plain(r.inn))+cm);
+  });
+  (S.deals||[]).forEach(function(x,i){L.push('Deal '+(i+1)+'. '+x.code+' | '+x.vol+' '+x.op+' '+x.rate+' ('+x.ps+')')});
+  L.push('Total OUT '+plain(t.o)+' | IN '+plain(t.i));
+  L.push('Closing cash '+plain(t.bal));
+  return L.join('\n');
+}
+function downloadText(name,txt){
+  var a=document.createElement('a');a.href=URL.createObjectURL(new Blob([txt],{type:'text/plain'}));a.download=name;document.body.appendChild(a);a.click();
+  setTimeout(function(){URL.revokeObjectURL(a.href);document.body.removeChild(a)},1000);
+}
+$('shareFile').onclick=function(){
+  if(!rows().length&&!S.open&&!S.deals.length){toast('Nothing to share yet');return}
+  shareFileGen('cash-day-'+dayStamp()+'.txt',payload(),'text/plain',markBak);
+};
+$('shareCsv').onclick=function(){
+  if(!rows().length){toast('Nothing to export yet');return}
+  shareFileGen('cash-day-'+dayStamp()+'.csv',dayCSV(),'text/csv',function(){});
+};
+$('shareText').onclick=function(){
+  if(!rows().length){toast('Nothing to share yet');return}
+  var txt=summaryText();
+  if(navigator.share){navigator.share({text:txt}).catch(function(e){if(e&&e.name!=='AbortError')copyText(txt,'Copied — paste it into a message')});return}
+  copyText(txt,'Copied — paste it into a message');
+};
+var recv=null;
+function parseBackup(raw){
+  var mk=raw.indexOf('CASHENTRY-DATA'),i=raw.indexOf('{',mk>=0?mk:0);if(i<0)return null;
+  var o;try{o=JSON.parse(raw.slice(i))}catch(e){return null}
+  var T=o&&o.app==='cashentry'?o.S:(o&&Array.isArray(o.entries)?o:null);   // also accepts "Copy backup of today" text
+  if(!T||!Array.isArray(T.entries))return null;
+  var ent=T.entries.map(function(e){return{code:String(e.code||'').toUpperCase().trim(),narr:String(e.narr||''),out:num(e.out),inn:num(e.inn),cr:num(e.cr),ci:num(e.ci)}});
+  var exp=(Array.isArray(T.exp)?T.exp:[]).map(function(x){return{label:String(x.label||''),amt:num(x.amt),own:!!x.own}}).filter(function(x){return x.amt>0});
+  var dl=(Array.isArray(T.deals)?T.deals:[]).map(function(x){var v=num(x.vol),r=parseFloat(x.rate),op=x.op==='/'?'/':'*';return{code:String(x.code||'').toUpperCase().trim(),vol:v,op:op,rate:r,ps:x.ps==='S'?'S':'P',inr:(v>0&&r>0)?dealInr(v,op,r):0,b:+x.b||0}}).filter(function(x){return x.code&&x.vol>0&&x.rate>0});
+  return{sid:String(o.sid||T.sid||''),date:/^\d{4}-\d\d-\d\d$/.test(T.date||'')?T.date:'',deals:dl,open:T.open===''||T.open==null?'':String(num(T.open)),entries:ent,exp:exp,expNarr:String(T.expNarr||'EXP'),at:o.at||'',biz:String(o.biz||'')};
+}
+function sheetSig(T){
+  var a=(T.entries||[]).map(function(e){return[String(e.code||'').toUpperCase(),e.out||0,e.inn||0,e.cr||0,e.ci||0].join(',')}).sort().join(';');
+  var b=(T.exp||[]).map(function(x){return x.amt+(x.own?'o':'')}).sort().join(';');
+  var c=(T.deals||[]).map(function(x){return[String(x.code||'').toUpperCase(),x.vol,x.op,x.rate,x.ps].join(',')}).sort().join(';');
+  return[num(T.open),a,b,c].join('|');
+}
+function renderRecv(raw){
+  recv=raw&&raw.trim()?parseBackup(raw):null;
+  var inf=$('recvInfo'),ok=!!recv;
+  if(!raw||!raw.trim())inf.innerHTML='';
+  else if(!recv)inf.innerHTML='<div class="flag bad">That does not look like a day file or backup.</div>';
+  else{
+    var dup=recv.entries.filter(function(e){return S.entries.some(function(x){return x.code===e.code&&x.narr===e.narr&&x.out===e.out&&x.inn===e.inn&&x.cr===e.cr&&x.ci===e.ci})}).length;
+    var o=0,i=0;recv.entries.forEach(function(e){o+=e.out;i+=e.inn});var b=0;recv.exp.forEach(function(x){b+=x.amt});
+    inf.innerHTML='<div class="flag okf">'+recv.entries.length+' entries, '+recv.exp.length+' expense lines'+(recv.deals.length?', '+recv.deals.length+' deals':'')+' · OUT '+fmt(o+b)+' · IN '+fmt(i)+(recv.open?' · opening '+fmt(num(recv.open)):'')+'</div>'
+      +((recv.biz&&BIZ&&recv.biz.toLowerCase()!==BIZ.toLowerCase())?'<div class="flag bad">This day file is from "'+esc(recv.biz)+'" but this tool is "'+esc(BIZ)+'". Check you picked the right file before adding.</div>':'')+(dup?'<div class="flag warn">'+dup+' of these entries are already on your sheet. Adding again will double them.</div>':'');
+  }
+  var addOff=!ok,repOff=!ok;
+  if(ok&&recv.sid){
+    var posted=L?L.days.filter(function(d){return d.sid===recv.sid})[0]:null,rat=new Date(recv.at).getTime()||0;
+    var msg='';
+    if(posted){msg='This sheet was already posted to the ledger ('+fd(posted.date)+'). It cannot be loaded again.';addOff=repOff=true}
+    else if(recv.sid===S.sid){
+      var same=sheetSig(S)===sheetSig(recv);
+      if(same){msg='This is exactly the sheet that is on your phone. Nothing to load.';addOff=repOff=true}
+      else if(rat&&rat<META.chg){msg='This file is older than the sheet on your phone (you changed it after the file was made). Not loaded.';addOff=repOff=true}
+      else{msg='A newer version of the sheet on your phone. Use Replace to update it (Add would double the entries).';addOff=true}
+    }else if(SEEN[recv.sid]){
+      if(rat&&rat<=SEEN[recv.sid]){msg='You already loaded this version of this sheet (or a newer one).';addOff=repOff=true}
+      else{msg='A newer version of a sheet you loaded before. Use Replace (Add would double the entries).';addOff=true}
+    }
+    if(msg)inf.innerHTML+='<div class="flag '+(addOff&&repOff?'bad':'warn')+'">'+esc(msg)+'</div>';
+  }
+  $('recvAdd').disabled=addOff;$('recvRep').disabled=repOff;
+  $('recvAdd').textContent='Add to my sheet';$('recvRep').textContent='Replace my sheet';f.rc=null;
+}
+$('recvText').oninput=function(){renderRecv(this.value)};
+$('recvFile').onchange=function(){
+  var fl=this.files&&this.files[0];if(!fl)return;
+  var r=new FileReader();r.onload=function(){$('recvText').value=String(r.result);renderRecv(String(r.result))};r.readAsText(fl);
+};
+function confirmTap(btn,key,label,go){
+  if(f.rc!==key){f.rc=key;btn.textContent='Tap again to '+label;clearTimeout(f.rct);f.rct=setTimeout(function(){f.rc=null;btn.textContent=btn.getAttribute('data-l')},4000);return}
+  clearTimeout(f.rct);f.rc=null;go();
+}
+$('recvAdd').setAttribute('data-l','Add to my sheet');$('recvRep').setAttribute('data-l','Replace my sheet');
+$('recvAdd').onclick=function(){
+  if(!recv)return;var r=recv;
+  confirmTap(this,'add','add '+(r.entries.length+r.exp.length+r.deals.length)+' rows',function(){
+    r.entries.forEach(function(e){e.id='e'+(S.seq++);S.entries.push(e)});
+    r.exp.forEach(function(x){S.exp.push(x)});
+    r.deals.forEach(function(x){S.deals.push(x)});
+    markSeen(r.sid,r.at);
+    if(!S.open&&r.open)S.open=r.open;
+    save();all();$('recvText').value='';$('recvFile').value='';renderRecv('');toast('Added to your sheet');
+  });
+};
+$('recvRep').onclick=function(){
+  if(!recv)return;var r=recv;
+  confirmTap(this,'rep','replace today\'s sheet',function(){
+    ls(LKEY,{t:Date.now(),s:S});
+    var n={open:r.open,entries:[],exp:r.exp,expNarr:r.expNarr||'EXP',seq:S.seq,deals:r.deals,date:r.date||S.date,sid:r.sid||newSid()};markSeen(r.sid,r.at);
+    r.entries.forEach(function(e){e.id='e'+(n.seq++);n.entries.push(e)});
+    S=n;save();f.lastDel=null;all();$('recvText').value='';$('recvFile').value='';renderRecv('');toast('Replaced — your old sheet can be restored for 24 hours');
+  });
+};
+
+
+// ===== permanent ledger (stored in IndexedDB) =====
+var L=null,CACHE=null,dbH=null,dbTried=false;
+function newLedger(){return{v:1,types:{},reserve:'RESERVE',crown:{code:'CROWN',open:0},ob:null,days:[],late:[],wait:[],commCode:'COMM',seq:1,chg:0,bak:0}}
+function fixLedger(x){x=x||newLedger();x.days=x.days||[];x.late=x.late||[];x.wait=x.wait||[];x.seq=x.seq||1;x.commCode=x.commCode==null?'COMM':x.commCode;x.crown=x.crown||{code:'CROWN',open:0};x.types=x.types||{};x.reserve=x.reserve||'RESERVE';x.chg=x.chg||0;x.bak=x.bak||0;x.ob=x.ob||null;return x}
+function idb(cb){
+  if(dbH){cb(dbH);return}
+  if(dbTried){cb(null);return}
+  try{var r=indexedDB.open('cashentry-db',1);
+    r.onupgradeneeded=function(){r.result.createObjectStore('kv')};
+    r.onsuccess=function(){dbH=r.result;dbTried=true;cb(dbH)};
+    r.onerror=function(){dbTried=true;cb(null)};r.onblocked=function(){dbTried=true;cb(null)};
+  }catch(e){dbTried=true;cb(null)}
+}
+function lsTry(k,v){try{localStorage.setItem(k,JSON.stringify(v));return true}catch(e){return false}}
+function kvGet(k,cb){idb(function(db){
+  if(!db){cb(ls('cashentry.fb.'+k));return}
+  try{var q=db.transaction('kv').objectStore('kv').get(k);q.onsuccess=function(){cb(q.result||null)};q.onerror=function(){cb(null)}}catch(e){cb(null)}
+})}
+function kvSet(k,v,cb){idb(function(db){
+  if(!db){cb(lsTry('cashentry.fb.'+k,v));return}
+  try{var tx=db.transaction('kv','readwrite');tx.objectStore('kv').put(v,k);var done=false;
+    tx.oncomplete=function(){if(!done){done=true;cb(true)}};tx.onerror=tx.onabort=function(){if(!done){done=true;cb(false)}}
+  }catch(e){cb(false)}
+})}
+function ldPut(cb){kvSet('ledger',L,function(ok){if(!ok)toast('COULD NOT SAVE THE LEDGER — back it up now');renderLedBak();if(cb)cb(ok)})}
+function ldSave(cb){L.chg=Date.now();CACHE=null;ldPut(cb)}
+
+function today(){var d=new Date();function p(n){return(n<10?'0':'')+n}return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())}
+function addDay(s,n){var p=s.split('-'),d=new Date(+p[0],+p[1]-1,+p[2]+n);function q(x){return(x<10?'0':'')+x}return d.getFullYear()+'-'+q(d.getMonth()+1)+'-'+q(d.getDate())}
+var MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+function fd(s){if(!s)return'';var p=String(s).split('-');return p.length===3?(p[2]+'-'+MON[+p[1]-1]+'-'+p[0]):s}
+function fmt2(n){return r2(n).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2})}
+function dealInr(v,op,r){return r2(op==='/'?v/r:v*r)}
+function dealNarr(x){return x.v+' '+x.op+' '+x.r+' ('+x.ps+')'}
+
+function events(){
+  if(CACHE)return CACHE;
+  var ev=[],ob=L.ob?L.ob.date:'';
+  L.days.forEach(function(d){
+    if(ob&&d.date<ob)return;
+    (d.deals||[]).forEach(function(x){ev.push({d:d.date,k:0,s:x.s,c:x.c,n:dealNarr(x),o:x.ps==='S'?x.inr:0,i:x.ps==='P'?x.inr:0,cr:0,ci:0})});
+    (d.ent||[]).forEach(function(e){ev.push({d:d.date,k:1,s:e.s,c:e.c,n:e.n,o:e.o,i:e.i,cr:e.cr,ci:e.ci})});
+  });
+  L.late.forEach(function(e){if(ob&&e.d<ob)return;ev.push({d:e.d,k:1,s:1e9+e.s,c:e.c,n:e.n,o:e.o,i:e.i,cr:e.cr,ci:e.ci})});
+  return(CACHE=ev);
+}
+// net = IN minus OUT.  negative = they owe us (OUT), positive = we owe them (IN)
+function balances(to){
+  var net={},cm=0,cc=L.commCode;
+  if(L.ob)Object.keys(L.ob.rows).forEach(function(c){var r=L.ob.rows[c];net[c]=(r[1]||0)-(r[0]||0)});
+  events().forEach(function(e){if(to&&e.d>to)return;var v=e.i-e.o;if(e.c!==cc)v+=e.ci-e.cr;net[e.c]=(net[e.c]||0)+v;cm+=e.cr-e.ci});
+  if(cc&&Math.abs(cm)>0.0001)net[cc]=(net[cc]||0)+cm;
+  Object.keys(net).forEach(function(k){net[k]=r2(net[k])});
+  return net;
+}
+function z2(x){return(x<10?'0':'')+x}
+function ymd(d){return d.getFullYear()+'-'+z2(d.getMonth()+1)+'-'+z2(d.getDate())}
+function perRange(kk,pf,pt){
+  var t=today(),k=kk||f.per||'all';
+  if(k==='month')return[t.slice(0,8)+'01',''];
+  if(k==='last'){var p=t.split('-');return[ymd(new Date(+p[0],+p[1]-2,1)),ymd(new Date(+p[0],+p[1]-1,0))]}
+  if(k==='30')return[addDay(t,-29),''];
+  if(k==='custom')return[pf!==undefined?pf:(f.pf||''),pt!==undefined?pt:(f.pt||'')];
+  return['',''];
+}
+function perLabel(rg){return(!rg[0]&&!rg[1])?'All entries':((rg[0]?fd(rg[0]):'start')+' to '+(rg[1]?fd(rg[1]):fd(today())))}
+function pendingEv(){
+  var ev=[],d=S.date||today();
+  (S.deals||[]).forEach(function(x,ix){ev.push({d:d,k:0,s:2e9+ix,c:x.code,n:dealNarr({v:x.vol,op:x.op,r:x.rate,ps:x.ps}),o:x.ps==='S'?x.inr:0,i:x.ps==='P'?x.inr:0,cr:0,ci:0,p:1})});
+  (S.entries||[]).forEach(function(e,ix){if(e.code)ev.push({d:d,k:1,s:2e9+ix,c:e.code,n:e.narr,o:e.out||0,i:e.inn||0,cr:e.cr||0,ci:e.ci||0,p:1})});
+  return ev;
+}
+function statement(code,from,to,incl){
+  var cc=L.commCode,list=[],ob=0,obr=null,cm=0,npend=0;
+  if(L.ob&&L.ob.rows[code]){obr=L.ob.rows[code];ob=(obr[1]||0)-(obr[0]||0)}
+  var evs=events();if(incl&&(!to||to>=(S.date||today())))evs=evs.concat(pendingEv());
+  evs.forEach(function(e){
+    cm+=e.cr-e.ci;
+    if(e.c!==code)return;
+    if(e.p)npend++;
+    if(e.o||e.i||e.n||(!e.cr&&!e.ci))list.push({d:e.d,k:e.k,s:e.s,u:0,n:e.n,o:e.o,i:e.i,p:e.p});
+    if((e.cr||e.ci)&&code!==cc)list.push({d:e.d,k:e.k,s:e.s,u:1,n:'Commission',o:e.cr,i:e.ci,p:e.p});
+  });
+  list.sort(function(a,b){return a.d<b.d?-1:a.d>b.d?1:a.k-b.k||a.s-b.s||a.u-b.u});
+  if(code===cc&&Math.abs(cm)>0.0001)list.push({d:'9999',k:9,s:0,u:0,n:'Commission earned (all accounts)',o:cm<0?-cm:0,i:cm>0?cm:0,tail:true});
+  var bal=ob;list.forEach(function(r){bal=r2(bal+r.i-r.o);r.b=bal});
+  var open=ob,showOb=true,odate=L.ob?L.ob.date:'';
+  if(from&&!(L.ob&&from<=L.ob.date)){
+    showOb=false;odate=from;
+    var before=list.filter(function(r){return !r.tail&&r.d<from});
+    if(before.length)open=before[before.length-1].b;
+  }
+  var td=today();
+  var rows=list.filter(function(r){return r.tail?(!to||to>=td):((!from||r.d>=from)&&(!to||r.d<=to))});
+  return{open:open,obr:showOb?obr:null,odate:odate,rows:rows,bal:rows.length?rows[rows.length-1].b:open,npend:rows.filter(function(r){return r.p}).length};
+}
+function pendCount(code){var n=0;pendingEv().forEach(function(e){if(e.c===code)n++});return n}
+function nowStamp(){var d=new Date();return fd(today())+' '+z2(d.getHours())+':'+z2(d.getMinutes())}
+function crownPos(extra){
+  var cr=L.crown||{code:'CROWN',open:0},ob=L.ob?L.ob.date:'',p=0,sl=0,n=0;
+  L.days.forEach(function(d){if(ob&&d.date<ob)return;(d.deals||[]).forEach(function(x){if(x.c===cr.code){n++;if(x.ps==='P')p+=x.v;else sl+=x.v}})});
+  (extra||[]).forEach(function(x){if(x.code===cr.code){n++;if(x.ps==='P')p+=x.vol;else sl+=x.vol}});
+  return{open:num(cr.open),p:r2(p),s:r2(sl),net:r2(num(cr.open)+p-sl),n:n,code:cr.code};
+}
+function acctList(){var s={};codes.forEach(function(c){s[c]=1});if(L)Object.keys(balances()).forEach(function(c){s[c]=1});return Object.keys(s)}
+
+// ----- tables pasted from Excel -----
+function numCell(s){if(s==null)return 0;s=String(s).trim();if(s==='')return 0;var n=parseFloat(s.replace(/,/g,''));return(isNaN(n)||!/^-?[\d,]*\.?\d+$/.test(s))?NaN:n}
+function parseSheetRows(text){
+  var rows=[],bad=[],seen={},dup=[];
+  String(text).split(/\r?\n/).forEach(function(line){
+    if(!line.trim())return;
+    var code,o,i,m,typ='';
+    if(line.indexOf('\t')>=0){
+      var t=line.split('\t').map(function(x){return x.trim()});
+      code=t[0].toUpperCase();var rest=t.slice(1);
+      if(/^ACCOUNT/.test(code)||/^CODE$/.test(code))return;
+      if(t.length>=4&&(t[1]===''||isNaN(numCell(t[1])))){rest=t.slice(2);typ=t[1]}          // Code, Type, OUT, IN, ...
+      else if(rest.length&&rest[0]!==''&&isNaN(numCell(rest[0])))rest.shift();   // an Account Type column
+      o=numCell(rest[0]);i=numCell(rest[1]);
+    }else if((m=line.trim().match(/^(.+?)\s+(-?[\d,]*\.?\d+)\s+(-?[\d,]*\.?\d+)$/))){
+      code=m[1].trim().toUpperCase();o=numCell(m[2]);i=numCell(m[3]);
+    }else{bad.push(line.trim());return}
+    if(!code||isNaN(o)||isNaN(i)){bad.push(line.trim());return}
+    if(seen[code]){dup.push(code);return}seen[code]=1;
+    rows.push({code:code,o:r2(o),i:r2(i),t:typ});
+  });
+  return{rows:rows,bad:bad,dup:dup};
+}
+function signed(n){return n<0?'-'+fmt2(-n):fmt2(n)}
+function oi(n){return n<0?'<span class="oo">OUT '+fmt2(-n)+'</span>':n>0?'<span class="ii">IN '+fmt2(n)+'</span>':'0'}
+
+// ----- Ledger view -----
+function renderCrown(){
+  var c=crownPos(),ex=crownPos(S.deals||[]),h='<div class="two"><div><div class="mute">Opening</div><b>'+signed(c.open)+'</b></div><div><div class="mute">Purchased (P)</div><b class="ii">'+fmt2(c.p)+'</b></div><div><div class="mute">Sold (S)</div><b class="oo">'+fmt2(c.s)+'</div></div></b>';
+  h='<div class="two"><div class="bcard" style="margin:0"><div class="mute">NET AED VOLUME HELD ('+esc(c.code)+')</div><div class="bigbal" style="font-size:24px">'+signed(c.net)+'</div></div><div class="bcard" style="margin:0"><div class="mute">Opening '+signed(c.open)+'</div><div class="mute"><span class="ii">+ '+fmt2(c.p)+'</span> bought · <span class="oo">− '+fmt2(c.s)+'</span> sold</div></div></div>';
+  if((S.deals||[]).some(function(x){return x.code===c.code}))h+='<div class="mute" style="margin-top:6px">With the deals on today\'s sheet (not posted yet): '+signed(ex.net)+'</div>';
+  $('crownBody').innerHTML=h;
+}
+function renderLedger(){
+  if(!L){$('ledBanner').innerHTML='<div class="card"><div class="mute">Opening the ledger…</div></div>';return}
+  renderLedBanner();renderCrown();renderStatement();renderTypeBar();renderBalList();renderMonth();renderAccts();renderWait();renderPosted();renderOb();renderLedBak();renderDayView();if($('fqIn').value)renderFind();
+}
+function renderLedBanner(){
+  var h='';
+  if(!L.ob)h+='<div class="flag warn" style="margin:12px 0">No opening balances yet. Open “Opening balances” below and paste them from the Chart of Accounts.</div>';
+  if(L.wait.length)h+='<div class="flag warn" style="margin:12px 0">'+L.wait.length+' entr'+(L.wait.length>1?'ies are':'y is')+' waiting for an account code (see below).</div>';
+  if(L.days.length&&L.chg>L.bak)h+='<div class="flag warn" style="margin:12px 0">The ledger has changed since the last backup. Open the Day tab and use “Backup, restore and export”.</div>';
+  $('ledBanner').innerHTML=h;
+}
+function renderStatement(){
+  var code=f.stCode,sug='',typed=$('stIn').value.trim().toUpperCase();
+  if(typed&&typed!==code){
+    var a=acctList().filter(function(c){return c.indexOf(typed)>=0}).sort().slice(0,14);
+    sug=a.map(function(c){return'<button class="chip" data-c="'+esc(c)+'">'+esc(c)+'</button>'}).join('')||'<span class="mute">No account matches “'+esc(typed)+'”</span>';
+  }else if(!typed){
+    var a2=Object.keys(use).sort(function(x,y){return use[y]-use[x]}).slice(0,8);
+    sug=a2.map(function(c){return'<button class="chip" data-c="'+esc(c)+'">'+esc(c)+'</button>'}).join('');
+  }
+  $('stSug').innerHTML=sug;
+  var out=$('stOut');
+  if(!code){out.innerHTML='<div class="mute">Type an account code, or tap a name in the list below.</div>';return}
+  var pc0=pendCount(code),inc=pc0>0&&f.stPend!==false,rg=perRange(),s=statement(code,rg[0],rg[1],inc),MAXR=150,show=f.stAll?s.rows:s.rows.slice(-MAXR),cut=s.rows.length-show.length,per=f.per||'all';
+  function pc(k,l){return'<button class="chip'+(per===k?' on':'')+'" data-per="'+k+'">'+l+'</button>'}
+  var h='<div class="chips" style="margin:8px 0 4px">'+pc('all','All')+pc('month','This month')+pc('last','Last month')+pc('30','Last 30 days')+pc('custom','Custom')+'</div>';
+  if(per==='custom')h+='<div class="two" style="margin:4px 0"><div><div class="mute">From</div><input type="date" id="pf" value="'+esc(f.pf||'')+'"></div><div><div class="mute">To</div><input type="date" id="pt" value="'+esc(f.pt||'')+'"></div></div>';
+  h+='<div style="margin-top:6px"><div class="mute">CUSTOMER / ACCOUNT LEDGER · '+esc(perLabel(rg))+'</div><b style="font-size:20px">'+esc(code)+'</b></div>';
+  h+='<div class="two" style="margin-top:8px"><div class="bcard" style="margin:0"><div class="mute">OPENING BALANCE</div><div class="bigbal '+(s.open<0?'neg':s.open>0?'pos':'')+'" style="font-size:21px">'+signed(s.open)+'</div></div><div class="bcard" style="margin:0"><div class="mute">CLOSING BALANCE</div><div class="bigbal '+(s.bal<0?'neg':s.bal>0?'pos':'')+'" style="font-size:21px">'+signed(s.bal)+'</div></div></div>';
+  if(pc0)h+='<div class="flag warn" style="margin:6px 0"><b>'+pc0+' entr'+(pc0>1?'ies':'y')+' from today\'s sheet for '+esc(code)+' not posted yet.</b> <button class="chip'+(inc?' on':'')+'" id="stPend">'+(inc?'Included in this statement':'Not included — tap to include')+'</button></div>';
+  h+='<div class="mute" style="margin:6px 0 8px">OUT = they owe us · IN = we owe them · a negative (red) balance means they owe us.</div>';
+  h+='<table class="stmt"><tr><th>Date</th><th>Narration</th><th class="n">OUT</th><th class="n">IN</th><th class="n">Balance</th></tr>';
+  h+='<tr class="open"><td class="dt">'+fd(s.odate)+'</td><td>Opening Balance</td><td class="n oo">'+(s.obr&&s.obr[0]?fmt2(s.obr[0]):'')+'</td><td class="n ii">'+(s.obr&&s.obr[1]?fmt2(s.obr[1]):'')+'</td><td class="n">'+signed(s.open)+'</td></tr>';
+  if(cut>0)h+='<tr><td colspan="5" class="mute" style="text-align:center"><button class="btn sec sm" id="stMore">Show '+cut+' earlier row'+(cut>1?'s':'')+'</button></td></tr>';
+  show.forEach(function(r,ix){
+    h+='<tr class="'+(r.p?'pend':ix%2?'':'alt')+'"><td class="dt">'+(r.tail?'':fd(r.d))+'</td><td>'+esc(r.n)+'</td><td class="n oo">'+(r.o?fmt2(r.o):'')+'</td><td class="n ii">'+(r.i?fmt2(r.i):'')+'</td><td class="n">'+signed(r.b)+'</td></tr>';
+  });
+  if(!s.rows.length)h+='<tr><td colspan="5" class="mute">No entries in this period.</td></tr>';
+  h+='</table><div style="margin-top:10px"><button class="btn" id="stSend">Send statement (image)</button></div>';
+  out.innerHTML=h;
+}
+function renderBalList(){
+  var net=balances(),keys=Object.keys(net);
+  if(f.hz===undefined)f.hz=true;
+  if(f.hz)keys=keys.filter(function(k){return Math.abs(net[k])>=0.005});
+  else{codes.forEach(function(c){if(keys.indexOf(c)<0)keys.push(c)});keys=keys.map(function(k){return k})}
+  if(f.ty)keys=keys.filter(function(k){return typeOf(k)===f.ty});
+  keys.sort(f.big?function(a,b){return Math.abs(net[b]||0)-Math.abs(net[a]||0)||(a<b?-1:1)}:function(a,b){return a<b?-1:a>b?1:0});
+  var to=0,ti=0;
+  keys.forEach(function(k){var v=net[k]||0;if(v<0)to-=v;else ti+=v});
+  var h='<table class="stmt"><tr><th>Account</th><th class="n">OUT (they owe us)</th><th class="n">IN (we owe them)</th></tr>';
+  var shown=f.allRows?keys:keys.slice(0,15);
+  shown.forEach(function(k){var v=net[k]||0;h+='<tr class="arow" data-c="'+esc(k)+'"><td><b>'+esc(k)+'</b></td><td class="n oo">'+(v<0?fmt2(-v):'')+'</td><td class="n ii">'+(v>0?fmt2(v):'')+'</td></tr>'});
+  h+='<tr class="tot"><td>Total ('+keys.length+')</td><td class="n oo">'+fmt2(to)+'</td><td class="n ii">'+fmt2(ti)+'</td></tr></table>';
+  h+='<div class="mute" style="margin-top:6px">Difference OUT − IN: '+fmt2(r2(to-ti))+(L.ob||L.days.length?'':' · nothing loaded yet')+'. Tap an account to open its statement.</div>';
+  $('balList').innerHTML=h;
+  $('balMore').innerHTML=keys.length>15?'<button class="btn sec" id="balToggle">'+(f.allRows?'Show fewer':'Show all '+keys.length+' accounts')+'</button>':'';
+  $('srtAZ').classList.toggle('on',!f.big);$('srtBig').classList.toggle('on',!!f.big);$('hideZero').classList.toggle('on',!!f.hz);
+}
+function renderWait(){
+  $('waitCard').style.display=waitItems().length?'':'none';
+  $('waitList').innerHTML=L.wait.map(function(w){
+    return'<div class="bcard"><div><b>'+fd(w.d)+'</b> · '+esc(w.n||'(no narration)')+' · '+(w.o?'<span class="oo">OUT '+fmt2(w.o)+'</span>':'')+(w.i?'<span class="ii">IN '+fmt2(w.i)+'</span>':'')+(w.cr?' · Comm R '+fmt2(w.cr):'')+(w.ci?' · Comm I '+fmt2(w.ci):'')+'</div>'
+      +'<div class="two" style="margin-top:6px"><input type="text" class="wc" data-wc="'+w.id+'" placeholder="Account code" autocapitalize="characters" autocomplete="off" style="font-size:16px;padding:8px"><button class="btn sec sm" data-wa="'+w.id+'">Add to ledger</button></div>'
+      +'<div class="chips wsug" data-ws="'+w.id+'" style="margin-top:6px">'+chipHtml(codeSuggest('',6),'','data-wp="'+w.id+'" data-pc')+'</div>'
+      +'<div style="margin-top:4px"><button class="act" style="border:0;background:none;color:var(--bad);font-size:13px" data-wd="'+w.id+'">'+(f.wdel===w.id?'sure? tap again to remove':'remove')+'</button></div></div>';
+  }).join('');
+}
+function renderPosted(){
+  var d=L.days.slice().sort(function(a,b){return a.date<b.date?1:a.date>b.date?-1:0});
+  $('postedBox').querySelector('summary').textContent='Posted days ('+d.length+')';
+  $('postedList').innerHTML=d.length?d.slice(0,60).map(function(x){
+    var o=0,i=0;(x.ent||[]).forEach(function(e){o+=e.o;i+=e.i});
+    return'<div class="bcard"><div style="display:flex;justify-content:space-between"><b>'+fd(x.date)+'</b><span class="mute">'+(x.ent||[]).length+' rows'+((x.deals||[]).length?' · '+x.deals.length+' deals':'')+'</span></div><div class="mute">OUT '+fmt(o)+' · IN '+fmt(i)+' · cash at close '+fmt(x.close)+'</div><div style="margin-top:4px"><button class="btn sec sm" data-vw="'+x.id+'" style="margin-right:6px">View</button><button class="btn sec sm" data-ro="'+x.id+'">'+(f.ro===x.id?'Tap again to reopen':'Reopen to edit')+'</button></div></div>';
+  }).join('')+(d.length>60?'<div class="mute">Showing the latest 60 days.</div>':''):'<div class="mute">No days posted yet.</div>';
+}
+function renderOb(){
+  var cur=$('obCur');
+  if(L.ob){var o=0,i=0,n=0;Object.keys(L.ob.rows).forEach(function(k){o+=L.ob.rows[k][0]||0;i+=L.ob.rows[k][1]||0;n++});cur.textContent='Saved: '+n+' accounts, balances start '+fd(L.ob.date)+', OUT '+fmt2(o)+' · IN '+fmt2(i)+'.'}
+  else cur.textContent='Nothing saved yet.';
+  if(!$('obDate').value)$('obDate').value=L.ob?L.ob.date:'';
+  if(document.activeElement!==$('commCode'))$('commCode').value=L.commCode||'';
+  if(document.activeElement!==$('crownCode'))$('crownCode').value=(L.crown||{}).code||'CROWN';
+  if(document.activeElement!==$('crownOpen'))$('crownOpen').value=(L.crown&&L.crown.open)?L.crown.open:'';
+}
+var BAK_DAYS=1;
+function bakNudgeDue(){
+  if(!L||!L.days||!L.days.length)return null;
+  if(!(L.chg>L.bak))return null;
+  var sn=ls('cashentry.bakSnooze')||0;if(Date.now()<sn)return null;
+  if(!L.bak)return'never';
+  var age=Date.now()-L.bak;
+  return age>BAK_DAYS*86400000?Math.floor(age/86400000):null;
+}
+function renderBakNudge(){
+  var el=$('bakNudge');if(!el)return;
+  var d=bakNudgeDue();
+  if(d==null){el.innerHTML='';return}
+  var msg=d==='never'?'The ledger has never been backed up.':'Last backup was '+d+' day'+(d>1?'s':'')+' ago, and there are changes since then.';
+  el.innerHTML='<div class="flag warn" style="margin:10px 0;padding:10px"><b>Back up your ledger.</b> '+msg+'<div style="margin-top:8px"><button class="btn sm" id="bakNow">Back up now</button> <button class="btn sec sm" id="bakLater">Remind me later</button></div></div>';
+}
+$('bakNudge').onclick=function(e){
+  if(e.target.id==='bakLater'){ls('cashentry.bakSnooze',Date.now()+6*3600000);renderBakNudge();return}
+  if(e.target.id==='bakNow'){
+    var c=drCfg();
+    if(c&&c.cid)driveBackup(true,function(){renderBakNudge()});
+    else{$('ledShare').click();setTimeout(renderBakNudge,1500)}
+  }
+};
+function renderLedBak(){
+  if(!L||!$('ledBak'))return;
+  var n=0;L.days.forEach(function(d){n+=(d.ent||[]).length+(d.deals||[]).length});
+  renderBakNudge();
+  var el=$('ledBak');
+  el.className='flag '+(L.days.length&&L.chg>L.bak?'warn':'okf');
+  el.textContent=L.days.length+' days · '+n+' entries. '+(L.bak?'Last backup '+new Date(L.bak).toLocaleString():'Never backed up.')+(L.days.length&&L.chg>L.bak?' Changes since then are NOT backed up.':'');
+}
+
+function renderProf(){
+  var el=$('profBody');if(!el||!L)return;
+  var m=(S.date||today()).slice(0,7),r=monthSummary(m),t=totals(),dl=S.deals||[];
+  var tdp=dealsProfit(dl).profit,tcm=r2(t.cr-t.ci),tex=0;
+  rows().forEach(function(x){if(L.commCode&&x.code===L.commCode)tcm=r2(tcm+x.inn-x.out)});
+  rows().forEach(function(x){if(x.code&&typeOf(x.code)==='Expense')tex+=x.out-x.inn});tex=r2(tex);
+  var posted=L.days.some(function(d){return d.date===S.date});
+  var has=(rows().length||dl.length)&&!posted;
+  function row(l,a,b,c,cl){return'<tr><td>'+l+'</td><td class="n">'+a+'</td><td class="n">'+b+'</td><td class="n '+(cl||'')+'">'+c+'</td></tr>'}
+  var h='<table class="stmt"><tr><th></th><th class="n">Posted</th><th class="n">Today’s sheet</th><th class="n">Total</th></tr>';
+  var X=has?1:0;
+  h+=row('Currency profit',signed(r.dp),X?signed(tdp):'—',signed(r2(r.dp+(X?tdp:0))));
+  h+=row('Commission',signed(r.cm),X?signed(tcm):'—',signed(r2(r.cm+(X?tcm:0))));
+  h+=row('Expenses',signed(r.ex),X?signed(tex):'—',signed(r2(r.ex+(X?tex:0))));
+  var net=r2(r.dp+r.cm-r.ex+(X?tdp+tcm-tex:0));
+  h+='<tr class="tot"><td>Net profit</td><td class="n">'+signed(r.net)+'</td><td class="n">'+(X?signed(r2(tdp+tcm-tex)):'—')+'</td><td class="n '+(net<0?'oo':'ii')+'">'+signed(net)+'</td></tr></table>';
+  h+='<div class="mute" style="margin-top:6px">'+fd(m+'-01').slice(3)+'. “Posted” is the days already closed; “Today’s sheet” is what you have entered but not posted yet. Same rules as the Month summary in the Ledger tab.</div>';
+  el.innerHTML=h;
+}
+function renderClose(){
+  if(!$('closeInfo'))return;
+  var t=totals(),rs=rows(),dl=S.deals||[];
+  try{renderProf()}catch(e){}
+  $('closeBal').textContent=fmt(t.bal);
+  if(document.activeElement!==$('dayDate'))$('dayDate').value=S.date||'';
+  var h='',unk=[];
+  rs.forEach(function(r){if(r.code&&!known(r.code)&&unk.indexOf(r.code)<0)unk.push(r.code)});
+  dl.forEach(function(x){if(!known(x.code)&&unk.indexOf(x.code)<0)unk.push(x.code)});
+  var nc=rs.filter(function(r){return !r.code}).length;
+  if(!L)h='<div class="flag warn">Opening the ledger…</div>';
+  else{
+    if(L.days.some(function(d){return d.date===S.date}))h+='<div class="flag bad">'+fd(S.date)+' is already posted. Change the date, or reopen that day from the Ledger tab.</div>';
+    if(unk.length)h+='<div class="flag bad">Code not in the account list: '+esc(unk.join(', '))+'. Fix these rows (edit) or add it in Ledger → Accounts and types before posting.</div>';
+    if(nc)h+='<div class="flag warn">'+nc+' row(s) have no account code. They are posted to the cash balance but wait in “Waiting for code” until you give them a code.</div>';
+    if(!L.ob)h+='<div class="flag warn">No opening balances loaded yet — balances will be wrong until you load them (Ledger tab).</div>';
+    var last=L.days.slice().sort(function(a,b){return a.date<b.date?1:-1})[0];
+    (function(){var ld=latestDay(),r=$('lastImgRow');if(r){r.style.display=ld?'':'none';if(ld)$('sendLastImg').textContent='Send picture of last posted day ('+fd(ld.date)+')'}})();
+    $('lastCloseNote').textContent=last?'Last posted: '+fd(last.date)+' · cash at close '+fmt(last.close)+(L.chg>L.bak?' · ledger not backed up yet':''):'No day posted yet.';
+    var before=null;L.days.forEach(function(d){if(S.date&&d.date<S.date&&(!before||d.date>before.date))before=d});
+    if(before&&S.open!==''&&Math.abs(num(S.open)-before.close)>=0.005)h+='<div class="flag warn">Opening cash '+fmt(num(S.open))+' differs from the closing cash of the previous posted day '+fmt(before.close)+' ('+fd(before.date)+').</div>';
+    var after=null;L.days.forEach(function(d){if(S.date&&d.date>S.date&&(!after||d.date<after.date))after=d});
+    if(after&&(rs.length||dl.length))h+='<div class="flag warn">Days after this date are already posted (up to '+fd(last.date)+'). Their opening and closing cash will not change by themselves.</div>';
+    if(S.date&&S.date>addDay(today(),1))h+='<div class="flag warn">This date is in the future ('+fd(S.date)+'). Check the date.</div>';
+    if(S.date&&S.date<addDay(today(),-45)&&(rs.length||dl.length))h+='<div class="flag warn">This date is more than 45 days ago ('+fd(S.date)+'). Check the date.</div>';
+    if(rs.length||dl.length)h+='<div class="mute">'+rs.length+' cash rows'+(dl.length?' · '+dl.length+' deals':'')+' ready for '+(S.date?fd(S.date):'(pick a date)')+'.</div>';
+  }
+  $('closeInfo').innerHTML=h;
+  var uc=$('undoClose');
+  if(L&&L.days.length){var ld=latestDay();uc.style.display='';if(f.uc!==ld.id)uc.textContent='Undo last close ('+fd(ld.date)+')'}else uc.style.display='none';
+  renderReview();
+  renderDealsToday();
+}
+
+
+// ----- statement as an image -----
+function stCanvases(code){
+  var rg=perRange(),inc=pendCount(code)>0&&f.stPend!==false,s=statement(code,rg[0],rg[1],inc),W=900,rowH=40,PER=40,pages=[],i;
+  for(i=0;i<s.rows.length;i+=PER)pages.push(s.rows.slice(i,i+PER));
+  if(!pages.length)pages=[[]];
+  var np=pages.length,out=[],FONT='system-ui,Arial,sans-serif',RED='#c0392b',GRN='#1e8e4e',GREY='#6b7280';
+  function fit(g,t,mw){t=String(t);if(g.measureText(t).width<=mw)return t;while(t.length>1&&g.measureText(t+'…').width>mw)t=t.slice(0,-1);return t+'…'}
+  pages.forEach(function(pr,pi){
+    var first=pi===0,last=pi===np-1,headH=first?290:110,footH=last?190:60;
+    var c=document.createElement('canvas');c.width=W;c.height=headH+40+(first?rowH:0)+pr.length*rowH+footH;
+    var g=c.getContext('2d');
+    function T(t,x,y,o){o=o||{};g.font=(o.b?'bold ':'')+(o.sz||21)+'px '+FONT;g.fillStyle=o.c||'#1b1f24';g.textAlign=o.a||'left';g.textBaseline='middle';g.fillText(t,x,y)}
+    g.fillStyle='#fff';g.fillRect(0,0,W,c.height);
+    g.fillStyle='#1f4fd8';g.fillRect(0,0,W,first?96:70);
+    T(BIZ||'Account statement',28,first?48:35,{b:1,sz:32,c:'#fff'});
+    if(first){
+      T('STATEMENT OF ACCOUNT',28,128,{sz:18,c:GREY});
+      T(code,28,166,{b:1,sz:36});
+      T('Period: '+perLabel(rg),W-28,128,{a:'right',sz:20,c:GREY});
+      T('As of: '+nowStamp(),W-28,160,{a:'right',sz:20,c:GREY});
+      var cw=(W-56-16)/2,cards=[['OPENING BALANCE',s.open],['CLOSING BALANCE',s.bal]];
+      cards.forEach(function(cd,k){
+        var x=28+k*(cw+16),y=196;
+        g.fillStyle='#f4f5f7';g.fillRect(x,y,cw,76);g.strokeStyle='#e2e5ea';g.strokeRect(x+.5,y+.5,cw-1,75);
+        T(cd[0],x+16,y+22,{sz:16,c:GREY});
+        T(signed(cd[1]),x+16,y+52,{b:1,sz:32,c:cd[1]<0?RED:cd[1]>0?GRN:'#1b1f24'});
+      });
+    }else T(code+' — statement continued',28,92,{b:1,sz:22});
+    var y0=headH;
+    g.fillStyle='#eef0f4';g.fillRect(0,y0,W,40);
+    T('Date',28,y0+20,{b:1,sz:18,c:GREY});T('Narration',190,y0+20,{b:1,sz:18,c:GREY});
+    T('OUT (INR)',590,y0+20,{b:1,sz:18,c:GREY,a:'right'});T('IN (INR)',735,y0+20,{b:1,sz:18,c:GREY,a:'right'});T('Balance (+/-)',W-28,y0+20,{b:1,sz:18,c:GREY,a:'right'});
+    var y=y0+40;
+    if(first){
+      g.fillStyle='#f7ecd2';g.fillRect(0,y,W,rowH);
+      T(fd(s.odate),28,y+20,{sz:18,c:GREY});T('Opening Balance',190,y+20,{b:1});
+      if(s.obr&&s.obr[0])T(fmt2(s.obr[0]),590,y+20,{a:'right',c:RED});
+      if(s.obr&&s.obr[1])T(fmt2(s.obr[1]),735,y+20,{a:'right',c:GRN});
+      T(signed(s.open),W-28,y+20,{a:'right',b:1});
+      y+=rowH;
+    }
+    g.font='21px '+FONT;
+    pr.forEach(function(r,ix){
+      var gi=pi*PER+ix;
+      if(r.p){g.fillStyle='#fbe7c2';g.fillRect(0,y,W,rowH)}else if(gi%2===0){g.fillStyle='#eef3fd';g.fillRect(0,y,W,rowH)}
+      g.strokeStyle='#e2e5ea';g.beginPath();g.moveTo(0,y+rowH-.5);g.lineTo(W,y+rowH-.5);g.stroke();
+      T(r.tail?'':fd(r.d),28,y+20,{sz:18,c:GREY});
+      g.font='21px '+FONT;T(fit(g,r.n,330),190,y+20);
+      if(r.o)T(fmt2(r.o),590,y+20,{a:'right',c:RED});
+      if(r.i)T(fmt2(r.i),735,y+20,{a:'right',c:GRN});
+      T(signed(r.b),W-28,y+20,{a:'right'});
+      y+=rowH;
+    });
+    if(!s.rows.length){T('No entries in this period.',190,y+24,{c:GREY});y+=rowH}
+    if(last){
+      g.strokeStyle='#1b1f24';g.lineWidth=2;g.beginPath();g.moveTo(0,y+4);g.lineTo(W,y+4);g.stroke();g.lineWidth=1;
+      T('Closing Balance',190,y+40,{b:1,sz:24});
+      T(signed(s.bal),W-28,y+40,{a:'right',b:1,sz:28,c:s.bal<0?RED:s.bal>0?GRN:'#1b1f24'});
+      T('Balance: negative (-) = amount due from you · positive = amount due to you',28,y+92,{sz:16,c:GREY});
+      if(s.npend)T('Shaded rows: '+s.npend+' of today\'s entries, not yet posted to the ledger. Entries after '+nowStamp().slice(12)+' are not included.',28,y+120,{sz:16,c:'#9a5b00'});
+      else T('Entries made after '+nowStamp().slice(12)+' on '+fd(today())+' are not included.',28,y+120,{sz:16,c:GREY});
+    }
+    if(np>1)T('Page '+(pi+1)+' of '+np,W-28,c.height-24,{a:'right',sz:16,c:GREY});
+    out.push(c);
+  });
+  return out;
+}
+function downloadFile(file){var a=document.createElement('a');a.href=URL.createObjectURL(file);a.download=file.name;document.body.appendChild(a);a.click();setTimeout(function(){URL.revokeObjectURL(a.href);document.body.removeChild(a)},1500)}
+function shareImages(cs,base,title,msg){
+  var files=[],n=0;
+  cs.forEach(function(c,i){c.toBlob(function(b){
+    files[i]=new File([b],base+(cs.length>1?'-p'+(i+1):'')+'.png',{type:'image/png'});
+    if(++n===cs.length)finish();
+  },'image/png')});
+  function finish(){
+    try{
+      if(navigator.canShare&&navigator.canShare({files:files})){
+        navigator.share({files:files,title:title}).catch(function(e){if(e&&e.name!=='AbortError'){files.forEach(downloadFile);toast('Sharing not available — image downloaded')}});
+        return;
+      }
+    }catch(e){}
+    files.forEach(downloadFile);toast(msg+' image downloaded — send it from your Files or Gallery');
+  }
+}
+function waitItems(){
+  var a=[];
+  L.wait.forEach(function(w){a.push({d:w.d,n:w.n,o:w.o,i:w.i,cr:w.cr,ci:w.ci,t:0})});
+  S.entries.forEach(function(e){if(!e.code)a.push({d:S.date||today(),n:e.narr,o:e.out||0,i:e.inn||0,cr:e.cr||0,ci:e.ci||0,t:1})});
+  return a;
+}
+function waitCanvases(){
+  var it=waitItems(),W=900,rowH=44,PER=34,FONT='system-ui,Arial,sans-serif',RED='#c0392b',GRN='#1e8e4e',GREY='#6b7280',pages=[],i;
+  var hasC=it.some(function(x){return x.cr||x.ci}),X=hasC?{n:28,d:76,nar:200,nw:250,o:620,i:735,cr:810,ci:880}:{n:28,d:76,nar:200,nw:380,o:690,i:860};
+  for(i=0;i<it.length;i+=PER)pages.push(it.slice(i,i+PER));if(!pages.length)pages=[[]];
+  var to=0,ti=0;it.forEach(function(x){to+=x.o;ti+=x.i});to=r2(to);ti=r2(ti);
+  var out=[],np=pages.length;
+  function fit(g,t,mw){t=String(t==null?'':t);if(g.measureText(t).width<=mw)return t;while(t.length>1&&g.measureText(t+'…').width>mw)t=t.slice(0,-1);return t+'…'}
+  pages.forEach(function(pr,pi){
+    var first=pi===0,last=pi===np-1,headH=first?200:100,footH=last?150:50;
+    var c=document.createElement('canvas');c.width=W;c.height=headH+40+pr.length*rowH+footH;
+    var g=c.getContext('2d');
+    function T(t,x,y,o){o=o||{};g.font=(o.b?'bold ':'')+(o.sz||21)+'px '+FONT;g.fillStyle=o.c||'#1b1f24';g.textAlign=o.a||'left';g.textBaseline='middle';g.fillText(t,x,y)}
+    g.fillStyle='#fff';g.fillRect(0,0,W,c.height);
+    g.fillStyle='#1f4fd8';g.fillRect(0,0,W,first?96:70);
+    T(BIZ||'Cash entries',28,first?48:35,{b:1,sz:32,c:'#fff'});
+    if(first){T('ENTRIES WAITING FOR ACCOUNT CODE',28,128,{sz:18,c:GREY});T(it.length+' entr'+(it.length===1?'y':'ies')+' — please tell me the code for each',28,164,{b:1,sz:28});T('As of: '+nowStamp(),W-28,128,{a:'right',sz:20,c:GREY})}
+    else T('Waiting entries (continued)',28,92,{b:1,sz:22});
+    var y0=headH;g.fillStyle='#eef0f4';g.fillRect(0,y0,W,40);
+    T('#',X.n,y0+20,{b:1,sz:18,c:GREY});T('Date',X.d,y0+20,{b:1,sz:18,c:GREY});T('Narration',X.nar,y0+20,{b:1,sz:18,c:GREY});
+    T('OUT',X.o,y0+20,{b:1,sz:18,c:GREY,a:'right'});T('IN',X.i,y0+20,{b:1,sz:18,c:GREY,a:'right'});
+    if(hasC){T('Comm R',X.cr,y0+20,{b:1,sz:18,c:GREY,a:'right'});T('Comm I',X.ci,y0+20,{b:1,sz:18,c:GREY,a:'right'})}
+    var y=y0+40;
+    pr.forEach(function(r,ix){
+      var gi=pi*PER+ix;
+      if(gi%2===0){g.fillStyle='#eef3fd';g.fillRect(0,y,W,rowH)}
+      g.strokeStyle='#e2e5ea';g.beginPath();g.moveTo(0,y+rowH-.5);g.lineTo(W,y+rowH-.5);g.stroke();
+      T(String(gi+1),X.n,y+22,{sz:18,c:GREY});
+      T(fd(r.d).slice(0,6),X.d,y+22,{sz:17,c:GREY});
+      g.font='21px '+FONT;T(fit(g,r.n||'(no narration)',X.nw),X.nar,y+22);
+      if(r.o)T(fmt2(r.o),X.o,y+22,{a:'right',c:RED});
+      if(r.i)T(fmt2(r.i),X.i,y+22,{a:'right',c:GRN});
+      if(hasC){if(r.cr)T(fmt2(r.cr),X.cr,y+22,{a:'right',sz:18});if(r.ci)T(fmt2(r.ci),X.ci,y+22,{a:'right',sz:18})}
+      y+=rowH;
+    });
+    if(!it.length){T('Nothing is waiting.',X.nar,y+24,{c:GREY});y+=rowH}
+    if(last){
+      g.strokeStyle='#1b1f24';g.lineWidth=2;g.beginPath();g.moveTo(0,y+4);g.lineTo(W,y+4);g.stroke();g.lineWidth=1;
+      T('Total',X.nar,y+38,{b:1,sz:24});T(fmt2(to),X.o,y+38,{a:'right',b:1,sz:24,c:RED});T(fmt2(ti),X.i,y+38,{a:'right',b:1,sz:24,c:GRN});
+      T('Reply with the number and the account code, for example: 1 = ABC',28,y+92,{sz:17,c:GREY});
+    }
+    if(np>1)T('Page '+(pi+1)+' of '+np,W-28,c.height-24,{a:'right',sz:16,c:GREY});
+    out.push(c);
+  });
+  return out;
+}
+function sendWait(){
+  if(!waitItems().length){toast('Nothing is waiting for a code');return}
+  shareImages(waitCanvases(),'waiting-entries-'+today(),'Entries waiting for account code','Waiting entries');
+}
+function sendStatement(){
+  var code=f.stCode;if(!code||!L)return;
+  shareImages(stCanvases(code),'statement-'+code.replace(/[^A-Za-z0-9]+/g,'-')+'-'+today(),'Statement '+code,'Statement');
+}
+
+// ===== daily cash book picture (for the boss) =====
+function dayModelToday(){
+  var t=totals();
+  return{date:S.date,open:num(S.open),close:t.bal,unposted:true,
+    rows:S.entries.map(function(r){return{c:r.code,n:r.narr,o:r.out,i:r.inn,cr:r.cr,ci:r.ci}}),
+    exp:(S.exp||[]).map(function(x){return{label:x.label,amt:x.amt}})};
+}
+function dayModelPosted(d){
+  var hasExp=Array.isArray(d.exp);
+  return{date:d.date,open:d.open,close:d.close,
+    rows:(d.ent||[]).filter(function(e){return !(hasExp&&e.x)}).sort(function(a,b){return a.s-b.s}).map(function(e){return{c:e.c,n:e.n,o:e.o,i:e.i,cr:e.cr,ci:e.ci}}),
+    exp:hasExp?d.exp.map(function(x){return{label:x.label,amt:x.amt}}):[]};
+}
+function dayCanvases(m){
+  var W=900,rowH=40,PER=36,FONT='system-ui,Arial,sans-serif',RED='#c0392b',GRN='#1e8e4e',GREY='#6b7280';
+  var to=0,ti=0,tcr=0,tci=0;m.rows.forEach(function(r){to+=r.o||0;ti+=r.i||0;tcr+=r.cr||0;tci+=r.ci||0});
+  var texp=0;(m.exp||[]).forEach(function(x){texp+=x.amt});texp=r2(texp);to=r2(to+texp);
+  var hasC=tcr>0||tci>0;
+  var X=hasC?{n:28,code:78,narr:200,nw:235,o:570,i:690,cr:788,ci:872}:{n:28,code:78,narr:200,nw:380,o:640,i:800};
+  var lines=[],k=0;
+  m.rows.forEach(function(r){k++;lines.push({t:'r',k:k,r:r})});
+  if(!m.rows.length&&!(m.exp||[]).length)lines.push({t:'msg',x:'No cash entries.'});
+  if((m.exp||[]).length){lines.push({t:'sec',x:'EXPENSES BREAKDOWN'});m.exp.forEach(function(x,ix){lines.push({t:'x',k:ix+1,x:x})});lines.push({t:'xt',v:texp})}
+  var pages=[];for(var i=0;i<lines.length;i+=PER)pages.push(lines.slice(i,i+PER));
+  if(!pages.length)pages=[[]];
+  var np=pages.length,out=[];
+  function fit(g,t,mw){t=String(t==null?'':t);if(g.measureText(t).width<=mw)return t;while(t.length>1&&g.measureText(t+'…').width>mw)t=t.slice(0,-1);return t+'…'}
+  pages.forEach(function(pl,pi){
+    var first=pi===0,last=pi===np-1,headH=first?290:110,footH=last?(180+(hasC?30:0)):60;
+    var c=document.createElement('canvas');c.width=W;c.height=headH+40+pl.length*rowH+footH;
+    var g=c.getContext('2d');
+    function T(t,x,y,o){o=o||{};g.font=(o.b?'bold ':'')+(o.sz||21)+'px '+FONT;g.fillStyle=o.c||'#1b1f24';g.textAlign=o.a||'left';g.textBaseline='middle';g.fillText(t,x,y)}
+    g.fillStyle='#fff';g.fillRect(0,0,W,c.height);
+    g.fillStyle='#1f4fd8';g.fillRect(0,0,W,first?96:70);
+    T(BIZ||'Daily cash book',28,first?48:35,{b:1,sz:32,c:'#fff'});
+    if(first){
+      T('DAILY CASH BOOK',28,128,{sz:18,c:GREY});
+      T(fd(m.date),28,166,{b:1,sz:36});
+      if(m.unposted)T('Not yet posted to the ledger',W-28,128,{a:'right',sz:18,c:GREY});
+      T(m.rows.length+' entries'+((m.exp||[]).length?' · '+m.exp.length+' expense lines':''),W-28,160,{a:'right',sz:20,c:GREY});
+      var cw=(W-56-16)/2,cards=[['OPENING CASH',m.open],['CLOSING CASH',m.close]];
+      cards.forEach(function(cd,q){
+        var x=28+q*(cw+16),y=196;
+        g.fillStyle='#f4f5f7';g.fillRect(x,y,cw,76);g.strokeStyle='#e2e5ea';g.strokeRect(x+.5,y+.5,cw-1,75);
+        T(cd[0],x+16,y+22,{sz:16,c:GREY});
+        T(fmt2(cd[1]),x+16,y+52,{b:1,sz:32,c:cd[1]<0?RED:'#1b1f24'});
+      });
+    }else T(fd(m.date)+' — cash book continued',28,92,{b:1,sz:22});
+    var y0=headH;
+    g.fillStyle='#eef0f4';g.fillRect(0,y0,W,40);
+    T('#',X.n,y0+20,{b:1,sz:18,c:GREY});T('Code',X.code,y0+20,{b:1,sz:18,c:GREY});T('Narration',X.narr,y0+20,{b:1,sz:18,c:GREY});
+    T('OUT',X.o,y0+20,{b:1,sz:18,c:GREY,a:'right'});T('IN',X.i,y0+20,{b:1,sz:18,c:GREY,a:'right'});
+    if(hasC){T('Comm R',X.cr,y0+20,{b:1,sz:18,c:GREY,a:'right'});T('Comm I',X.ci,y0+20,{b:1,sz:18,c:GREY,a:'right'})}
+    var y=y0+40;
+    pl.forEach(function(ln){
+      g.strokeStyle='#e2e5ea';g.beginPath();g.moveTo(0,y+rowH-.5);g.lineTo(W,y+rowH-.5);g.stroke();
+      if(ln.t==='sec'){g.fillStyle='#f7ecd2';g.fillRect(0,y,W,rowH);T(ln.x,X.n,y+20,{b:1,sz:18,c:GREY})}
+      else if(ln.t==='msg')T(ln.x,X.narr,y+20,{c:GREY});
+      else if(ln.t==='r'){
+        var r=ln.r;if(ln.k%2===1){g.fillStyle='#eef3fd';g.fillRect(0,y,W,rowH)}
+        T(String(ln.k),X.n,y+20,{sz:18,c:GREY});
+        var nc=!r.c;T(nc?'?':r.c,X.code,y+20,{b:1,sz:20,c:nc?RED:'#1b1f24'});
+        g.font='21px '+FONT;T(fit(g,r.n,X.nw),X.narr,y+20);
+        if(r.o)T(fmt2(r.o),X.o,y+20,{a:'right',c:RED});
+        if(r.i)T(fmt2(r.i),X.i,y+20,{a:'right',c:GRN});
+        if(hasC){if(r.cr)T(fmt2(r.cr),X.cr,y+20,{a:'right',sz:19});if(r.ci)T(fmt2(r.ci),X.ci,y+20,{a:'right',sz:19})}
+      }else if(ln.t==='x'){
+        var xx=ln.x;if(ln.k%2===1){g.fillStyle='#eef3fd';g.fillRect(0,y,W,rowH)}
+        T(String(ln.k),X.n,y+20,{sz:18,c:GREY});
+        g.font='21px '+FONT;T(fit(g,xx.label,X.nw+(X.o-X.narr-X.nw)-110),X.code,y+20);
+        T(fmt2(xx.amt),X.o,y+20,{a:'right',c:RED});
+      }else if(ln.t==='xt'){
+        g.fillStyle='#f4f5f7';g.fillRect(0,y,W,rowH);
+        T('Total expenses',X.code,y+20,{b:1,sz:21});T(fmt2(ln.v),X.o,y+20,{a:'right',b:1,c:RED});
+      }
+      y+=rowH;
+    });
+    if(last){
+      g.strokeStyle='#1b1f24';g.lineWidth=2;g.beginPath();g.moveTo(0,y+4);g.lineTo(W,y+4);g.stroke();g.lineWidth=1;
+      T('Cash book total',X.narr,y+30,{b:1,sz:22});
+      T(fmt2(to),X.o,y+30,{a:'right',b:1,sz:20,c:RED});T(fmt2(ti),X.i,y+30,{a:'right',b:1,sz:20,c:GRN});
+      var yy=y+30;
+      if(hasC){yy+=30;T('Commission',X.narr,yy,{sz:19,c:GREY});T(fmt2(tcr),X.cr,yy,{a:'right',sz:19,c:GREY});T(fmt2(tci),X.ci,yy,{a:'right',sz:19,c:GREY})}
+      yy+=52;
+      T('Opening '+fmt2(m.open)+'  +  IN '+fmt2(ti)+'  −  OUT '+fmt2(to),28,yy,{sz:19,c:GREY});
+      T('Closing cash '+fmt2(m.close),W-28,yy,{a:'right',b:1,sz:26});
+    }
+    if(np>1)T('Page '+(pi+1)+' of '+np,W-28,c.height-24,{a:'right',sz:16,c:GREY});
+    out.push(c);
+  });
+  return out;
+}
+function sendDayImage(m){
+  if(!m.rows.length&&!(m.exp||[]).length){toast('Nothing to send yet');return}
+  shareImages(dayCanvases(m),'cash-book-'+m.date,'Cash book '+fd(m.date),'Cash book');
+}
+$('sendLastImg').onclick=function(){var d=latestDay();if(d)sendDayImage(dayModelPosted(d))};
+$('shareImg').onclick=function(){sendDayImage(dayModelToday())};
+
+
+// ===== trial balance picture =====
+function tbList(){
+  var net=balances(),keys=Object.keys(net).filter(function(k){return Math.abs(net[k])>=0.005});
+  if(f.ty)keys=keys.filter(function(k){return typeOf(k)===f.ty});
+  keys.sort(f.big?function(a,b){return Math.abs(net[b]||0)-Math.abs(net[a]||0)||(a<b?-1:1)}:function(a,b){return a<b?-1:a>b?1:0});
+  return keys.map(function(k){var v=net[k];return{c:k,o:v<0?-v:0,i:v>0?v:0}});
+}
+function tbCanvases(){
+  var rowsL=tbList(),W=900,rowH=40,PER=40,FONT='system-ui,Arial,sans-serif',RED='#c0392b',GRN='#1e8e4e',GREY='#6b7280';
+  var to=0,ti=0;rowsL.forEach(function(r){to+=r.o;ti+=r.i});to=r2(to);ti=r2(ti);
+  var pages=[],i;for(i=0;i<rowsL.length;i+=PER)pages.push(rowsL.slice(i,i+PER));if(!pages.length)pages=[[]];
+  var np=pages.length,out=[];
+  var last=null;L.days.forEach(function(d){if(!last||d.date>last)last=d.date});
+  pages.forEach(function(pr,pi){
+    var first=pi===0,isLast=pi===np-1,headH=first?290:110,footH=isLast?150:60;
+    var c=document.createElement('canvas');c.width=W;c.height=headH+40+pr.length*rowH+footH;
+    var g=c.getContext('2d');
+    function T(t,x,y,o){o=o||{};g.font=(o.b?'bold ':'')+(o.sz||21)+'px '+FONT;g.fillStyle=o.c||'#1b1f24';g.textAlign=o.a||'left';g.textBaseline='middle';g.fillText(t,x,y)}
+    g.fillStyle='#fff';g.fillRect(0,0,W,c.height);
+    g.fillStyle='#1f4fd8';g.fillRect(0,0,W,first?96:70);
+    T(BIZ||'Trial balance',28,first?48:35,{b:1,sz:32,c:'#fff'});
+    if(first){
+      T('TRIAL BALANCE'+(f.ty?' — '+f.ty.toUpperCase():''),28,128,{sz:18,c:GREY});
+      T('As on '+fd(today()),28,166,{b:1,sz:36});
+      T(rowsL.length+' accounts',W-28,128,{a:'right',sz:20,c:GREY});
+      if(last)T('Posted up to '+fd(last),W-28,160,{a:'right',sz:20,c:GREY});
+      var cw=(W-56-16)/2,cards=[['TOTAL OUT (they owe us)',to,RED],['TOTAL IN (we owe them)',ti,GRN]];
+      cards.forEach(function(cd,q){
+        var x=28+q*(cw+16),y=196;
+        g.fillStyle='#f4f5f7';g.fillRect(x,y,cw,76);g.strokeStyle='#e2e5ea';g.strokeRect(x+.5,y+.5,cw-1,75);
+        T(cd[0],x+16,y+22,{sz:16,c:GREY});T(fmt2(cd[1]),x+16,y+52,{b:1,sz:32,c:cd[2]});
+      });
+    }else T('Trial balance continued',28,92,{b:1,sz:22});
+    var y0=headH;
+    g.fillStyle='#eef0f4';g.fillRect(0,y0,W,40);
+    T('#',28,y0+20,{b:1,sz:18,c:GREY});T('Account',90,y0+20,{b:1,sz:18,c:GREY});T('OUT (INR)',640,y0+20,{b:1,sz:18,c:GREY,a:'right'});T('IN (INR)',W-28,y0+20,{b:1,sz:18,c:GREY,a:'right'});
+    var y=y0+40;
+    pr.forEach(function(r,ix){
+      var gi=pi*PER+ix;
+      if(gi%2===0){g.fillStyle='#eef3fd';g.fillRect(0,y,W,rowH)}
+      g.strokeStyle='#e2e5ea';g.beginPath();g.moveTo(0,y+rowH-.5);g.lineTo(W,y+rowH-.5);g.stroke();
+      T(String(gi+1),28,y+20,{sz:18,c:GREY});T(r.c,90,y+20,{b:1,sz:21});
+      if(r.o)T(fmt2(r.o),640,y+20,{a:'right',c:RED});
+      if(r.i)T(fmt2(r.i),W-28,y+20,{a:'right',c:GRN});
+      y+=rowH;
+    });
+    if(!rowsL.length){T('No balances yet.',90,y+24,{c:GREY});y+=rowH}
+    if(isLast){
+      g.strokeStyle='#1b1f24';g.lineWidth=2;g.beginPath();g.moveTo(0,y+4);g.lineTo(W,y+4);g.stroke();g.lineWidth=1;
+      T('Total',90,y+36,{b:1,sz:24});T(fmt2(to),640,y+36,{a:'right',b:1,sz:24,c:RED});T(fmt2(ti),W-28,y+36,{a:'right',b:1,sz:24,c:GRN});
+      T('Difference OUT − IN: '+fmt2(r2(to-ti)),28,y+88,{sz:18,c:GREY});
+    }
+    if(np>1)T('Page '+(pi+1)+' of '+np,W-28,c.height-24,{a:'right',sz:16,c:GREY});
+    out.push(c);
+  });
+  return out;
+}
+$('sendTb').onclick=function(){if(!L)return;shareImages(tbCanvases(),'trial-balance-'+today(),'Trial balance '+fd(today()),'Trial balance')};
+
+// ===== account types and month summary =====
+var TYPES=['Customer','Correspondent','Internal','Expense'];
+function normType(t){t=String(t||'').trim().toLowerCase();for(var i=0;i<TYPES.length;i++)if(TYPES[i].toLowerCase()===t)return TYPES[i];return''}
+function typeOf(c){return(L&&L.types&&L.types[c])||''}
+function lastDayOf(m){var p=m.split('-'),d=new Date(+p[0],+p[1],0);return m+'-'+z2(d.getDate())}
+function monthSummary(m){
+  var pre=m?m+'-':'',end=m?m+'-31':'9999-12-31',dp=0,cm=0,ex=0;
+  events().forEach(function(e){
+    if(m&&e.d.slice(0,8)!==pre)return;
+    if(e.k===0)dp+=e.o-e.i;
+    else{cm+=e.cr-e.ci;if(L.commCode&&e.c===L.commCode)cm+=e.i-e.o;if(typeOf(e.c)==='Expense')ex+=e.o-e.i}
+  });
+  L.wait.forEach(function(w){if(!m||String(w.d).slice(0,8)===pre)cm+=(w.cr||0)-(w.ci||0)});
+  var net=r2(dp+cm-ex),bal=balances(end),res=bal[L.reserve||'RESERVE']||0,last=null;
+  L.days.forEach(function(d){if(d.date<=end&&(!last||d.date>last.date))last=d});
+  return{dp:r2(dp),cm:r2(cm),ex:r2(ex),net:net,res:res,sug:r2(res+net),cash:last?last.close:null,cashDate:last?last.date:'',bal:bal};
+}
+function renderMonth(){
+  if(!L)return;
+  if(!$('monthIn').value)$('monthIn').value=today().slice(0,7);
+  if(document.activeElement!==$('reserveCode'))$('reserveCode').value=L.reserve||'RESERVE';
+  var m=$('monthIn').value,box=$('monthBody');
+  if(!m){box.innerHTML='';return}
+  var r=monthSummary(m);
+  function row(l,v,cls){return'<tr><td>'+l+'</td><td class="n '+(cls||'')+'">'+v+'</td></tr>'}
+  box.innerHTML='<table class="stmt">'
+    +row('Cash in hand'+(r.cashDate?' (closing, '+fd(r.cashDate)+')':''),r.cash==null?'—':fmt2(r.cash))
+    +row('Currency trading profit',signed(r.dp),r.dp<0?'oo':'ii')
+    +row('Commission profit',signed(r.cm),r.cm<0?'oo':'ii')
+    +row('Total expenses',signed(r.ex))
+    +'<tr class="tot"><td>NET PROFIT FOR THE MONTH</td><td class="n '+(r.net<0?'oo':'ii')+'">'+signed(r.net)+'</td></tr>'
+    +row('Current RESERVE balance',signed(r.res))
+    +'<tr class="tot"><td>Suggested new RESERVE</td><td class="n">'+signed(r.sug)+'</td></tr></table>'
+    +'<div class="mute" style="margin-top:6px">Same rules as the Excel Monthly Summary. Commission profit = commission received minus issued, plus cash IN minus cash OUT on the commission account. Expenses are accounts of type Expense'+(Object.keys(L.types||{}).length?'':' — <b>no account types loaded yet</b> (paste the Chart of Accounts under Opening balances, or set types under Accounts and types)')+'.</div>';
+}
+$('monthIn').onchange=renderMonth;
+$('reserveCode').onchange=function(){if(!L)return;L.reserve=this.value.trim().toUpperCase()||'RESERVE';ldSave(function(){renderMonth()})};
+$('monthCopy').onclick=function(){
+  if(!L)return;var m=$('monthIn').value;if(!m){toast('Pick the month');return}
+  var r=monthSummary(m),nextFirst=addDay(lastDayOf(m),1),lines=[],to=0,ti=0,rc=L.reserve||'RESERVE';
+  var all={};codes.forEach(function(c){all[c]=1});Object.keys(r.bal).forEach(function(c){all[c]=1});
+  Object.keys(all).sort().forEach(function(c){
+    var ty=typeOf(c),v=r.bal[c]||0;
+    if(c===rc)v=r.sug;
+    if(ty==='Expense')v=0;
+    var o=v<0?-v:0,i=v>0?v:0;to+=o;ti+=i;
+    lines.push([c,ty,o?plain(o):'',i?plain(i):'',nextFirst].join('\t'));
+  });
+  copyText(lines.join('\n'),lines.length+' accounts copied');
+  $('monthNote').textContent='Columns: Code · Type · OUT · IN · Date (for the Chart of Accounts). Expense accounts are blank and '+rc+' carries the suggested new reserve. Totals: OUT '+fmt2(to)+' · IN '+fmt2(ti)+' · difference '+fmt2(r2(to-ti))+'. Check that difference against how you balance the opening cash (SHOP-IRUPU) in Excel before pasting.';
+};
+// account types UI
+function renderTypeBar(){
+  var has={};Object.keys(L.types||{}).forEach(function(k){has[L.types[k]]=1});
+  var h='';
+  if(Object.keys(has).length){h='<button class="chip'+(f.ty?'':' on')+'" data-ty="">All types</button>'+TYPES.filter(function(t){return has[t]}).map(function(t){return'<button class="chip'+(f.ty===t?' on':'')+'" data-ty="'+t+'">'+t+'</button>'}).join('')}
+  $('typeBar').innerHTML=h;
+}
+$('typeBar').onclick=function(e){var t=e.target.getAttribute&&e.target.getAttribute('data-ty');if(t===null||t===undefined)return;f.ty=t;renderBalList()};
+function renderAccts(){
+  if(!L)return;
+  var q=$('acQ').value.trim().toUpperCase(),list=acctList().sort().filter(function(c){return!q||c.indexOf(q)>=0}).slice(0,80);
+  var used={};events().forEach(function(e){used[e.c]=1});S.entries.forEach(function(e){if(e.code)used[e.code]=1});(S.deals||[]).forEach(function(x){used[x.code]=1});
+  if(L.ob)Object.keys(L.ob.rows).forEach(function(c){var r=L.ob.rows[c];if((r[0]||0)||(r[1]||0))used[c]=1});
+  L.wait.forEach(function(w){if(w.c)used[w.c]=1});
+  $('acList').innerHTML=list.map(function(c){
+    var ty=typeOf(c);
+    return'<div class="exrow"><span><b>'+esc(c)+'</b></span><select data-ac="'+esc(c)+'" style="font-size:15px;padding:6px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink)"><option value="">—</option>'+TYPES.map(function(t){return'<option'+(t===ty?' selected':'')+'>'+t+'</option>'}).join('')+'</select>'+(used[c]?'':'<button class="act" style="border:0;background:none;color:var(--bad);font-size:13px" data-rm="'+esc(c)+'">'+(f.rm===c?'sure? tap again':'remove')+'</button>')+'</div>';
+  }).join('')+(acctList().length>80&&!q?'<div class="mute">Showing 80 — type to find others.</div>':'');
+}
+$('acQ').oninput=renderAccts;
+$('acList').onclick=function(e){
+  var c=e.target.getAttribute&&e.target.getAttribute('data-rm');if(!c||!L)return;
+  if(f.rm!==c){f.rm=c;renderAccts();clearTimeout(f.rmt);f.rmt=setTimeout(function(){f.rm=null;renderAccts()},4000);return}
+  f.rm=null;
+  codes=codes.filter(function(x){return x!==c});ls(CKEY,codes);$('codesBox').value=codes.join('\n');
+  if(L.types)delete L.types[c];if(L.ob&&L.ob.rows[c])delete L.ob.rows[c];
+  ldSave(function(){renderLedger();toast(c+' removed')});
+};
+$('acList').onchange=function(e){
+  var c=e.target.getAttribute&&e.target.getAttribute('data-ac');if(!c||!L)return;
+  L.types=L.types||{};if(e.target.value)L.types[c]=e.target.value;else delete L.types[c];
+  ldSave(function(){renderTypeBar();renderMonth();toast(c+' → '+(e.target.value||'no type'))});
+};
+$('acAdd').onclick=function(){
+  if(!L)return;var c=$('acNew').value.trim().toUpperCase();if(!c){toast('Type the new account code');return}
+  if(codes.indexOf(c)>=0){toast(c+' already exists');return}
+  codes.push(c);codes.sort();ls(CKEY,codes);$('codesBox').value=codes.join('\n');
+  L.types=L.types||{};L.types[c]=$('acNewType').value;
+  ldSave(function(){$('acNew').value='';renderLedger();toast(c+' added')});
+};
+
+// ----- events: ledger -----
+$('tabLedger').onclick=function(){setView('ledger')};
+$('stIn').oninput=function(){var v=this.value.trim().toUpperCase();this.value=v;f.stAll=false;f.stCode=(v&&acctList().indexOf(v)>=0)?v:null;renderStatement()};
+$('stSug').onclick=function(e){var c=e.target.getAttribute&&e.target.getAttribute('data-c');if(c){$('stIn').value=c;f.stCode=c;f.stAll=false;renderStatement()}};
+$('stOut').onclick=function(e){
+  var t=e.target;
+  if(t.id==='stMore'){f.stAll=true;renderStatement()}
+  else if(t.id==='stPend'){f.stPend=f.stPend===false;renderStatement()}
+  else if(t.id==='stSend')sendStatement();
+  else if(t.getAttribute&&t.getAttribute('data-per')){f.per=t.getAttribute('data-per');f.stAll=false;renderStatement()}
+};
+$('stOut').onchange=function(e){var t=e.target;if(t.id==='pf'){f.pf=t.value;renderStatement()}else if(t.id==='pt'){f.pt=t.value;renderStatement()}};
+$('balMore').onclick=function(e){if(e.target.id==='balToggle'){f.allRows=!f.allRows;renderBalList()}};
+$('balList').onclick=function(e){var tr=e.target.closest&&e.target.closest('tr[data-c]');if(tr){var c=tr.getAttribute('data-c');$('stIn').value=c;f.stCode=c;f.stAll=false;renderStatement();$('stIn').scrollIntoView({behavior:'smooth',block:'start'})}};
+$('srtAZ').onclick=function(){f.big=false;renderBalList()};$('srtBig').onclick=function(){f.big=true;renderBalList()};
+$('hideZero').onclick=function(){f.hz=!f.hz;renderBalList()};
+
+$('waitSend').onclick=sendWait;
+function waitSug(id){
+  var inp=document.querySelector('[data-wc="'+id+'"]'),box=document.querySelector('[data-ws="'+id+'"]');if(!inp||!box)return;
+  var v=inp.value.trim().toUpperCase();box.innerHTML=chipHtml(codeSuggest(v,6),v,'data-wp="'+id+'" data-pc');
+}
+$('waitList').oninput=function(e){var id=e.target.getAttribute&&e.target.getAttribute('data-wc');if(id){e.target.value=e.target.value.toUpperCase();waitSug(id)}};
+$('waitList').onclick=function(e){
+  var pc=e.target.getAttribute&&e.target.getAttribute('data-pc'),pw=e.target.getAttribute&&e.target.getAttribute('data-wp');
+  if(pc&&pw){var wi=document.querySelector('[data-wc="'+pw+'"]');if(wi){wi.value=pc;waitSug(pw)}return}
+  var a=e.target.getAttribute&&e.target.getAttribute('data-wa'),d=e.target.getAttribute&&e.target.getAttribute('data-wd');
+  if(a){
+    var inp=document.querySelector('[data-wc="'+a+'"]'),c=inp?inp.value.trim().toUpperCase():'';
+    if(!c){toast('Type the account code first');return}
+    if(!known(c)){toast('“'+c+'” is not in your account list');return}
+    var ix=-1;L.wait.forEach(function(w,i){if(w.id===a)ix=i});if(ix<0)return;
+    var w=L.wait[ix];L.wait.splice(ix,1);L.late.push({d:w.d,s:L.seq++,c:c,n:w.n,o:w.o,i:w.i,cr:w.cr,ci:w.ci});
+    ldSave(function(ok){if(!ok){L.late.pop();L.wait.splice(ix,0,w);CACHE=null}renderLedger();if(ok)toast('Added to '+c)});
+  }
+  if(d){
+    if(f.wdel!==d){f.wdel=d;renderWait();clearTimeout(f.wdt);f.wdt=setTimeout(function(){f.wdel=null;renderWait()},4000);return}
+    f.wdel=null;L.wait=L.wait.filter(function(w){return w.id!==d});ldSave(function(){renderLedger();toast('Removed')});
+  }
+};
+function kvDel(k,cb){idb(function(db){if(!db){try{localStorage.removeItem('cashentry.fb.'+k)}catch(e){}if(cb)cb();return}try{var tx=db.transaction('kv','readwrite');tx.objectStore('kv').delete(k);tx.oncomplete=function(){if(cb)cb()};tx.onerror=function(){if(cb)cb()}}catch(e){if(cb)cb()}})}
+// safety copies of the whole ledger (IndexedDB only)
+function snapshot(why){
+  if(!dbH||!L)return;
+  var meta=ls('cashentry.snapmeta')||[],n=meta.length?meta[meta.length-1].n+1:0,ent={n:n,t:Date.now(),why:why,days:L.days.length};
+  kvSet('snap'+n,L,function(ok){
+    if(!ok)return;
+    meta.push(ent);while(meta.length>5){var o=meta.shift();kvDel('snap'+o.n)}
+    ls('cashentry.snapmeta',meta);renderSnaps();
+  });
+}
+function renderSnaps(){
+  var el=$('snapList');if(!el)return;
+  var meta=(ls('cashentry.snapmeta')||[]).slice().reverse();
+  el.innerHTML=meta.length?meta.map(function(m){return'<div class="bcard" style="display:flex;justify-content:space-between;align-items:center;gap:8px"><div><b>'+new Date(m.t).toLocaleString()+'</b><div class="mute">'+esc(m.why)+' · '+m.days+' days</div></div><button class="btn sec sm" data-sn="'+m.n+'">'+(f.sn===m.n?'Tap again':'Restore')+'</button></div>'}).join(''):'<div class="mute">None yet — the first one is made when you post a day.</div>';
+}
+$('snapList').onclick=function(e){
+  var n=e.target.getAttribute&&e.target.getAttribute('data-sn');if(n===null||n===undefined||!L)return;n=+n;
+  if(f.sn!==n){f.sn=n;renderSnaps();clearTimeout(f.snt);f.snt=setTimeout(function(){f.sn=null;renderSnaps()},4000);return}
+  f.sn=null;
+  kvGet('snap'+n,function(v){
+    if(!v||!Array.isArray(v.days)){toast('That safety copy could not be read');renderSnaps();return}
+    snapshot('before restoring a safety copy');
+    var prev=L;L=fixLedger(v);CACHE=null;
+    ldSave(function(ok){if(!ok){L=prev;CACHE=null}else toast('Ledger restored from the safety copy');renderLedger();renderClose()});
+  });
+};
+function latestDay(){var b=null;L.days.forEach(function(d){if(!b||(d.at||0)>(b.at||0))b=d});return b}
+function reopenDay(id){
+  if(S.entries.length||S.exp.length||(S.deals&&S.deals.length)){toast('Today\'s sheet has entries. Close or clear it first.');return}
+  var day=null;L.days.forEach(function(d){if(d.id===id)day=d});if(!day)return;
+  snapshot('before reopening '+fd(day.date));
+  var keep=L.days.slice();L.days=L.days.filter(function(d){return d.id!==id});
+  ldSave(function(ok){
+    if(!ok){L.days=keep;CACHE=null;return}
+    var n={open:String(day.open||''),entries:[],exp:[],expNarr:S.expNarr,seq:S.seq,deals:[],date:day.date,sid:day.sid||newSid()};
+    (day.ent||[]).forEach(function(e){if(e.x&&day.exp)return;n.entries.push({id:'e'+(n.seq++),code:e.c,narr:e.n,out:e.o,inn:e.i,cr:e.cr,ci:e.ci})});
+    (day.exp||[]).forEach(function(x){n.exp.push({label:x.label,amt:x.amt,own:!!x.own})});
+    (day.deals||[]).forEach(function(x){n.deals.push({code:x.c,vol:x.v,op:x.op,rate:x.r,ps:x.ps,inr:x.inr,b:x.b||0})});
+    S=n;save();f.review=false;all();setView('cash');toast('Day reopened on the Cash book tab — review it, then post it again');
+  });
+}
+
+// ---- find an entry + posted-day view
+function dayById(id){for(var i=0;i<L.days.length;i++)if(L.days[i].id===id)return L.days[i];return null}
+function sortedDays(){return L.days.slice().sort(function(a,b){return a.date<b.date?-1:a.date>b.date?1:(a.at||0)-(b.at||0)})}
+function renderDayView(){
+  var c=$('dayViewCard');if(!f.vw){c.style.display='none';return}
+  var d=dayById(f.vw);if(!d){f.vw=null;c.style.display='none';return}
+  var sd=sortedDays(),ix=sd.indexOf(d),o=0,i=0,cr=0,ci=0;
+  var ent=(d.ent||[]).slice().sort(function(a,b){return a.s-b.s});
+  var h='<div style="display:flex;justify-content:space-between;align-items:center"><h2 style="margin:0">'+fd(d.date)+'</h2><button class="btn sec sm" id="vwClose">Close</button></div>';
+  h+='<div class="two" style="margin-top:6px"><div><div class="mute">Opening cash</div><b>'+fmt(d.open)+'</b></div><div><div class="mute">Closing cash</div><b>'+fmt(d.close)+'</b></div></div>';
+  if((d.deals||[]).length){
+    var dd=d.deals.slice().sort(function(a,b){return a.s-b.s});
+    h+='<div class="mute" style="margin-top:10px">Currency deals ('+dd.length+')</div><table class="vt">'+dd.map(function(x){return'<tr><td><b>'+esc(x.c)+'</b></td><td>'+esc(dealNarr(x))+'</td><td class="num '+(x.ps==='S'?'oo':'ii')+'">'+(x.ps==='S'?'OUT ':'IN ')+fmt2(x.inr)+'</td></tr>'}).join('')+'</table>';
+  }
+  h+='<div class="mute" style="margin-top:10px">Cash book ('+ent.length+' rows)</div><table class="vt"><tr class="vh"><td>Code</td><td>Narration</td><td class="num">OUT</td><td class="num">IN</td><td></td></tr>';
+  ent.forEach(function(e){
+    o+=e.o;i+=e.i;cr+=e.cr||0;ci+=e.ci||0;
+    h+='<tr'+(f.hl===e.s?' class="hit"':'')+'><td><b>'+esc(e.c)+'</b></td><td>'+esc(e.n)+((e.cr||e.ci)?'<div class="mute">Comm '+(e.cr?'R '+fmt2(e.cr):'')+(e.ci?'I '+fmt2(e.ci):'')+'</div>':'')+'</td><td class="num oo">'+(e.o?fmt2(e.o):'')+'</td><td class="num ii">'+(e.i?fmt2(e.i):'')+'</td><td><button class="act" style="border:0;background:none;color:var(--acc);font-size:14px" data-ed="'+e.s+'">edit</button></td></tr>';
+    if(f.ed===e.s)h+='<tr><td colspan="5"><div class="bcard" style="background:var(--bg)"><div class="mute">Correct this entry</div>'
+      +'<input id="edC" type="text" autocapitalize="characters" autocomplete="off" value="'+esc(e.c)+'" style="margin:4px 0;text-transform:uppercase">'
+      +'<input id="edN" type="text" autocapitalize="characters" autocomplete="off" value="'+esc(e.n)+'" style="margin:4px 0;text-transform:uppercase">'
+      +'<div class="two"><div><div class="mute">OUT</div><input id="edO" type="text" inputmode="decimal" value="'+(e.o||'')+'"></div><div><div class="mute">IN</div><input id="edI" type="text" inputmode="decimal" value="'+(e.i||'')+'"></div></div>'
+      +'<div class="two" style="margin-top:4px"><div><div class="mute">Comm R</div><input id="edR" type="text" inputmode="decimal" value="'+(e.cr||'')+'"></div><div><div class="mute">Comm I</div><input id="edIc" type="text" inputmode="decimal" value="'+(e.ci||'')+'"></div></div>'
+      +'<div id="edMsg" style="margin-top:6px"></div>'
+      +'<div class="two" style="margin-top:8px"><button class="btn" id="edSave">Save correction</button><button class="btn sec" id="edCancel">Cancel</button></div>'
+      +'<div style="margin-top:6px"><button class="act" style="border:0;background:none;color:var(--bad);font-size:14px" id="edDel">'+(f.edDel?'sure? tap again to delete this entry':'delete this entry')+'</button></div></div></td></tr>';
+  });
+  h+='<tr class="vh"><td colspan="2">Total</td><td class="num">'+fmt2(o)+'</td><td class="num">'+fmt2(i)+'</td><td></td></tr></table>';
+  if(cr||ci)h+='<div class="mute">Commission R '+fmt2(cr)+' · Commission I '+fmt2(ci)+'</div>';
+  if((d.deals||[]).length){var dpf=dealsProfit(d.deals.map(function(x){return{ps:x.ps,inr:x.inr}}));h+='<div class="mute">Deals profit that day: <b class="'+(dpf.profit<0?'oo':'ii')+'">'+signed(dpf.profit)+'</b></div>'}
+  h+='<div class="two" style="margin-top:10px"><button class="btn sec sm" id="vwPrev"'+(ix>0?'':' disabled')+'>◀ Earlier day</button><button class="btn sec sm" id="vwNext"'+(ix<sd.length-1?'':' disabled')+'>Later day ▶</button></div>';
+  h+='<div style="margin-top:8px"><button class="btn sec" id="vwCopy">Copy this day\'s rows</button></div><div style="margin-top:8px"><button class="btn" id="vwImg">Send cash book picture</button></div><div class="mute" style="margin-top:6px">Tap “edit” on a row to correct it. Deals are changed by reopening the day from “Posted days”.</div>';
+  c.innerHTML=h;c.style.display='';
+}
+
+function applyEdit(del){
+  var d=dayById(f.vw);if(!d)return;
+  var e=null;(d.ent||[]).forEach(function(x){if(x.s===f.ed)e=x});if(!e)return;
+  var msg=$('edMsg');
+  function bad(t){msg.innerHTML='<div class="flag bad">'+esc(t)+'</div>'}
+  var code=$('edC').value.trim().toUpperCase(),n=$('edN').value.trim().toUpperCase(),o=num($('edO').value),i=num($('edI').value),cr=num($('edR').value),ci=num($('edIc').value);
+  if(!del){
+    if(!code){bad('Account code is needed. Delete the entry if it was a mistake.');return}
+    if(acctList().indexOf(code)<0){bad(code+' is not in the account list. Add it first (Ledger → Accounts and types).');return}
+    if(!(o||i||cr||ci)){bad('Enter an amount, or delete the entry.');return}
+  }
+  var oldClose=d.close,sd=sortedDays(),ix=sd.indexOf(d);
+  snapshot(del?'before deleting a posted entry':'before correcting a posted entry');
+  var before=JSON.stringify(e);
+  if(del)d.ent=d.ent.filter(function(x){return x!==e});else{e.c=code;e.n=n;e.o=o;e.i=i;e.cr=cr;e.ci=ci}
+  var to=0,ti=0;(d.ent||[]).forEach(function(x){to+=x.o;ti+=x.i});
+  var nc=r2(num(d.open)+ti-to),delta=r2(nc-oldClose),note='';
+  d.close=nc;
+  if(Math.abs(delta)>=0.005){
+    var prev=oldClose,broken=false,k,adj=0;
+    for(k=ix+1;k<sd.length;k++){
+      var x=sd[k];
+      if(Math.abs(x.open-prev)<0.005){prev=x.close;x.open=r2(x.open+delta);x.close=r2(x.close+delta);adj++}else{broken=true;break}
+    }
+    if(!broken&&S.open!==''&&Math.abs(num(S.open)-prev)<0.005){S.open=String(r2(num(S.open)+delta));save();adj++}
+    note=' Cash at close changed by '+signed(delta)+(adj?'; '+adj+' later opening/closing figure(s) adjusted.':'.')+(broken?' A later day did not start from this day’s closing cash, so check it.':'');
+  }
+  ldSave(function(ok){
+    if(!ok){return}
+    f.ed=null;f.edDel=false;renderDayView();renderLedger();renderClose();renderTop();
+    toast((del?'Entry deleted.':'Entry corrected.')+note);
+  });
+}
+function openDayView(id,hl){f.ed=null;f.edDel=false;f.vw=id;f.hl=hl==null?null:hl;renderDayView();var c=$('dayViewCard');c.scrollIntoView({behavior:'smooth',block:'start'});var hit=c.querySelector('.hit');if(hit)setTimeout(function(){hit.scrollIntoView({block:'center'})},50)}
+$('dayViewCard').onclick=function(e){
+  var t=e.target,id=t.id;
+  var ed=t.getAttribute&&t.getAttribute('data-ed');if(ed!==null&&ed!==undefined){f.ed=(f.ed===+ed)?null:+ed;f.edDel=false;renderDayView();return}
+  if(!id)return;
+  var d=dayById(f.vw),sd=sortedDays(),ix=sd.indexOf(d);
+  if(id==='edSave'){applyEdit(false);return}
+  if(id==='edCancel'){f.ed=null;f.edDel=false;renderDayView();return}
+  if(id==='edDel'){if(!f.edDel){f.edDel=true;renderDayView();clearTimeout(f.edt);f.edt=setTimeout(function(){f.edDel=false;if(f.ed!==null&&f.ed!==undefined)renderDayView()},4000);return}applyEdit(true);return}
+  if(id==='vwClose'){f.ed=null;f.vw=null;renderDayView()}
+  else if(id==='vwPrev'&&ix>0){f.ed=null;f.vw=sd[ix-1].id;f.hl=null;renderDayView()}
+  else if(id==='vwNext'&&ix<sd.length-1){f.ed=null;f.vw=sd[ix+1].id;f.hl=null;renderDayView()}
+  else if(id==='vwImg'){sendDayImage(dayModelPosted(d))}
+  else if(id==='vwCopy'){copyText((d.ent||[]).slice().sort(function(a,b){return a.s-b.s}).map(function(e){return[e.c,e.n,e.o||'',e.i||'',e.cr||'',e.ci||''].join('\t')}).join('\n'),'Rows copied')}
+};
+function findEntries(q){
+  q=q.trim().toUpperCase();if(!q)return[];
+  var qn=q.replace(/[,\s]/g,''),isNum=/^\d+(\.\d+)?$/.test(qn),res=[];
+  function hit(e){
+    if(e.c&&e.c.indexOf(q)>=0)return true;
+    if(e.n&&String(e.n).toUpperCase().indexOf(q)>=0)return true;
+    if(isNum){var a=[e.o,e.i,e.cr,e.ci];for(var k=0;k<4;k++){if(a[k]&&(String(r2(a[k]))===qn||String(r2(a[k])).indexOf(qn)===0||String(Math.round(a[k]))===qn))return true}}
+    return false;
+  }
+  L.days.forEach(function(d){
+    (d.ent||[]).forEach(function(e){if(hit(e))res.push({d:d.date,id:d.id,s:e.s,e:e,w:''})});
+    (d.deals||[]).forEach(function(x){
+      var e={c:x.c,n:dealNarr(x),o:x.ps==='S'?x.inr:0,i:x.ps==='P'?x.inr:0};
+      if(hit(e)||(isNum&&(String(x.v)===qn||String(x.r)===qn)))res.push({d:d.date,id:d.id,s:x.s,e:e,w:'deal'});
+    });
+  });
+  (L.late||[]).forEach(function(e0){var e={c:e0.c,n:e0.n,o:e0.o,i:e0.i,cr:e0.cr,ci:e0.ci};if(hit(e))res.push({d:e0.d,id:null,e:e,w:'late'})});
+  (L.wait||[]).forEach(function(w){var e={c:'(no code)',n:w.n,o:w.o,i:w.i,cr:w.cr,ci:w.ci};if(hit({c:'',n:w.n,o:w.o,i:w.i,cr:w.cr,ci:w.ci}))res.push({d:w.d,id:null,e:e,w:'wait'})});
+  rows().forEach(function(r){var e={c:r.code,n:r.narr,o:r.out,i:r.inn,cr:r.cr,ci:r.ci};if(hit(e))res.push({d:S.date,id:null,e:e,w:'today'})});
+  (S.deals||[]).forEach(function(x){var e={c:x.code,n:x.vol+' '+x.op+' '+x.rate+' ('+x.ps+')',o:x.ps==='S'?x.inr:0,i:x.ps==='P'?x.inr:0};if(hit(e))res.push({d:S.date,id:null,e:e,w:'today'})});
+  res.sort(function(a,b){return a.d<b.d?1:a.d>b.d?-1:0});
+  return res;
+}
+function renderFind(){
+  var q=$('fqIn').value,out=$('fqOut');
+  if(!q.trim()){out.innerHTML='';return}
+  var r=findEntries(q),h='';
+  if(!r.length){out.innerHTML='<div class="mute">Nothing found.</div>';return}
+  var tag={deal:'deal',late:'late entry',wait:'waiting for code',today:'today\'s sheet, not posted'};
+  h+='<div class="mute">'+r.length+' found'+(r.length>100?' — showing the latest 100':'')+'</div>';
+  h+=r.slice(0,100).map(function(x,k){
+    var e=x.e;
+    return'<div class="bcard fq" data-k="'+k+'"><div style="display:flex;justify-content:space-between"><b>'+esc(e.c)+'</b><span class="mute">'+fd(x.d)+(x.w?' · '+tag[x.w]:'')+'</span></div><div>'+esc(e.n||'')+'</div><div>'+(e.o?'<span class="oo">OUT '+fmt2(e.o)+'</span> ':'')+(e.i?'<span class="ii">IN '+fmt2(e.i)+'</span> ':'')+(e.cr?'<span class="mute">Comm R '+fmt2(e.cr)+'</span> ':'')+(e.ci?'<span class="mute">Comm I '+fmt2(e.ci)+'</span>':'')+'</div>'+(x.id?'<div class="mute">Tap to see this day</div>':'')+'</div>';
+  }).join('');
+  out.innerHTML=h;f.fr=r;
+}
+$('fqIn').oninput=function(){clearTimeout(f.fqt);f.fqt=setTimeout(renderFind,150)};
+$('fqOut').onclick=function(e){var c=e.target.closest&&e.target.closest('.fq');if(!c||!f.fr)return;var x=f.fr[+c.getAttribute('data-k')];if(x&&x.id)openDayView(x.id,x.s)};
+$('postedList').onclick=function(e){
+  var vw=e.target.getAttribute&&e.target.getAttribute('data-vw');if(vw){openDayView(vw,null);return}
+  var id=e.target.getAttribute&&e.target.getAttribute('data-ro');if(!id)return;
+  if(f.ro!==id){f.ro=id;renderPosted();clearTimeout(f.rot);f.rot=setTimeout(function(){f.ro=null;renderPosted()},4000);return}
+  f.ro=null;reopenDay(id);
+};
+$('undoClose').onclick=function(){
+  if(!L||!L.days.length)return;var d=latestDay(),b=this;
+  if(f.uc!==d.id){f.uc=d.id;b.textContent='Tap again to take '+fd(d.date)+' back to the sheet';clearTimeout(f.uct);f.uct=setTimeout(function(){f.uc=null;renderClose()},4000);return}
+  f.uc=null;reopenDay(d.id);
+};
+
+// opening balances
+var obP=null;
+function renderObPrev(){
+  var txt=$('obText').value;
+  if(!txt.trim()){obP=null;$('obInfo').innerHTML='';$('obSave').disabled=true;return}
+  var p=parseSheetRows(txt),o=0,i=0,nw=[];
+  p.rows.forEach(function(r){o+=r.o;i+=r.i;if(codes.length&&codes.indexOf(r.code)<0)nw.push(r.code)});
+  obP=p;
+  var h='<div class="flag okf">'+p.rows.length+' accounts · OUT '+fmt2(o)+' · IN '+fmt2(i)+'</div>';
+  h+=Math.abs(o-i)<0.005?'<div class="flag okf">OUT and IN tally.</div>':'<div class="flag warn">OUT − IN = '+fmt2(r2(o-i))+' (the Chart of Accounts tally should be 0.00).</div>';
+  if(nw.length)h+='<div class="flag warn">'+nw.length+' code(s) are not in your account list and will be added: '+esc(nw.slice(0,12).join(', '))+(nw.length>12?'…':'')+'</div>';
+  if(p.dup.length)h+='<div class="flag bad">Repeated codes ignored (first one used): '+esc(p.dup.join(', '))+'</div>';
+  if(p.bad.length)h+='<div class="flag bad">'+p.bad.length+' line(s) could not be read, for example: “'+esc(p.bad[0])+'”. Copy the columns straight from Excel.</div>';
+  $('obInfo').innerHTML=h;
+  $('obSave').disabled=!p.rows.length;$('obSave').textContent='Save opening balances';f.obc=null;
+}
+$('obText').oninput=renderObPrev;
+$('commCode').onchange=function(){if(!L)return;L.commCode=this.value.trim().toUpperCase();ldSave(function(){renderLedger()})};
+$('obSave').onclick=function(){
+  if(!L||!obP||!obP.rows.length)return;
+  var date=$('obDate').value;if(!date){toast('Pick the date balances start on');return}
+  var b=this;
+  if(L.ob&&f.obc!==1){f.obc=1;b.textContent='Replace the saved balances? Tap again';clearTimeout(f.obt);f.obt=setTimeout(function(){f.obc=null;b.textContent='Save opening balances'},4000);return}
+  f.obc=null;
+  snapshot('before saving opening balances');
+  var old=L.ob,rows={},added=0;
+  obP.rows.forEach(function(r){rows[r.code]=[r.o,r.i];if(codes.indexOf(r.code)<0){codes.push(r.code);added++}});
+  codes.sort();ls(CKEY,codes);$('codesBox').value=codes.join('\n');
+  L.ob={date:date,rows:rows};
+  var oldT=L.types;L.types=Object.assign({},L.types||{});obP.rows.forEach(function(r){var ty=normType(r.t);if(ty)L.types[r.code]=ty});
+  ldSave(function(ok){if(!ok){L.ob=old;L.types=oldT}else{$('obText').value='';obP=null;$('obInfo').innerHTML='';$('obSave').disabled=true;toast('Saved '+Object.keys(rows).length+' balances'+(added?' · '+added+' codes added':''))}b.textContent='Save opening balances';renderLedger();all()});
+};
+$('obDate').onchange=function(){};
+$('crownCode').onchange=$('crownOpen').onchange=function(){
+  if(!L)return;
+  L.crown={code:($('crownCode').value.trim().toUpperCase())||'CROWN',open:num($('crownOpen').value)};
+  ldSave(function(){renderLedger();toast('Crown position saved')});
+};
+
+// compare with Excel
+$('cmpText').oninput=function(){
+  var out=$('cmpOut');if(!L){out.innerHTML='';return}
+  if(!this.value.trim()){out.innerHTML='';return}
+  oninputCrown();
+  var p=parseSheetRows(this.value),net=balances(),seen={},diffs=[],ok=0;
+  p.rows.forEach(function(r){
+    seen[r.code]=1;var ex=r2(r.i-r.o),tl=net[r.code]||0;
+    if(Math.abs(ex-tl)<0.005)ok++;else diffs.push({c:r.code,ex:ex,tl:tl});
+  });
+  Object.keys(net).forEach(function(c){if(!seen[c]&&Math.abs(net[c])>=0.005)diffs.push({c:c,ex:0,tl:net[c],only:true})});
+  diffs.sort(function(a,b){return a.c<b.c?-1:1});
+  var h='<div class="flag '+(diffs.length?'bad':'okf')+'">'+ok+' of '+p.rows.length+' accounts match'+(diffs.length?' · '+diffs.length+' differ':' — everything agrees')+'</div>';
+  if(diffs.length){
+    h+='<table class="stmt"><tr><th>Account</th><th class="n">Excel</th><th class="n">Tool</th><th class="n">Difference</th></tr>';
+    diffs.forEach(function(d){h+='<tr><td><b>'+esc(d.c)+'</b>'+(d.only?'<div class="mute">not in the Excel paste</div>':'')+'</td><td class="n">'+oi(d.ex)+'</td><td class="n">'+oi(d.tl)+'</td><td class="n">'+signed(r2(d.tl-d.ex))+'</td></tr>'});
+    h+='</table><div class="mute" style="margin-top:6px">Difference = tool − Excel on the IN-minus-OUT scale. Check that both sides hold the same days and the same opening balances.</div>';
+  }
+  if(p.bad.length)h+='<div class="flag warn">'+p.bad.length+' line(s) not read, e.g. “'+esc(p.bad[0])+'”.</div>';
+  out.innerHTML=h;
+};
+
+function crownCmp(){
+  var v=$('cmpCrown').value.trim(),el=$('cmpCrownOut');
+  if(!el){el=document.createElement('div');el.id='cmpCrownOut';$('cmpCrown').parentNode.insertBefore(el,$('cmpText'))}
+  if(!L||v===''){el.innerHTML='';return}
+  var x=numCell(v),c=crownPos();
+  if(isNaN(x)){el.innerHTML='<div class="flag bad">Not a number.</div>';return}
+  el.innerHTML=Math.abs(x-c.net)<0.005?'<div class="flag okf">Crown AED position matches: '+signed(c.net)+'</div>':'<div class="flag bad">Crown AED differs — Excel '+signed(x)+' · tool '+signed(c.net)+' · difference '+signed(r2(c.net-x))+'</div>';
+}
+function oninputCrown(){crownCmp()}
+$('cmpCrown').oninput=crownCmp;
+// backup / restore / export
+function shareFileGen(name,txt,mime,done){
+  try{
+    var file=new File([txt],name,{type:mime});
+    if(navigator.canShare&&navigator.canShare({files:[file]})){
+      navigator.share({files:[file],title:name}).then(done).catch(function(e){if(e&&e.name!=='AbortError'){downloadText(name,txt);done();toast('Sharing not available — file downloaded')}});
+      return;
+    }
+  }catch(e){}
+  downloadText(name,txt);done();toast('File downloaded — send it from your Files app');
+}
+
+// ---- Google Drive backup (own Drive, drive.file scope, no listing calls)
+var DR_KEY='cashentry.drive',DT=null,DTC=null;
+function drCfg(){return ls(DR_KEY)||{}}
+function drSave(c){ls(DR_KEY,c)}
+function renderDrive(){
+  if(!$('driveBtn'))return;
+  var c=drCfg();$('drOrigin').textContent=location.origin;
+  if(document.activeElement!==$('drCid'))$('drCid').value=c.cid||'';
+  $('drAuto').checked=!!c.auto;
+  $('driveBtn').style.display=c.cid?'':'none';
+  $('drForget').style.display=c.cid?'':'none';
+  var n=$('driveNote');
+  n.textContent=c.cid?(c.last?'Last Drive backup: '+new Date(c.last).toLocaleString():'Client ID saved. Tap “Back up to Google Drive” above to sign in.'):'Not set up. Open “Google Drive setup” below.';
+}
+function loadGIS(cb){
+  if(window.google&&google.accounts&&google.accounts.oauth2)return cb(true);
+  var sc=document.createElement('script');sc.src='https://accounts.google.com/gsi/client';sc.async=true;
+  sc.onload=function(){cb(true)};sc.onerror=function(){cb(false)};document.head.appendChild(sc);
+}
+function drToken(interactive,cb){
+  if(DT&&DT.exp>Date.now()+60000)return cb(DT.t);
+  var c=drCfg();if(!c.cid)return cb(null,'Not set up');
+  loadGIS(function(ok){
+    if(!ok)return cb(null,'Could not reach Google (offline?)');
+    try{
+      var done=false;function fin(t,m){if(done)return;done=true;cb(t,m)}
+      var tc=google.accounts.oauth2.initTokenClient({client_id:c.cid,scope:'https://www.googleapis.com/auth/drive.file',
+        callback:function(r){if(r&&r.access_token){DT={t:r.access_token,exp:Date.now()+(+r.expires_in||3000)*1000};fin(DT.t)}else fin(null,(r&&r.error)||'Sign-in failed')},
+        error_callback:function(e){fin(null,(e&&e.type)||'Sign-in cancelled')}});
+      tc.requestAccessToken({prompt:interactive?'':'none'});
+    }catch(e){cb(null,'Google sign-in failed')}
+  });
+}
+function drFetch(tok,url,method,body,ctype,cb){
+  var h={Authorization:'Bearer '+tok};if(ctype)h['Content-Type']=ctype;
+  fetch(url,{method:method,headers:h,body:body}).then(function(r){return r.text().then(function(t){var j=null;try{j=JSON.parse(t)}catch(e){}cb(r.status,j)})}).catch(function(){cb(0,null)});
+}
+function drMulti(meta,txt){
+  var b='cashentry'+Date.now();
+  return{type:'multipart/related; boundary='+b,body:'--'+b+'\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n'+JSON.stringify(meta)+'\r\n--'+b+'\r\nContent-Type: application/json\r\n\r\n'+txt+'\r\n--'+b+'--'}
+}
+function drUpload(tok,name,txt,cb,retry){
+  var c=drCfg();c.files=c.files||{};
+  function mkFolder(){
+    drFetch(tok,'https://www.googleapis.com/drive/v3/files','POST',JSON.stringify({name:'Cash Entry backups',mimeType:'application/vnd.google-apps.folder'}),'application/json',function(st,j){
+      if(st>=200&&st<300&&j&&j.id){c.folder=j.id;drSave(c);create()}else cb(false,'Drive refused (code '+st+')')});
+  }
+  function create(){
+    var m=drMulti({name:name,parents:[c.folder]},txt);
+    drFetch(tok,'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id','POST',m.body,m.type,function(st,j){
+      if(st>=200&&st<300&&j&&j.id){c.files[name]=j.id;drSave(c);cb(true)}
+      else if((st===404||st===400)&&!retry){c.folder=null;c.files={};drSave(c);drUpload(tok,name,txt,cb,true)}
+      else cb(false,st===401?'Sign-in expired':'Drive refused (code '+st+')')});
+  }
+  if(!c.folder)return mkFolder();
+  if(c.files[name]){
+    var m=drMulti({},txt);
+    drFetch(tok,'https://www.googleapis.com/upload/drive/v3/files/'+c.files[name]+'?uploadType=multipart&fields=id','PATCH',m.body,m.type,function(st){
+      if(st>=200&&st<300)cb(true);
+      else if(st===404){delete c.files[name];drSave(c);create()}
+      else cb(false,st===401?'Sign-in expired':'Drive refused (code '+st+')')});
+  }else create();
+}
+function driveBackup(interactive,done){
+  if(!L){if(done)done(false);return}
+  var txt=JSON.stringify({app:'cashentry-ledger',v:1,biz:BIZ,at:new Date().toISOString(),L:L});
+  var name='cash-ledger-backup-'+today()+'.json';
+  drToken(interactive,function(tok,msg){
+    if(!tok){if(interactive)toast('Drive backup not done: '+msg);if(done)done(false,msg);return}
+    drUpload(tok,name,txt,function(ok,m){
+      if(ok){var c=drCfg();c.last=Date.now();drSave(c);L.bak=Date.now();ldPut();renderDrive();toast('Backed up to Google Drive')}
+      else{if(m==='Sign-in expired')DT=null;toast('Drive backup not done: '+m)}
+      if(done)done(ok,m);
+    });
+  });
+}
+$('driveBtn').onclick=function(){driveBackup(true)};
+$('drCid').onchange=function(){var c=drCfg();c.cid=this.value.replace(/\s+/g,'');this.value=c.cid;if(!c.cid){c.folder=null;c.files={}}DT=null;drSave(c);renderDrive();if(c.cid&&!/^\d+-[A-Za-z0-9_]+\.apps\.googleusercontent\.com$/.test(c.cid)){toast('That does not look like a Client ID. It should look like 1234567890-abc123.apps.googleusercontent.com')}else if(c.cid){toast('Client ID saved. Now tap “Back up to Google Drive”');$('driveBtn').scrollIntoView({behavior:'smooth',block:'center'})}};
+$('drAuto').onchange=function(){var c=drCfg();c.auto=this.checked;drSave(c)};
+$('drForget').onclick=function(){drSave({});DT=null;renderDrive();toast('Google Drive disconnected (files already in Drive stay there)')};
+
+// ---- export in the Excel master's own layout
+function shareFilesGen(list,title,done){
+  try{
+    var files=list.map(function(x){return new File([x.txt],x.name,{type:x.mime})});
+    if(navigator.canShare&&navigator.canShare({files:files})){
+      navigator.share({files:files,title:title}).then(done).catch(function(e){if(e&&e.name!=='AbortError'){list.forEach(function(x){downloadText(x.name,x.txt)});done();toast('Sharing not available — files downloaded')}});
+      return;
+    }
+  }catch(e){}
+  list.forEach(function(x,i){setTimeout(function(){downloadText(x.name,x.txt)},i*400)});done();toast('Files downloaded — open them from your Files app');
+}
+function xlsData(){
+  var cash=[],deals=[];
+  L.days.forEach(function(d){
+    (d.ent||[]).forEach(function(e){cash.push({d:d.date,s:e.s,c:e.c,n:e.n,o:e.o,i:e.i,cr:e.cr,ci:e.ci})});
+    (d.deals||[]).forEach(function(x){deals.push({d:d.date,s:x.s,c:x.c,v:x.v,op:x.op,r:x.r,ps:x.ps})});
+  });
+  (L.late||[]).forEach(function(e){cash.push({d:e.d,s:1e9+e.s,c:e.c,n:e.n,o:e.o,i:e.i,cr:e.cr,ci:e.ci})});
+  (L.wait||[]).forEach(function(w){cash.push({d:w.d,s:2e9,c:'',n:w.n,o:w.o,i:w.i,cr:w.cr,ci:w.ci})});
+  function by(a,b){return a.d<b.d?-1:a.d>b.d?1:a.s-b.s}
+  cash.sort(by);deals.sort(by);
+  return{cash:cash,deals:deals};
+}
+function xlsDated(list,mk){
+  var prev=null;
+  return list.map(function(x){var dt=x.d!==prev?x.d:'';prev=x.d;return mk(dt,x)});
+}
+function renderXlsNote(){
+  var el=$('xlsNote');if(!el||!L)return;
+  var d=null;L.days.forEach(function(x){if(!d||x.date<d.date)d=x});
+  el.textContent=d?'Shop cash opening for Daily Cash Book cell D3 (first posted day, '+fd(d.date)+'): '+fmt2(d.open)+'. Date is filled only on the first row of each day, as in your sheet.':'Nothing posted yet.';
+}
+$('xlsExp').onclick=function(){
+  if(!L||!L.days.length){toast('Nothing posted yet');return}
+  var x=xlsData(),st=today(),bom='﻿',nl='\r\n';
+  var cashRows=xlsDated(x.cash,function(dt,e){return[dt,e.c,e.n,plain(e.o),plain(e.i),plain(e.cr),plain(e.ci)].map(csvCell).join(',')});
+  var dealRows=xlsDated(x.deals,function(dt,e){return[dt,e.c,e.v,e.op,e.r,e.ps].map(csvCell).join(',')});
+  var obRows=[];
+  if(L.ob)Object.keys(L.ob.rows).sort().forEach(function(c){var r=L.ob.rows[c];obRows.push([c,typeOf(c),plain(r[0]),plain(r[1]),L.ob.date].map(csvCell).join(','))});
+  var list=[
+   {name:'excel-1-daily-cash-book-'+st+'.csv',mime:'text/csv',txt:bom+['Date','Account Code','Narration','OUT','IN','Commission R','Commission I'].join(',')+nl+cashRows.join(nl)+nl},
+   {name:'excel-2-currency-purchase-sales-'+st+'.csv',mime:'text/csv',txt:bom+['Date','Account Code','Volume','Op','Rate','P/S'].join(',')+nl+dealRows.join(nl)+nl},
+   {name:'excel-3-chart-of-accounts-opening-'+st+'.csv',mime:'text/csv',txt:bom+['Account Code','Account Type','Opening OUT','Opening IN','Opening Balance Date'].join(',')+nl+obRows.join(nl)+nl}
+  ];
+  shareFilesGen(list,'Excel master export '+st,function(){});
+};
+
+// ===== import a whole Excel workbook (.xlsx read in the browser, nothing uploaded) =====
+function u16(b,o){return b[o]|(b[o+1]<<8)}
+function u32(b,o){return(b[o]|(b[o+1]<<8)|(b[o+2]<<16)|(b[o+3]<<24))>>>0}
+function zipIndex(b){
+  var e=-1,i;for(i=b.length-22;i>=Math.max(0,b.length-70000);i--){if(u32(b,i)===0x06054b50){e=i;break}}
+  if(e<0)throw new Error('This is not an .xlsx file');
+  var n=u16(b,e+10),off=u32(b,e+16),map={};
+  for(i=0;i<n;i++){
+    if(u32(b,off)!==0x02014b50)break;
+    var nl=u16(b,off+28),el=u16(b,off+30),cl=u16(b,off+32);
+    var name=new TextDecoder().decode(b.subarray(off+46,off+46+nl));
+    map[name]={m:u16(b,off+10),cs:u32(b,off+20),lo:u32(b,off+42)};
+    off+=46+nl+el+cl;
+  }
+  return map;
+}
+function zipRead(b,map,name){
+  var z=map[name];if(!z)return Promise.resolve(null);
+  var o=z.lo,nl=u16(b,o+26),el=u16(b,o+28),st=o+30+nl+el,data=b.subarray(st,st+z.cs);
+  if(z.m===0)return Promise.resolve(new TextDecoder().decode(data));
+  if(z.m!==8)return Promise.reject(new Error('Unsupported compression'));
+  if(typeof DecompressionStream==='undefined')return Promise.reject(new Error('This browser cannot open .xlsx files. Update Chrome.'));
+  var ds=new DecompressionStream('deflate-raw'),w=ds.writable.getWriter();w.write(data);w.close();
+  return new Response(ds.readable).arrayBuffer().then(function(ab){return new TextDecoder().decode(ab)});
+}
+function xmlDoc(t){return new DOMParser().parseFromString(t,'application/xml')}
+function readXlsx(buf){
+  var b=new Uint8Array(buf);
+  if(b[0]===0xD0&&b[1]===0xCF)return Promise.reject(new Error('This workbook has an open-password (it is encrypted). In Excel: File → Info → Protect Workbook → Encrypt with Password, clear the password, save a copy, then pick that copy.'));
+  var map;try{map=zipIndex(b)}catch(e){return Promise.reject(e)}
+  var shared=[],sheets={};
+  return Promise.all([zipRead(b,map,'xl/workbook.xml'),zipRead(b,map,'xl/_rels/workbook.xml.rels'),zipRead(b,map,'xl/sharedStrings.xml')]).then(function(r){
+    if(!r[0])throw new Error('Not a valid workbook');
+    if(r[2]){var d=xmlDoc(r[2]).getElementsByTagName('si');for(var i=0;i<d.length;i++){var ts=d[i].getElementsByTagName('t'),x='';for(var k=0;k<ts.length;k++){if(ts[k].parentNode.nodeName==='rPh')continue;x+=ts[k].textContent}shared.push(x)}}
+    var rel={},rd=xmlDoc(r[1]||'<x/>').getElementsByTagName('Relationship');
+    for(var j=0;j<rd.length;j++)rel[rd[j].getAttribute('Id')]=rd[j].getAttribute('Target');
+    var sh=xmlDoc(r[0]).getElementsByTagName('sheet'),list=[];
+    for(var q=0;q<sh.length;q++){
+      var rid=sh[q].getAttribute('r:id')||sh[q].getAttributeNS('http://schemas.openxmlformats.org/officeDocument/2006/relationships','id'),t=rel[rid]||'';
+      t=t.replace(/^\//,'');if(t.indexOf('xl/')!==0)t='xl/'+t;
+      list.push({name:sh[q].getAttribute('name'),path:t});
+    }
+    var want=['Chart of Accounts','Daily Cash Book','Currency Purchase & Sales','Monthly Summary','Customer Ledger'];
+    var todo=list.filter(function(x){return want.indexOf(x.name)>=0});
+    return Promise.all(todo.map(function(x){return zipRead(b,map,x.path).then(function(t){
+      var cells={};
+      if(t){
+        var cs=xmlDoc(t).getElementsByTagName('c');
+        for(var i=0;i<cs.length;i++){
+          var c=cs[i],ref=c.getAttribute('r'),ty=c.getAttribute('t'),ve=c.getElementsByTagName('v')[0],v;
+          if(ty==='inlineStr'){var tt=c.getElementsByTagName('t')[0];v=tt?tt.textContent:undefined}
+          else if(!ve||ve.textContent==='')continue;
+          else if(ty==='s')v=shared[+ve.textContent];
+          else if(ty==='str'||ty==='e')v=ve.textContent;
+          else if(ty==='b')v=ve.textContent==='1';
+          else v=parseFloat(ve.textContent);
+          if(v!==undefined)cells[ref]=v;
+        }
+      }
+      sheets[x.name]=cells;
+    })})).then(function(){
+      want.forEach(function(n){if(!sheets[n])throw new Error('Sheet “'+n+'” not found in this workbook')});
+      return sheets;
+    });
+  });
+}
+function xlDate(v){
+  if(typeof v==='number'&&v>20000&&v<80000){var d=new Date(Math.round((v-25569)*86400000));return d.getUTCFullYear()+'-'+z2(d.getUTCMonth()+1)+'-'+z2(d.getUTCDate())}
+  if(typeof v==='string'){var m=v.trim().match(/^(\d{1,2})[-\/.](\d{1,2})[-\/.](\d{4})$/);if(m)return m[3]+'-'+z2(+m[2])+'-'+z2(+m[1]);m=v.trim().match(/^(\d{4})-(\d\d)-(\d\d)/);if(m)return m[1]+'-'+m[2]+'-'+m[3]}
+  return'';
+}
+function xnum(v){return typeof v==='number'?v:(typeof v==='string'?(isNaN(parseFloat(v.replace(/,/g,'')))?0:parseFloat(v.replace(/,/g,''))):0)}
+function xstr(v){return v==null?'':String(v).trim()}
+function buildFromSheets(sh){
+  var warn=[],coa=sh['Chart of Accounts'],cb=sh['Daily Cash Book'],cp=sh['Currency Purchase & Sales'],ms=sh['Monthly Summary'],cl=sh['Customer Ledger'];
+  var Lx=newLedger();Lx.reserve=(L&&L.reserve)||'RESERVE';Lx.commCode=(L&&L.commCode!=null)?L.commCode:'COMM';
+  var rowsOb={},types={},obDates=[],coaCodes=[],r,seq=1;
+  for(r=5;r<=150;r++){
+    var c=xstr(coa['A'+r]).toUpperCase();if(!c)continue;
+    coaCodes.push(c);rowsOb[c]=[r2(xnum(coa['C'+r])),r2(xnum(coa['D'+r]))];
+    var t=normType(xstr(coa['B'+r]));if(t)types[c]=t;
+    var dd=xlDate(coa['E'+r]);if(dd)obDates.push(dd);
+  }
+  if(!coaCodes.length)warn.push('Chart of Accounts has no accounts');
+  var cash=[],prev='',skipped=0;
+  for(r=6;r<=1605;r++){
+    var code=xstr(cb['C'+r]).toUpperCase(),nr=xstr(cb['D'+r]),o=r2(xnum(cb['E'+r])),i=r2(xnum(cb['F'+r])),cr=r2(xnum(cb['G'+r])),ci=r2(xnum(cb['H'+r]));
+    if(!code&&!nr&&!o&&!i&&!cr&&!ci)continue;
+    var d=xlDate(cb['K'+r])||xlDate(cb['B'+r])||prev;
+    if(xlDate(cb['B'+r]))prev=xlDate(cb['B'+r]);else if(d)prev=d;
+    if(!d){warn.push('Daily Cash Book row '+r+' has no date');continue}
+    if(!o&&!i&&!cr&&!ci&&!nr){skipped++;continue}
+    cash.push({r:r,d:d,c:code,n:nr,o:o,i:i,cr:cr,ci:ci});
+  }
+  var deals=[],prevD='',xin={};
+  for(r=5;r<=804;r++){
+    var dc=xstr(cp['C'+r]).toUpperCase();if(!dc)continue;
+    var v=xnum(cp['D'+r]),op=xstr(cp['E'+r])==='/'?'/':'*',rt=xnum(cp['F'+r]),ps=xstr(cp['G'+r]).toUpperCase()==='S'?'S':'P';
+    var dd2=xlDate(cp['N'+r])||xlDate(cp['B'+r])||prevD;if(xlDate(cp['B'+r]))prevD=xlDate(cp['B'+r]);else if(dd2)prevD=dd2;
+    if(!dd2){warn.push('Currency sheet row '+r+' has no date');continue}
+    if(!(v>0&&rt>0)){warn.push('Currency sheet row '+r+' ('+dc+') has no volume or rate');continue}
+    var exInr=ps==='S'?xnum(cp['H'+r]):xnum(cp['I'+r]);
+    deals.push({r:r,d:dd2,c:dc,v:v,op:op,rt:rt,ps:ps,inr:dealInr(v,op,rt),exInr:exInr,b:xnum(cp['Q'+r])||0});
+  }
+  var dates={};cash.forEach(function(x){dates[x.d]=1});deals.forEach(function(x){dates[x.d]=1});
+  var dl=Object.keys(dates).sort(),open=r2(xnum(cb['D3'])),days=[],wait=[],first=null;
+  dl.forEach(function(dt,ix){
+    var ent=[],ds=[],o=0,inn=0;
+    deals.filter(function(x){return x.d===dt}).forEach(function(x){ds.push({c:x.c,v:x.v,op:x.op,r:x.rt,ps:x.ps,inr:x.inr,b:x.b,s:seq++})});
+    cash.filter(function(x){return x.d===dt}).forEach(function(x){
+      o+=x.o;inn+=x.i;
+      if(x.c)ent.push({c:x.c,n:x.n,o:x.o,i:x.i,cr:x.cr,ci:x.ci,s:seq++,x:0});
+      else wait.push({id:'w'+(seq++),d:dt,n:x.n,o:x.o,i:x.i,cr:x.cr,ci:x.ci});
+    });
+    var close=r2(open+inn-o);
+    days.push({id:'d'+(seq++),date:dt,open:open,close:close,at:ix+1,sid:'xl'+ix,ent:ent,deals:ds,exp:[]});
+    open=close;
+  });
+  Lx.days=days;Lx.wait=wait;Lx.seq=seq;
+  var mn=obDates.length?obDates.slice().sort()[0]:'';if(dl.length&&(!mn||dl[0]<mn))mn=dl[0];
+  Lx.ob={date:mn||today(),rows:rowsOb};Lx.types=types;
+  if(coaCodes.indexOf('COMMISSION')>=0)Lx.commCode='COMMISSION';
+  Lx.crown={code:(L&&L.crown&&L.crown.code)||'CROWN',open:xnum(cp['P2'])};
+  var missing={};cash.forEach(function(x){if(x.c&&coaCodes.indexOf(x.c)<0)missing[x.c]=1});deals.forEach(function(x){if(coaCodes.indexOf(x.c)<0)missing[x.c]=1});
+  var X={cash:{b5:ms['B5']},b9:ms['B9'],b10:ms['B10'],b11:ms['B11'],b12:ms['B12'],f5:ms['F5'],f6:ms['F6'],p3:cp['P3'],tb:{},clCode:xstr(cl['C4']).toUpperCase(),clBal:cl['F3'],clRows:0,
+    dealMis:deals.filter(function(x){return x.exInr!==0&&Math.abs(x.exInr-x.inr)>0.005}).length};
+  for(r=16;r<=161;r++){var a=xstr(ms['A'+r]).toUpperCase();if(a)X.tb[a]=[r2(xnum(ms['B'+r])),r2(xnum(ms['C'+r]))]}
+  X.clList=[];for(r=8;r<=257;r++){if(typeof cl['E'+r]==='number'){X.clRows++;X.clList.push({n:xstr(cl['B'+r]),o:r2(xnum(cl['C'+r])),i:r2(xnum(cl['D'+r])),b:r2(xnum(cl['E'+r]))})}}
+  return{L:Lx,X:X,warn:warn,codes:coaCodes,missing:Object.keys(missing),
+    stats:{coa:coaCodes.length,cash:cash.length,deals:deals.length,days:days.length,wait:wait.length,skipped:skipped,from:dl[0]||'',to:dl[dl.length-1]||'',lastClose:days.length?days[days.length-1].close:open}};
+}
+function xlCompare(B){
+  var keep=L,res=[];
+  L=B.L;CACHE=null;
+  try{
+    var net=balances(),X=B.X,tol=0.005;
+    var ms=monthSummary(null),cp=crownPos();
+    function chk(label,ex,tv){if(typeof ex!=='number'){res.push({l:label,e:'not in file',t:fmt2(tv),ok:null});return}res.push({l:label,e:fmt2(ex),t:fmt2(tv),ok:Math.abs(ex-tv)<=tol})}
+    var cashLast=B.stats.lastClose;
+    chk('Shop cash balance (Monthly Summary B5)',X.cash.b5,cashLast);
+    chk('Currency trading profit (B9)',X.b9,ms.dp);
+    chk('Commission profit (B10)',X.b10,ms.cm);
+    chk('Total expenses (B11)',X.b11,ms.ex);
+    chk('NET PROFIT (B12)',X.b12,ms.net);
+    chk('Current RESERVE (F5)',X.f5,ms.res);
+    chk('Suggested new RESERVE (F6)',X.f6,ms.sug);
+    chk('Crown AED net volume (P3)',X.p3,cp.net);
+    res.push({l:'Currency rows: INR per deal',e:X.dealMis?X.dealMis+' differ':'all match',t:'',ok:X.dealMis===0});
+    if(X.clCode){
+      var st=statement(X.clCode,'','');
+      chk('Customer Ledger '+X.clCode+': current balance (F3)',X.clBal,st.bal);
+      res.push({l:'Customer Ledger '+X.clCode+': number of rows',e:String(X.clRows),t:String(st.rows.length),ok:X.clRows===st.rows.length});
+      var badL=0,firstBad='';
+      X.clList.forEach(function(x,ix){var y=st.rows[ix];if(!y||Math.abs(x.o-(y.o||0))>tol||Math.abs(x.i-(y.i||0))>tol||Math.abs(x.b-y.b)>tol){badL++;if(!firstBad)firstBad='row '+(ix+1)+' '+x.n}});
+      res.push({l:'Customer Ledger '+X.clCode+': every row (amounts and running balance)',e:'',t:badL?badL+' differ, first: '+firstBad:'all match',ok:badL===0});
+    }
+    var codes2={},k,diff=[],same=0;
+    Object.keys(X.tb).forEach(function(c){codes2[c]=1});Object.keys(net).forEach(function(c){if(Math.abs(net[c])>=0.005)codes2[c]=1});
+    Object.keys(codes2).sort().forEach(function(c){
+      var v=net[c]||0,to=v<0?-v:0,ti=v>0?v:0,e=X.tb[c];
+      if(!e){diff.push({c:c,why:'not in the Excel trial balance',eo:0,ei:0,to:to,ti:ti});return}
+      if(Math.abs(e[0]-to)>tol||Math.abs(e[1]-ti)>tol)diff.push({c:c,eo:e[0],ei:e[1],to:to,ti:ti});else same++;
+    });
+    var tto=0,tti=0;Object.keys(net).forEach(function(c){var v=net[c];if(v<0)tto-=v;else tti+=v});
+    return{res:res,diff:diff,same:same,total:Object.keys(codes2).length,tcomm:B.L.commCode,tto:r2(tto),tti:r2(tti)};
+  }finally{L=keep;CACHE=null}
+}
+function renderXl(B,C){
+  var st=B.stats,h='<div class="flag okf">Read: '+st.coa+' accounts · '+st.cash+' cash rows · '+st.deals+' currency rows · '+st.days+' days ('+fd(st.from)+' to '+fd(st.to)+')'+(st.wait?' · '+st.wait+' rows without account code':'')+'.</div>';
+  if(B.warn.length)h+='<div class="flag warn" style="margin-top:6px">'+B.warn.slice(0,8).map(esc).join('<br>')+(B.warn.length>8?'<br>…and '+(B.warn.length-8)+' more':'')+'</div>';
+  if(B.missing.length)h+='<div class="flag warn" style="margin-top:6px">Codes used in entries but missing from the Chart of Accounts (Excel leaves them out of its trial balance): '+B.missing.map(esc).join(', ')+'</div>';
+  var bad=C.res.filter(function(x){return x.ok===false}).length+C.diff.length;
+  h+='<div class="flag '+(bad?'bad':'okf')+'" style="margin-top:6px">'+(bad?'Differences found: '+C.diff.length+' account(s)'+(C.res.filter(function(x){return x.ok===false}).length?' and '+C.res.filter(function(x){return x.ok===false}).length+' summary figure(s)':'')+'.':'Everything matches Excel: '+C.same+' accounts and every summary figure.')+'</div>';
+  h+='<table class="stmt" style="margin-top:8px"><tr><th>Check</th><th class="n">Excel</th><th class="n">App</th><th></th></tr>';
+  C.res.forEach(function(x){h+='<tr><td>'+esc(x.l)+'</td><td class="n">'+esc(x.e)+'</td><td class="n">'+esc(x.t)+'</td><td>'+(x.ok===null?'–':x.ok?'✓':'<b class="oo">✗</b>')+'</td></tr>'});
+  h+='<tr class="tot"><td>Accounts matching</td><td class="n" colspan="2">'+C.same+' of '+C.total+'</td><td>'+(C.diff.length?'<b class="oo">✗</b>':'✓')+'</td></tr></table>';
+  if(C.diff.length){
+    h+='<div class="mute" style="margin-top:8px">Accounts that differ</div><table class="stmt"><tr><th>Account</th><th class="n">Excel OUT / IN</th><th class="n">App OUT / IN</th></tr>';
+    C.diff.slice(0,60).forEach(function(d){h+='<tr><td><b>'+esc(d.c)+'</b>'+(d.why?'<div class="mute">'+esc(d.why)+'</div>':'')+(d.c===C.tcomm?'<div class="mute">Commission account: Excel may look for the name COMMISSION only</div>':'')+'</td><td class="n">'+fmt2(d.eo)+' / '+fmt2(d.ei)+'</td><td class="n">'+fmt2(d.to)+' / '+fmt2(d.ti)+'</td></tr>'});
+    h+='</table>'+(C.diff.length>60?'<div class="mute">Showing 60 of '+C.diff.length+'.</div>':'');
+  }
+  $('xlOut').innerHTML=h;
+}
+var xlB=null;
+$('xlFile').onchange=function(){
+  var fl=this.files&&this.files[0];xlB=null;$('xlLoad').disabled=true;$('xlOut').innerHTML='';
+  if(!fl){$('xlInfo').innerHTML='';return}
+  $('xlInfo').innerHTML='<div class="mute">Reading '+esc(fl.name)+'…</div>';
+  var rd=new FileReader();
+  rd.onerror=function(){$('xlInfo').innerHTML='<div class="flag bad">Could not read the file</div>'};
+  rd.onload=function(){
+    readXlsx(rd.result).then(function(sh){
+      if(!L){$('xlInfo').innerHTML='<div class="flag bad">The ledger is still opening. Try again.</div>';return}
+      var B=buildFromSheets(sh),C=xlCompare(B);xlB=B;
+      $('xlInfo').innerHTML='<div class="mute">'+esc(fl.name)+'</div>';
+      renderXl(B,C);$('xlLoad').disabled=false;
+    }).catch(function(e){$('xlInfo').innerHTML='<div class="flag bad">'+esc(e&&e.message||'Could not read this workbook')+'</div>'});
+  };
+  rd.readAsArrayBuffer(fl);
+};
+$('xlLoad').onclick=function(){
+  if(!xlB||!L)return;var b=this;
+  if(f.xlc!==1){f.xlc=1;b.textContent='Tap again: this replaces the whole ledger';clearTimeout(f.xlt);f.xlt=setTimeout(function(){f.xlc=null;b.textContent='Load this workbook into the app (replaces the ledger)'},4000);return}
+  f.xlc=null;b.textContent='Load this workbook into the app (replaces the ledger)';
+  var prev=L;snapshot('before loading an Excel workbook');
+  kvSet('ledger_prev',prev,function(){
+    L=xlB.L;L.chg=Date.now();L.bak=0;CACHE=null;
+    xlB.codes.forEach(function(c){if(codes.indexOf(c)<0)codes.push(c)});codes.sort();ls(CKEY,codes);$('codesBox').value=codes.join('\n');
+    ldPut(function(ok){
+      if(!ok){L=prev;CACHE=null;return}
+      var lc=xlB.stats.lastClose,ld=xlB.stats.to;xlB=null;b.disabled=true;$('xlFile').value='';
+      if(!S.entries.length&&!S.exp.length&&!(S.deals&&S.deals.length)){S.open=String(lc);if(ld){var nd=addDay(ld,1),td=today();S.date=nd>td?nd:td}save();resetForm();all()}
+      renderLedger();renderClose();
+      toast('Workbook loaded. Today’s sheet now opens with '+fmt2(lc));
+    });
+  });
+};
+$('ledShare').onclick=function(){
+  if(!L)return;
+  var txt=JSON.stringify({app:'cashentry-ledger',v:1,biz:BIZ,at:new Date().toISOString(),L:L});
+  shareFileGen('cash-ledger-backup-'+today()+'.json',txt,'text/plain',function(){L.bak=Date.now();ldPut();renderBakNudge();renderLedBak()});
+};
+$('ledCsv').onclick=function(){
+  if(!L)return;
+  var Ls=[['Date','Account','Narration','OUT','IN','Commission R','Commission I','Type'].join(',')];
+  if(L.ob)Object.keys(L.ob.rows).sort().forEach(function(c){var r=L.ob.rows[c];Ls.push([L.ob.date,c,'Opening Balance',plain(r[0]),plain(r[1]),'','','Opening'].map(csvCell).join(','))});
+  events().slice().sort(function(a,b){return a.d<b.d?-1:a.d>b.d?1:a.k-b.k||a.s-b.s}).forEach(function(e){Ls.push([e.d,e.c,e.n,plain(e.o),plain(e.i),plain(e.cr),plain(e.ci),e.k?'Cash':'Deal'].map(csvCell).join(','))});
+  shareFileGen('cash-ledger-'+today()+'.csv','﻿'+Ls.join('\r\n')+'\r\n','text/csv',function(){});
+};
+var ledR=null;
+$('ledFile').onchange=function(){
+  var fl=this.files&&this.files[0],inf=$('ledRInfo');ledR=null;$('ledRestore').disabled=true;if(!fl)return;
+  var r=new FileReader();r.onload=function(){
+    var o;try{o=JSON.parse(String(r.result).replace(/^﻿/,''))}catch(e){o=null}
+    if(!o||o.app!=='cashentry-ledger'||!o.L||!Array.isArray(o.L.days)){inf.innerHTML='<div class="flag bad">That is not a ledger backup file.</div>';return}
+    ledR=fixLedger(o.L);var n=0;ledR.days.forEach(function(d){n+=(d.ent||[]).length+(d.deals||[]).length});
+    inf.innerHTML='<div class="flag okf">'+ledR.days.length+' days · '+n+' entries · '+(ledR.ob?Object.keys(ledR.ob.rows).length+' opening balances':'no opening balances')+' · saved '+(o.at?new Date(o.at).toLocaleString():'')+'</div>'
+      +((o.biz&&BIZ&&o.biz.toLowerCase()!==BIZ.toLowerCase())?'<div class="flag bad">This backup is from “'+esc(o.biz)+'”, this tool is “'+esc(BIZ)+'”.</div>':'')
+      +'<div class="flag warn">Restoring replaces everything in this ledger ('+(L?L.days.length:0)+' days now). A copy of the current ledger is kept inside the app first.</div>';
+    $('ledRestore').disabled=false;$('ledRestore').textContent='Replace the ledger with this backup';f.lrc=null;
+  };r.readAsText(fl);
+};
+$('ledRestore').onclick=function(){
+  if(!ledR||!L)return;var b=this;
+  if(f.lrc!==1){f.lrc=1;b.textContent='Tap again to replace the ledger';clearTimeout(f.lrt);f.lrt=setTimeout(function(){f.lrc=null;b.textContent='Replace the ledger with this backup'},4000);return}
+  f.lrc=null;var prev=L;snapshot('before restoring a backup file');
+  kvSet('ledger_prev',prev,function(){
+    L=ledR;ledR=null;CACHE=null;
+    L.bak=Date.now();L.chg=L.bak;
+    ldPut(function(ok){if(!ok){L=prev;CACHE=null}else{$('ledFile').value='';$('ledRInfo').innerHTML='';$('ledRestore').disabled=true;toast('Ledger restored')}b.textContent='Replace the ledger with this backup';renderLedger();renderClose()});
+  });
+};
+
+// ----- close the day -----
+$('dayDate').onchange=$('dayDate').oninput=function(){S.date=this.value;save();renderClose()};
+function closeProblem(){
+  if(!L)return'The ledger is still opening — try again in a moment';
+  var date=S.date,rs=rows(),dl=S.deals||[];
+  if(!date)return'Pick the date of this sheet';
+  if(!rs.length&&!dl.length)return'Nothing to post';
+  var bad=0;rs.forEach(function(r){if(r.code&&!known(r.code))bad++});dl.forEach(function(x){if(!known(x.code))bad++});
+  if(bad)return bad+' row(s) have a code that is not in the list — see the note above';
+  if(L.days.some(function(d){return d.date===date}))return fd(date)+' is already posted';
+  return'';
+}
+function renderReview(){
+  var box=$('reviewBox');
+  if(!f.review||!L){box.style.display='none';box.innerHTML='';$('closeDay').style.display='';return}
+  var rs=rows(),dl=S.deals||[],cc=L.commCode,ch={},t=totals(),cm=0,bal=balances(),keys;
+  function add(c,v){ch[c]=(ch[c]||0)+v}
+  rs.forEach(function(r){if(!r.code)return;add(r.code,r.inn-r.out+(r.code!==cc?r.ci-r.cr:0))});
+  rs.forEach(function(r){cm+=r.cr-r.ci});
+  dl.forEach(function(x){add(x.code,x.ps==='P'?x.inr:-x.inr)});
+  if(cc&&Math.abs(cm)>0.0001)add(cc,cm);
+  keys=Object.keys(ch).sort();
+  var seenR={},dupR=[],seenD={},dupD=[],pv=0,sv=0;
+  rs.forEach(function(r){var k=[r.code,r.out,r.inn,r.cr,r.ci].join('|');if(r.code&&seenR[k])dupR.push(r.code+' '+(r.out?'OUT '+fmt2(r.out):r.inn?'IN '+fmt2(r.inn):'commission'));seenR[k]=1});
+  dl.forEach(function(x){var k=[x.code,x.vol,x.op,x.rate,x.ps].join('|');if(seenD[k])dupD.push(x.code+' '+x.vol+' '+x.op+' '+x.rate+' ('+x.ps+')');seenD[k]=1;if(x.ps==='P')pv+=x.vol;else sv+=x.vol});
+  var big=rs.slice().sort(function(a,b){return(b.out+b.inn)-(a.out+a.inn)}).slice(0,3).filter(function(r){return r.out+r.inn>0});
+  var h='<div class="bcard" style="border-color:var(--acc)"><b>Review before posting — '+fd(S.date)+'</b>';
+  h+='<div class="mute" style="margin-top:4px">Cash: OUT '+fmt2(t.o)+' · IN '+fmt2(t.i)+' · closing cash '+fmt2(t.bal)+(dl.length?'<br>Deals: '+dl.length+' (purchase volume '+fmt(pv)+', sale volume '+fmt(sv)+')':'')+'</div>';
+  h+=reviewChecks(dl);
+  var cp=crownPos(),cp2=crownPos(dl);
+  if(cp2.n>cp.n)h+='<div class="mute" style="margin-top:4px">Crown AED volume held: '+signed(cp.net)+' → <b>'+signed(cp2.net)+'</b></div>';
+  if(dupD.length)h+='<div class="flag bad">Same deal twice on this sheet: '+esc(dupD.join('; '))+'. If that is wrong, remove one (✕) under “Deals on today’s sheet”.</div>';
+  if(dupR.length)h+='<div class="flag warn">Same cash row more than once: '+esc(dupR.join('; '))+'. Fine if it really happened twice.</div>';
+  if(big.length)h+='<div class="flag warn">Largest rows — check for a wrong extra zero: '+big.map(function(r){return esc(r.code||'(no code)')+' '+fmt2(r.out||r.inn)}).join(' · ')+'</div>';
+  var nc=rs.filter(function(r){return !r.code}).length;
+  if(nc)h+='<div class="flag warn">'+nc+' row(s) without a code will go to “Waiting for code”.</div>';
+  h+='<table class="stmt" style="margin-top:6px"><tr><th>Account</th><th class="n">Change today</th><th class="n">New balance</th></tr>';
+  keys.forEach(function(k){var c=r2(ch[k]),nb=r2((bal[k]||0)+c);h+='<tr><td><b>'+esc(k)+'</b></td><td class="n '+(c<0?'oo':'ii')+'">'+signed(c)+'</td><td class="n '+(nb<0?'oo':'ii')+'">'+signed(nb)+'</td></tr>'});
+  h+='</table><div class="mute" style="margin:4px 0">Negative (red) = they owe us. New balance assumes the ledger above is up to date.</div>';
+  h+='<label style="display:flex;gap:8px;align-items:center;font-size:15px;margin:8px 0"><input type="checkbox" id="revOk" style="width:22px;height:22px"'+(f.revOk?' checked':'')+'> I checked this and it is correct</label>';
+  h+='<div class="two"><button class="btn" id="postNow"'+(f.revOk?'':' disabled')+'>Post to ledger</button><button class="btn sec" id="revCancel">Cancel</button></div></div>';
+  box.innerHTML=h;box.style.display='block';$('closeDay').style.display='none';
+}
+$('closeDay').onclick=function(){
+  var p=closeProblem();if(p){toast(p);return}
+  f.review=true;f.revOk=false;renderReview();$('reviewBox').scrollIntoView({behavior:'smooth',block:'start'});
+};
+$('reviewBox').onclick=function(e){
+  if(e.target.id==='revCancel'){f.review=false;renderReview()}
+  else if(e.target.id==='postNow')doPost();
+};
+$('reviewBox').onchange=function(e){if(e.target.id==='revOk'){f.revOk=e.target.checked;$('postNow').disabled=!f.revOk}};
+function doPost(){
+  var p=closeProblem();if(p){toast(p);f.review=false;renderReview();return}
+  if(!f.revOk)return;
+  var date=S.date,rs=rows(),dl=S.deals||[],nc=rs.filter(function(r){return !r.code}).length;
+  snapshot('before posting '+fd(date));
+  var t=totals(),ent=[],wait=[],snap={days:L.days,wait:L.wait,seq:L.seq};
+  var deals=dl.map(function(x){return{c:x.code,v:x.vol,op:x.op,r:x.rate,ps:x.ps,inr:x.inr,b:x.b||0,s:L.seq++}});
+  rs.forEach(function(r){
+    if(r.code)ent.push({c:r.code,n:r.narr,o:r.out,i:r.inn,cr:r.cr,ci:r.ci,s:L.seq++,x:r.ex?1:0});
+    else wait.push({id:'w'+(L.seq++),d:date,n:r.narr,o:r.out,i:r.inn,cr:r.cr,ci:r.ci});
+  });
+  var day={id:'d'+(L.seq++),date:date,open:num(S.open),close:t.bal,at:Date.now(),sid:S.sid,ent:ent,deals:deals,exp:(S.exp||[]).map(function(x){return{label:x.label,amt:x.amt,own:!!x.own}})};
+  L.days=L.days.concat([day]).sort(function(a,b){return a.date<b.date?-1:a.date>b.date?1:0});L.wait=L.wait.concat(wait);
+  ldSave(function(ok){
+    if(!ok){L.days=snap.days;L.wait=snap.wait;L.seq=snap.seq;CACHE=null;renderClose();return}
+    var nxt=addDay(date,1),td=today();
+    f.review=false;f.revOk=false;
+    S={open:String(t.bal),entries:[],exp:[],expNarr:S.expNarr,seq:S.seq,deals:[],date:nxt>td?nxt:td,sid:newSid()};
+    save();f.lastDel=null;resetForm();all();
+    var c=drCfg();if(c.cid&&c.auto){toast('Posted '+fd(date)+'. Backing up to Drive…');driveBackup(false,function(ok){if(!ok)toast('Posted '+fd(date)+'. Drive backup NOT done — back up from the Day tab.')})}else toast('Posted '+fd(date)+(nc?' · '+nc+' row(s) waiting for a code':'')+'. Back up the ledger.');
+  });
+}
+$('dealsToday').onclick=function(e){
+  var d=e.target.getAttribute&&e.target.getAttribute('data-dd');if(d===null||d===undefined)return;d=+d;
+  if(f.dd!==d){f.dd=d;renderClose();clearTimeout(f.ddt);f.ddt=setTimeout(function(){f.dd=null;renderClose()},4000);return}
+  f.dd=null;S.deals.splice(d,1);save();all();
+};
+$('dealAdd').onclick=function(){
+  var rs=computeDeals(parseDeals(D.text)).filter(function(r){return r.deal});
+  if(!rs.length){toast('Nothing to add');return}
+  var live=rs.filter(function(r){return !D.hold[r.i]});
+  if(!live.length){toast('Every row is skipped');return}
+  if(live.some(function(r){return !r.ok})){toast('Fix or skip the red rows first');return}
+  if(!$('dealChecked').checked){toast('Tick "I checked every row against the message" first');return}
+  S.deals=S.deals||[];
+  S.bseq=(S.bseq||0)+1;
+  live.forEach(function(r){var v=r2(r.vol);S.deals.push({code:r.code,vol:v,op:r.op,rate:r.rate,ps:r.ps,inr:dealInr(v,r.op,r.rate),b:S.bseq})});
+  save();D.text='';D.ov={};D.hold={};D.checked=false;dsave();$('dealText').value='';renderDeals();all();toast(live.length+' deals added to today\'s sheet');
+};
+
+
+// ===== checks: batch, rate, profit, paper book =====
+var HIST=null,HISTFOR=null;
+function rateStep(h,c,op,r){
+  var k=c+'|'+op,e=h[k]||(h[k]={n:0,s:0}),avg=0;
+  if(e.n>=2){var a=e.s/e.n;if(Math.abs(r-a)>a*TOL.rate/100)avg=a}
+  if(!avg){e.n++;e.s+=r}
+  return avg;
+}
+function rateHist(){
+  var ev=events();
+  if(HISTFOR===ev&&HIST)return HIST;
+  var h={},ob=L.ob?L.ob.date:'';
+  L.days.forEach(function(d){if(ob&&d.date<ob)return;(d.deals||[]).forEach(function(x){rateStep(h,x.c,x.op,x.r)})});
+  HIST=h;HISTFOR=ev;return h;
+}
+function dealFlags(dl){
+  var h=L?rateHist():{},cl={};
+  dl.forEach(function(x){var k=x.code+'|'+x.op;if(!cl[k])cl[k]=h[k]?{n:h[k].n,s:h[k].s}:{n:0,s:0}});
+  return dl.map(function(x){var a=rateStep(cl,x.code,x.op,x.rate);return a?'Rate '+x.rate+' is more than '+TOL.rate+'% from this account\'s usual '+r2(a*10000)/10000:''});
+}
+function batchStats(dl){
+  var g={},keys=[];
+  dl.forEach(function(x){var k=x.b||0;if(!g[k]){g[k]={p:0,s:0};keys.push(k)}g[k][x.ps==='P'?'p':'s']+=x.vol});
+  return keys.map(function(k,i){var o=g[k],diff=r2(o.p-o.s),base=Math.max(o.p,o.s);return{i:i+1,p:r2(o.p),s:r2(o.s),diff:diff,bad:base>0&&Math.abs(diff)>base*TOL.batch/100}});
+}
+function dealsProfit(dl){var o=0,i=0;dl.forEach(function(x){if(x.ps==='S')o+=x.inr;else i+=x.inr});return{o:r2(o),i:r2(i),profit:r2(o-i)}}
+function profitMsg(p){return p<0?'LOSS — unusual, please review':p===0?'Zero — check entries':'OK — profit as expected'}
+function pnum(v){v=String(v==null?'':v).trim();return v===''?null:numCell(v)}
+function cmpPair(po,pi,eo,ei){
+  var a=pnum(po),b=pnum(pi);
+  if(a===null&&b===null)return{state:'none',msg:''};
+  var bad=[];
+  if(a!==null&&(isNaN(a)||Math.abs(a-eo)>=0.005))bad.push('OUT: paper '+(isNaN(a)?'?':fmt2(a))+' · entered '+fmt2(eo));
+  if(b!==null&&(isNaN(b)||Math.abs(b-ei)>=0.005))bad.push('IN: paper '+(isNaN(b)?'?':fmt2(b))+' · entered '+fmt2(ei));
+  return bad.length?{state:'bad',msg:'CHECK — mismatch. '+bad.join(' — ')}:{state:'ok',msg:'OK — matches'+((a===null||b===null)?' (only one total typed)':'')};
+}
+function paperState(){
+  var pp=S.paper||{},t=totals(),dp=dealsProfit(S.deals||[]);
+  return{cash:cmpPair(pp.co,pp.ci,t.o,t.i),deals:cmpPair(pp.do,pp.di,dp.o,dp.i)};
+}
+function renderPaper(){
+  var pp=S.paper||{},st=paperState();
+  [['pcOut','co'],['pcIn','ci'],['pdOut','do'],['pdIn','di']].forEach(function(a){if(document.activeElement!==$(a[0]))$(a[0]).value=pp[a[1]]||''});
+  function box(id,x){$(id).innerHTML=x.state==='none'?'':'<div class="flag '+(x.state==='ok'?'okf':'bad')+'">'+esc(x.msg)+'</div>'}
+  box('paperCash',st.cash);box('paperDeals',st.deals);
+}
+[['pcOut','co'],['pcIn','ci'],['pdOut','do'],['pdIn','di']].forEach(function(a){
+  $(a[0]).oninput=function(){S.paper=S.paper||{};S.paper[a[1]]=this.value;save();renderPaper();if(f.review)renderReview()};
+});
+function reviewChecks(dl){
+  var h='',st=paperState(),dp=dealsProfit(dl);
+  if(st.cash.state==='none'&&(st.deals.state==='none'||!dl.length))h+='<div class="flag warn">Paper book totals not checked (Day tab).</div>';
+  else{
+    if(st.cash.state!=='none')h+='<div class="flag '+(st.cash.state==='ok'?'okf':'bad')+'">Paper cash book: '+esc(st.cash.msg)+'</div>';
+    if(dl.length&&st.deals.state!=='none')h+='<div class="flag '+(st.deals.state==='ok'?'okf':'bad')+'">Paper deals: '+esc(st.deals.msg)+'</div>';
+  }
+  if(dl.length){
+    h+='<div class="mute" style="margin-top:4px">Deals profit today (sales − purchases, INR): <b>'+signed(dp.profit)+'</b> · '+profitMsg(dp.profit)+'</div>';
+    batchStats(dl).forEach(function(b){if(b.bad)h+='<div class="flag warn">Message '+b.i+': purchases '+fmt2(b.p)+' vs sales '+fmt2(b.s)+' — differ by '+fmt2(Math.abs(b.diff))+' (stock kept with Crown?)</div>'});
+    var fl=dealFlags(dl);dl.forEach(function(x,i){if(fl[i])h+='<div class="flag warn">'+esc(x.code)+' '+x.vol+' '+x.op+' '+x.rate+' ('+x.ps+'): '+esc(fl[i])+'</div>'});
+  }
+  return h;
+}
+function renderDealsToday(){
+  var dl=S.deals||[];
+  $('dealsTodayCard').style.display=dl.length?'':'none';
+  $('dealsLink').innerHTML=dl.length?'<button class="pill" id="goDeals">'+dl.length+' deal'+(dl.length>1?'s':'')+' on today\'s sheet — see Deals tab →</button>':'';
+  if(!dl.length){$('dealsToday').innerHTML='';$('dealsStats').innerHTML='';return}
+  var fl=L?dealFlags(dl):dl.map(function(){return''});
+  $('dealsToday').innerHTML=dl.map(function(x,ix){return'<div class="exrow"><span><b>'+esc(x.code)+'</b> '+x.vol+' '+x.op+' '+x.rate+' ('+x.ps+') = '+fmt2(x.inr)+(fl[ix]?'<div class="flag warn" style="margin:2px 0 0">'+esc(fl[ix])+'</div>':'')+'</span><button data-dd="'+ix+'">'+(f.dd===ix?'sure?':'✕')+'</button></div>'}).join('');
+  var dp=dealsProfit(dl),h='';
+  batchStats(dl).forEach(function(b){h+='<div class="flag '+(b.bad?'warn':'okf')+'">Message '+b.i+': purchases '+fmt2(b.p)+' · sales '+fmt2(b.s)+(b.bad?' — differ by '+fmt2(Math.abs(b.diff))+' (stock kept with Crown?)':' — balanced')+'</div>'});
+  h+='<div class="mute">Deals profit (sales − purchases, INR): <b>'+signed(dp.profit)+'</b> · '+profitMsg(dp.profit)+'</div>';
+  if(L){var cp=crownPos(),cp2=crownPos(dl);if(cp2.n>cp.n)h+='<div class="mute" style="margin-top:4px">Crown AED volume held: '+signed(cp.net)+' → <b>'+signed(cp2.net)+'</b> after this sheet</div>'}
+  $('dealsStats').innerHTML=h;
+}
+$('dealsLink').onclick=function(e){if(e.target.id==='goDeals')setView('deals')};
+
+try{if('serviceWorker' in navigator&&/^https?:/.test(location.protocol))navigator.serviceWorker.register('sw.js')}catch(e){}
+try{if(navigator.storage&&navigator.storage.persist)navigator.storage.persist()}catch(e){}
+all();renderBak();setView(D.view==='settings'?'cash':D.view);applyMods();
+kvGet('ledger',function(v){L=fixLedger(v);CACHE=null;renderClose();renderLedBak();renderSnaps();if(D.view==='ledger')renderLedger()});
+})();
+</script>
+</body>
+</html>
