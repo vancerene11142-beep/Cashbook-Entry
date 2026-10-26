@@ -370,7 +370,7 @@ input[type=date]{width:100%;font-size:16px;padding:9px;border:1px solid var(--li
 <script>
 (function(){
 var DEFAULT_CODES=[];
-var APP_VERSION='2026-10-25.2';
+var APP_VERSION='2026-10-26.1';
 var NARRS=ls('cashentry.narrs')||[];
 var EXPCODE=ls('cashentry.expcode')||'SHOP-EXP';
 var BIZ=ls('cashentry.biz')||'';
@@ -1157,8 +1157,8 @@ function renderPosted(){
   var d=L.days.slice().sort(function(a,b){return a.date<b.date?1:a.date>b.date?-1:0});
   $('postedBox').querySelector('summary').textContent='Posted days ('+d.length+')';
   $('postedList').innerHTML=d.length?d.slice(0,60).map(function(x){
-    var o=0,i=0;(x.ent||[]).forEach(function(e){o+=e.o;i+=e.i});
-    return'<div class="bcard"><div style="display:flex;justify-content:space-between"><b>'+fd(x.date)+'</b><span class="mute">'+(x.ent||[]).length+' rows'+((x.deals||[]).length?' · '+x.deals.length+' deals':'')+'</span></div><div class="mute">OUT '+fmt(o)+' · IN '+fmt(i)+' · cash at close '+fmt(x.close)+'</div><div style="margin-top:4px"><button class="btn sec sm" data-vw="'+x.id+'" style="margin-right:6px">View</button><button class="btn sec sm" data-ro="'+x.id+'">'+(f.ro===x.id?'Tap again to reopen':'Reopen to edit')+'</button></div></div>';
+    var o=0,i=0,ex=dayExtras(x.date);(x.ent||[]).concat(ex).forEach(function(e){o+=e.o;i+=e.i});
+    return'<div class="bcard"><div style="display:flex;justify-content:space-between"><b>'+fd(x.date)+'</b><span class="mute">'+((x.ent||[]).length+ex.length)+' rows'+((x.deals||[]).length?' · '+x.deals.length+' deals':'')+'</span></div><div class="mute">OUT '+fmt(o)+' · IN '+fmt(i)+' · cash at close '+fmt(x.close)+'</div><div style="margin-top:4px"><button class="btn sec sm" data-vw="'+x.id+'" style="margin-right:6px">View</button><button class="btn sec sm" data-ro="'+x.id+'">'+(f.ro===x.id?'Tap again to reopen':'Reopen to edit')+'</button></div></div>';
   }).join('')+(d.length>60?'<div class="mute">Showing the latest 60 days.</div>':''):'<div class="mute">No days posted yet.</div>';
 }
 function renderOb(){
@@ -1411,7 +1411,7 @@ function dayModelToday(){
 function dayModelPosted(d){
   var hasExp=Array.isArray(d.exp);
   return{date:d.date,open:d.open,close:d.close,
-    rows:(d.ent||[]).filter(function(e){return !(hasExp&&e.x)}).sort(function(a,b){return a.s-b.s}).map(function(e){return{c:e.c,n:e.n,o:e.o,i:e.i,cr:e.cr,ci:e.ci}}),
+    rows:(d.ent||[]).filter(function(e){return !(hasExp&&e.x)}).sort(function(a,b){return a.s-b.s}).concat(dayExtras(d.date)).map(function(e){return{c:e.c,n:e.n,o:e.o,i:e.i,cr:e.cr,ci:e.ci}}),
     exp:hasExp?d.exp.map(function(x){return{label:x.label,amt:x.amt}}):[]};
 }
 function dayCanvases(m){
@@ -1716,7 +1716,7 @@ $('snapList').onclick=function(e){
     if(!v||!Array.isArray(v.days)){toast('That safety copy could not be read');renderSnaps();return}
     snapshot('before restoring a safety copy');
     var prev=L;L=fixLedger(v);CACHE=null;
-    ldSave(function(ok){if(!ok){L=prev;CACHE=null}else toast('Ledger restored from the safety copy');renderLedger();renderClose()});
+    ldSave(function(ok){if(!ok){L=prev;CACHE=null}else{if(!S.entries.length&&!S.exp.length&&!(S.deals&&S.deals.length)){var sdd=sortedDays(),ldd=sdd[sdd.length-1];if(ldd&&String(ldd.close)!==String(S.open)){S.open=String(ldd.close);save()}}var dup=L.days.some(function(d){return d.sid&&d.sid===S.sid})&&(S.entries.length||(S.deals||[]).length);toast(dup?'Restored. NOTE: today\'s sheet still holds a copy of '+fd(S.date)+', which is posted again. Use Day tab → Clear the day.':'Ledger restored from the safety copy')}renderLedger();renderClose()});
   });
 };
 function latestDay(){var b=null;L.days.forEach(function(d){if(!b||(d.at||0)>(b.at||0))b=d});return b}
@@ -1724,25 +1724,36 @@ function reopenDay(id){
   if(S.entries.length||S.exp.length||(S.deals&&S.deals.length)){toast('Today\'s sheet has entries. Close or clear it first.');return}
   var day=null;L.days.forEach(function(d){if(d.id===id)day=d});if(!day)return;
   snapshot('before reopening '+fd(day.date));
-  var keep=L.days.slice();L.days=L.days.filter(function(d){return d.id!==id});
+  var keep=L.days.slice(),keepW=L.wait.slice(),keepL=L.late.slice(),back=dayExtras(day.date);
+  L.days=L.days.filter(function(d){return d.id!==id});
+  L.wait=L.wait.filter(function(w){return w.d!==day.date});L.late=L.late.filter(function(e){return e.d!==day.date});CACHE=null;
   ldSave(function(ok){
-    if(!ok){L.days=keep;CACHE=null;return}
+    if(!ok){L.days=keep;L.wait=keepW;L.late=keepL;CACHE=null;return}
     var n={open:String(day.open||''),entries:[],exp:[],expNarr:S.expNarr,seq:S.seq,deals:[],date:day.date,sid:day.sid||newSid()};
     (day.ent||[]).forEach(function(e){if(e.x&&day.exp)return;n.entries.push({id:'e'+(n.seq++),code:e.c,narr:e.n,out:e.o,inn:e.i,cr:e.cr,ci:e.ci})});
+    back.forEach(function(e){n.entries.push({id:'e'+(n.seq++),code:e.c,narr:e.n,out:e.o,inn:e.i,cr:e.cr,ci:e.ci})});
     (day.exp||[]).forEach(function(x){n.exp.push({label:x.label,amt:x.amt,own:!!x.own})});
     (day.deals||[]).forEach(function(x){n.deals.push({code:x.c,vol:x.v,op:x.op,rate:x.r,ps:x.ps,inr:x.inr,b:x.b||0})});
-    S=n;save();f.review=false;all();setView('cash');toast('Day reopened on the Cash book tab — review it, then post it again');
+    S=n;save();f.review=false;all();setView('cash');toast('Day reopened on the Cash book tab'+(back.length?' with '+back.length+' waiting/late-coded row(s) put back':'')+' — review it, then post it again');
   });
 }
 
 // ---- find an entry + posted-day view
+// rows of a posted day that are NOT in day.ent: entries posted without a code (L.wait) and entries whose code was added later (L.late).
+// Their cash is part of the day's closing cash, so every day total must include them.
+function dayExtras(date){
+  var a=[];
+  (L.wait||[]).forEach(function(w){if(w.d===date)a.push({c:'',n:w.n,o:w.o||0,i:w.i||0,cr:w.cr||0,ci:w.ci||0,s:2e9+(parseInt(String(w.id).slice(1),10)||0),w:'wait'})});
+  (L.late||[]).forEach(function(e){if(e.d===date)a.push({c:e.c,n:e.n,o:e.o||0,i:e.i||0,cr:e.cr||0,ci:e.ci||0,s:1e9+e.s,w:'late'})});
+  return a;
+}
 function dayById(id){for(var i=0;i<L.days.length;i++)if(L.days[i].id===id)return L.days[i];return null}
 function sortedDays(){return L.days.slice().sort(function(a,b){return a.date<b.date?-1:a.date>b.date?1:(a.at||0)-(b.at||0)})}
 function renderDayView(){
   var c=$('dayViewCard');if(!f.vw){c.style.display='none';return}
   var d=dayById(f.vw);if(!d){f.vw=null;c.style.display='none';return}
   var sd=sortedDays(),ix=sd.indexOf(d),o=0,i=0,cr=0,ci=0;
-  var ent=(d.ent||[]).slice().sort(function(a,b){return a.s-b.s});
+  var ent=(d.ent||[]).slice().sort(function(a,b){return a.s-b.s}).concat(dayExtras(d.date));
   var h='<div style="display:flex;justify-content:space-between;align-items:center"><h2 style="margin:0">'+fd(d.date)+'</h2><button class="btn sec sm" id="vwClose">Close</button></div>';
   h+='<div class="two" style="margin-top:6px"><div><div class="mute">Opening cash</div><b>'+fmt(d.open)+'</b></div><div><div class="mute">Closing cash</div><b>'+fmt(d.close)+'</b></div></div>';
   if((d.deals||[]).length){
@@ -1752,7 +1763,7 @@ function renderDayView(){
   h+='<div class="mute" style="margin-top:10px">Cash book ('+ent.length+' rows)</div><table class="vt"><tr class="vh"><td>Code</td><td>Narration</td><td class="num">OUT</td><td class="num">IN</td><td></td></tr>';
   ent.forEach(function(e){
     o+=e.o;i+=e.i;cr+=e.cr||0;ci+=e.ci||0;
-    h+='<tr'+(f.hl===e.s?' class="hit"':'')+'><td><b>'+esc(e.c)+'</b></td><td>'+esc(e.n)+((e.cr||e.ci)?'<div class="mute">Comm '+(e.cr?'R '+fmt2(e.cr):'')+(e.ci?'I '+fmt2(e.ci):'')+'</div>':'')+'</td><td class="num oo">'+(e.o?fmt2(e.o):'')+'</td><td class="num ii">'+(e.i?fmt2(e.i):'')+'</td><td><button class="act" style="border:0;background:none;color:var(--acc);font-size:14px" data-ed="'+e.s+'">edit</button></td></tr>';
+    h+='<tr'+(f.hl===e.s?' class="hit"':'')+'><td><b>'+(e.w==='wait'?'<span class="oo">? WAITING</span>':esc(e.c))+'</b>'+(e.w==='late'?'<div class="mute">code added later</div>':'')+'</td><td>'+esc(e.n)+((e.cr||e.ci)?'<div class="mute">Comm '+(e.cr?'R '+fmt2(e.cr):'')+(e.ci?'I '+fmt2(e.ci):'')+'</div>':'')+'</td><td class="num oo">'+(e.o?fmt2(e.o):'')+'</td><td class="num ii">'+(e.i?fmt2(e.i):'')+'</td><td>'+(e.w?'':'<button class="act" style="border:0;background:none;color:var(--acc);font-size:14px" data-ed="'+e.s+'">edit</button>')+'</td></tr>';
     if(f.ed===e.s)h+='<tr><td colspan="5"><div class="bcard" style="background:var(--bg)"><div class="mute">Correct this entry</div>'
       +'<input id="edC" type="text" autocapitalize="characters" autocomplete="off" value="'+esc(e.c)+'" style="margin:4px 0;text-transform:uppercase">'
       +'<input id="edN" type="text" autocapitalize="characters" autocomplete="off" value="'+esc(e.n)+'" style="margin:4px 0;text-transform:uppercase">'
@@ -1785,7 +1796,7 @@ function applyEdit(del){
   snapshot(del?'before deleting a posted entry':'before correcting a posted entry');
   var before=JSON.stringify(e);
   if(del)d.ent=d.ent.filter(function(x){return x!==e});else{e.c=code;e.n=n;e.o=o;e.i=i;e.cr=cr;e.ci=ci}
-  var to=0,ti=0;(d.ent||[]).forEach(function(x){to+=x.o;ti+=x.i});
+  var to=0,ti=0;(d.ent||[]).concat(dayExtras(d.date)).forEach(function(x){to+=x.o;ti+=x.i});
   var nc=r2(num(d.open)+ti-to),delta=r2(nc-oldClose),note='';
   d.close=nc;
   if(Math.abs(delta)>=0.005){
@@ -1816,7 +1827,7 @@ $('dayViewCard').onclick=function(e){
   else if(id==='vwPrev'&&ix>0){f.ed=null;f.vw=sd[ix-1].id;f.hl=null;renderDayView()}
   else if(id==='vwNext'&&ix<sd.length-1){f.ed=null;f.vw=sd[ix+1].id;f.hl=null;renderDayView()}
   else if(id==='vwImg'){sendDayImage(dayModelPosted(d))}
-  else if(id==='vwCopy'){copyText((d.ent||[]).slice().sort(function(a,b){return a.s-b.s}).map(function(e){return[e.c,e.n,e.o||'',e.i||'',e.cr||'',e.ci||''].join('\t')}).join('\n'),'Rows copied')}
+  else if(id==='vwCopy'){copyText((d.ent||[]).slice().sort(function(a,b){return a.s-b.s}).concat(dayExtras(d.date)).map(function(e){return[e.c,e.n,e.o||'',e.i||'',e.cr||'',e.ci||''].join('\t')}).join('\n'),'Rows copied')}
 };
 function findEntries(q){
   q=q.trim().toUpperCase();if(!q)return[];
@@ -2399,9 +2410,10 @@ function doPost(){
   L.days=L.days.concat([day]).sort(function(a,b){return a.date<b.date?-1:a.date>b.date?1:0});L.wait=L.wait.concat(wait);
   ldSave(function(ok){
     if(!ok){L.days=snap.days;L.wait=snap.wait;L.seq=snap.seq;CACHE=null;renderClose();return}
-    var nxt=addDay(date,1),td=today();
+    var sdl=sortedDays(),lastD=sdl[sdl.length-1],later=lastD&&lastD.date>date;   // re-posting an earlier day: carry on from the latest day, not from this one
+    var nxt=addDay(later?lastD.date:date,1),td=today();
     f.review=false;f.revOk=false;
-    S={open:String(t.bal),entries:[],exp:[],expNarr:S.expNarr,seq:S.seq,deals:[],date:nxt>td?nxt:td,sid:newSid()};
+    S={open:String(later?lastD.close:t.bal),entries:[],exp:[],expNarr:S.expNarr,seq:S.seq,deals:[],date:nxt>td?nxt:td,sid:newSid()};
     save();f.lastDel=null;resetForm();all();
     var c=drCfg();if(c.cid&&c.auto){toast('Posted '+fd(date)+'. Backing up to Drive…');driveBackup(false,function(ok){if(!ok)toast('Posted '+fd(date)+'. Drive backup NOT done — back up from the Day tab.')})}else toast('Posted '+fd(date)+(nc?' · '+nc+' row(s) waiting for a code':'')+'. Back up the ledger.');
   });
