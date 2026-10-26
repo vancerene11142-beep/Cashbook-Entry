@@ -370,7 +370,7 @@ input[type=date]{width:100%;font-size:16px;padding:9px;border:1px solid var(--li
 <script>
 (function(){
 var DEFAULT_CODES=[];
-var APP_VERSION='2026-10-26.1';
+var APP_VERSION='2026-10-26.2';
 var NARRS=ls('cashentry.narrs')||[];
 var EXPCODE=ls('cashentry.expcode')||'SHOP-EXP';
 var BIZ=ls('cashentry.biz')||'';
@@ -1758,7 +1758,7 @@ function renderDayView(){
   h+='<div class="two" style="margin-top:6px"><div><div class="mute">Opening cash</div><b>'+fmt(d.open)+'</b></div><div><div class="mute">Closing cash</div><b>'+fmt(d.close)+'</b></div></div>';
   if((d.deals||[]).length){
     var dd=d.deals.slice().sort(function(a,b){return a.s-b.s});
-    h+='<div class="mute" style="margin-top:10px">Currency deals ('+dd.length+')</div><table class="vt">'+dd.map(function(x){return'<tr><td><b>'+esc(x.c)+'</b></td><td>'+esc(dealNarr(x))+'</td><td class="num '+(x.ps==='S'?'oo':'ii')+'">'+(x.ps==='S'?'OUT ':'IN ')+fmt2(x.inr)+'</td></tr>'}).join('')+'</table>';
+    h+='<div class="mute" style="margin-top:10px">Currency deals ('+dd.length+')</div><table class="vt">'+dd.map(function(x){return'<tr><td><b>'+esc(x.c)+'</b></td><td>'+esc(dealNarr(x))+'</td><td class="num '+(x.ps==='S'?'oo':'ii')+'">'+(x.ps==='S'?'OUT ':'IN ')+fmt2(x.inr)+'</td><td><button class="act" style="border:0;background:none;color:var(--acc);font-size:14px" data-dp="'+x.s+'">edit</button></td></tr>'+(f.dpEd===x.s?'<tr><td colspan="4">'+dealFormHtml('dp',x)+'<div style="margin-top:2px"><button class="act" style="border:0;background:none;color:var(--bad);font-size:14px" id="dpDel">'+(f.dpDel?'sure? tap again to delete this deal':'delete this deal')+'</button></div></td></tr>':'')}).join('')+'</table>';
   }
   h+='<div class="mute" style="margin-top:10px">Cash book ('+ent.length+' rows)</div><table class="vt"><tr class="vh"><td>Code</td><td>Narration</td><td class="num">OUT</td><td class="num">IN</td><td></td></tr>';
   ent.forEach(function(e){
@@ -1777,10 +1777,32 @@ function renderDayView(){
   if(cr||ci)h+='<div class="mute">Commission R '+fmt2(cr)+' · Commission I '+fmt2(ci)+'</div>';
   if((d.deals||[]).length){var dpf=dealsProfit(d.deals.map(function(x){return{ps:x.ps,inr:x.inr}}));h+='<div class="mute">Deals profit that day: <b class="'+(dpf.profit<0?'oo':'ii')+'">'+signed(dpf.profit)+'</b></div>'}
   h+='<div class="two" style="margin-top:10px"><button class="btn sec sm" id="vwPrev"'+(ix>0?'':' disabled')+'>◀ Earlier day</button><button class="btn sec sm" id="vwNext"'+(ix<sd.length-1?'':' disabled')+'>Later day ▶</button></div>';
-  h+='<div style="margin-top:8px"><button class="btn sec" id="vwCopy">Copy this day\'s rows</button></div><div style="margin-top:8px"><button class="btn" id="vwImg">Send cash book picture</button></div><div class="mute" style="margin-top:6px">Tap “edit” on a row to correct it. Deals are changed by reopening the day from “Posted days”.</div>';
+  h+='<div style="margin-top:8px"><button class="btn sec" id="vwCopy">Copy this day\'s rows</button></div><div style="margin-top:8px"><button class="btn" id="vwImg">Send cash book picture</button></div><div class="mute" style="margin-top:6px">Tap “edit” on a row or a deal to correct it.</div>';
   c.innerHTML=h;c.style.display='';
 }
 
+function applyDealEdit(del){
+  var d=dayById(f.vw);if(!d)return;
+  var x=null;(d.deals||[]).forEach(function(y){if(y.s===f.dpEd)x=y});if(!x)return;
+  var m=$('dpM');
+  if(del){
+    if(!f.dpDel){f.dpDel=true;renderDayView();clearTimeout(f.dpt);f.dpt=setTimeout(function(){f.dpDel=false;if(f.dpEd!=null)renderDayView()},4000);return}
+    snapshot('before deleting a posted deal');
+    d.deals=d.deals.filter(function(y){return y!==x});
+  }else{
+    var r=readDealForm('dp');
+    if(r.err){m.innerHTML='<div class="flag bad">'+esc(r.err)+'</div>';return}
+    if(acctList().indexOf(r.c)<0){m.innerHTML='<div class="flag bad">'+esc(r.c)+' is not in the account list. Add it first (Ledger → Accounts and types).</div>';return}
+    snapshot('before correcting a posted deal');
+    x.c=r.c;x.v=r.v;x.op=r.op;x.r=r.r;x.ps=r.ps;x.inr=r.inr;
+  }
+  CACHE=null;
+  ldSave(function(ok){
+    if(!ok)return;
+    f.dpEd=null;f.dpDel=false;renderDayView();renderLedger();renderClose();renderTop();
+    toast(del?'Deal deleted.':'Deal corrected: '+fmt2(x.inr));
+  });
+}
 function applyEdit(del){
   var d=dayById(f.vw);if(!d)return;
   var e=null;(d.ent||[]).forEach(function(x){if(x.s===f.ed)e=x});if(!e)return;
@@ -1817,6 +1839,9 @@ function applyEdit(del){
 function openDayView(id,hl){f.ed=null;f.edDel=false;f.vw=id;f.hl=hl==null?null:hl;renderDayView();var c=$('dayViewCard');c.scrollIntoView({behavior:'smooth',block:'start'});var hit=c.querySelector('.hit');if(hit)setTimeout(function(){hit.scrollIntoView({block:'center'})},50)}
 $('dayViewCard').onclick=function(e){
   var t=e.target,id=t.id;
+  var dp=t.getAttribute&&t.getAttribute('data-dp');if(dp!==null&&dp!==undefined){f.dpEd=(f.dpEd===+dp)?null:+dp;f.dpDel=false;renderDayView();return}
+  if(id==='dpCancel'){f.dpEd=null;f.dpDel=false;renderDayView();return}
+  if(id==='dpSave'||id==='dpDel'){applyDealEdit(id==='dpDel');return}
   var ed=t.getAttribute&&t.getAttribute('data-ed');if(ed!==null&&ed!==undefined){f.ed=(f.ed===+ed)?null:+ed;f.edDel=false;renderDayView();return}
   if(!id)return;
   var d=dayById(f.vw),sd=sortedDays(),ix=sd.indexOf(d);
@@ -1824,8 +1849,8 @@ $('dayViewCard').onclick=function(e){
   if(id==='edCancel'){f.ed=null;f.edDel=false;renderDayView();return}
   if(id==='edDel'){if(!f.edDel){f.edDel=true;renderDayView();clearTimeout(f.edt);f.edt=setTimeout(function(){f.edDel=false;if(f.ed!==null&&f.ed!==undefined)renderDayView()},4000);return}applyEdit(true);return}
   if(id==='vwClose'){f.ed=null;f.vw=null;renderDayView()}
-  else if(id==='vwPrev'&&ix>0){f.ed=null;f.vw=sd[ix-1].id;f.hl=null;renderDayView()}
-  else if(id==='vwNext'&&ix<sd.length-1){f.ed=null;f.vw=sd[ix+1].id;f.hl=null;renderDayView()}
+  else if(id==='vwPrev'&&ix>0){f.ed=null;f.dpEd=null;f.vw=sd[ix-1].id;f.hl=null;renderDayView()}
+  else if(id==='vwNext'&&ix<sd.length-1){f.ed=null;f.dpEd=null;f.vw=sd[ix+1].id;f.hl=null;renderDayView()}
   else if(id==='vwImg'){sendDayImage(dayModelPosted(d))}
   else if(id==='vwCopy'){copyText((d.ent||[]).slice().sort(function(a,b){return a.s-b.s}).concat(dayExtras(d.date)).map(function(e){return[e.c,e.n,e.o||'',e.i||'',e.cr||'',e.ci||''].join('\t')}).join('\n'),'Rows copied')}
 };
@@ -2419,6 +2444,17 @@ function doPost(){
   });
 }
 $('dealsToday').onclick=function(e){
+  var t=e.target,tid=t.id,de=t.getAttribute&&t.getAttribute('data-de');
+  if(de!==null&&de!==undefined){f.dedT=(f.dedT===+de)?null:+de;renderDealsToday();return}
+  if(tid==='dtCancel'){f.dedT=null;renderDealsToday();return}
+  if(tid==='dtSave'){
+    var x=S.deals[f.dedT];if(!x)return;
+    var r=readDealForm('dt'),m=$('dtM');
+    if(r.err){m.innerHTML='<div class="flag bad">'+esc(r.err)+'</div>';return}
+    if(!known(r.c)){m.innerHTML='<div class="flag bad">'+esc(r.c)+' is not in the account list</div>';return}
+    S.deals[f.dedT]={code:r.c,vol:r.v,op:r.op,rate:r.r,ps:r.ps,inr:r.inr,b:x.b||0};
+    f.dedT=null;save();all();renderDeals();toast('Deal corrected: '+fmt2(r.inr));return;
+  }
   var d=e.target.getAttribute&&e.target.getAttribute('data-dd');if(d===null||d===undefined)return;d=+d;
   if(f.dd!==d){f.dd=d;renderClose();clearTimeout(f.ddt);f.ddt=setTimeout(function(){f.dd=null;renderClose()},4000);return}
   f.dd=null;S.deals.splice(d,1);save();all();
@@ -2500,13 +2536,30 @@ function reviewChecks(dl){
   }
   return h;
 }
+function dealFormHtml(p,x){
+  function sel(v,cur){return v===cur?' selected':''}
+  return'<div class="bcard" style="background:var(--bg);margin:6px 0"><div class="mute">Correct this deal</div>'
+   +'<input id="'+p+'C" type="text" autocapitalize="characters" autocomplete="off" value="'+esc(x.c)+'" style="margin:4px 0;text-transform:uppercase">'
+   +'<div class="two"><div><div class="mute">Volume</div><input id="'+p+'V" type="text" inputmode="decimal" value="'+esc(x.v)+'"></div><div><div class="mute">Rate</div><input id="'+p+'R" type="text" inputmode="decimal" value="'+esc(x.r)+'"></div></div>'
+   +'<div class="two" style="margin-top:4px"><div><div class="mute">Purchase / Sale</div><select id="'+p+'P"><option value="P"'+sel('P',x.ps)+'>Purchase (P)</option><option value="S"'+sel('S',x.ps)+'>Sale (S)</option></select></div>'
+   +'<div><div class="mute">Volume and rate</div><select id="'+p+'O"><option value="*"'+sel('*',x.op)+'>× multiply</option><option value="/"'+sel('/',x.op)+'>÷ divide</option></select></div></div>'
+   +'<div id="'+p+'M" style="margin-top:6px"></div>'
+   +'<div class="two" style="margin-top:8px"><button class="btn" id="'+p+'Save">Save correction</button><button class="btn sec" id="'+p+'Cancel">Cancel</button></div></div>';
+}
+function readDealForm(p){
+  var c=$(p+'C').value.trim().toUpperCase(),v=num($(p+'V').value),r=num($(p+'R').value),ps=$(p+'P').value==='S'?'S':'P',op=$(p+'O').value==='/'?'/':'*',err='';
+  if(!c)err='Account code is needed';
+  else if(!(v>0))err='Volume must be more than 0';
+  else if(!(r>0))err='Rate must be more than 0';
+  return{c:c,v:r2(v),r:r,op:op,ps:ps,inr:(v>0&&r>0)?dealInr(r2(v),op,r):0,err:err};
+}
 function renderDealsToday(){
   var dl=S.deals||[];
   $('dealsTodayCard').style.display=dl.length?'':'none';
   $('dealsLink').innerHTML=dl.length?'<button class="pill" id="goDeals">'+dl.length+' deal'+(dl.length>1?'s':'')+' on today\'s sheet — see Deals tab →</button>':'';
   if(!dl.length){$('dealsToday').innerHTML='';$('dealsStats').innerHTML='';return}
   var fl=L?dealFlags(dl):dl.map(function(){return''});
-  $('dealsToday').innerHTML=dl.map(function(x,ix){return'<div class="exrow"><span><b>'+esc(x.code)+'</b> '+x.vol+' '+x.op+' '+x.rate+' ('+x.ps+') = '+fmt2(x.inr)+(fl[ix]?'<div class="flag warn" style="margin:2px 0 0">'+esc(fl[ix])+'</div>':'')+'</span><button data-dd="'+ix+'">'+(f.dd===ix?'sure?':'✕')+'</button></div>'}).join('');
+  $('dealsToday').innerHTML=dl.map(function(x,ix){return'<div class="exrow"><span><b>'+esc(x.code)+'</b> '+x.vol+' '+x.op+' '+x.rate+' ('+x.ps+') = '+fmt2(x.inr)+(fl[ix]?'<div class="flag warn" style="margin:2px 0 0">'+esc(fl[ix])+'</div>':'')+'</span><span style="white-space:nowrap"><button data-de="'+ix+'" style="margin-right:6px">edit</button><button data-dd="'+ix+'">'+(f.dd===ix?'sure?':'✕')+'</button></span></div>'+(f.dedT===ix?dealFormHtml('dt',{c:x.code,v:x.vol,r:x.rate,ps:x.ps,op:x.op}):'')}).join('');
   var dp=dealsProfit(dl),h='';
   batchStats(dl).forEach(function(b){h+='<div class="flag '+(b.bad?'warn':'okf')+'">Message '+b.i+': purchases '+fmt2(b.p)+' · sales '+fmt2(b.s)+(b.bad?' — differ by '+fmt2(Math.abs(b.diff))+' (stock kept with Crown?)':' — balanced')+'</div>'});
   h+='<div class="mute">Deals profit (sales − purchases, INR): <b>'+signed(dp.profit)+'</b> · '+profitMsg(dp.profit)+'</div>';
