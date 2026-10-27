@@ -152,7 +152,7 @@ input[type=date]{width:100%;font-size:16px;padding:9px;border:1px solid var(--li
 
 <div class="card" id="expCard">
   <h2>Small expenses <span id="expCodeLbl"></span></h2>
-  <div class="two"><input id="exLabel" type="text" placeholder="Tea, auto…"><input id="exAmt" type="number" inputmode="decimal" placeholder="Amount"></div>
+  <div class="two"><input id="exLabel" type="text" placeholder="TEA, AUTO…" autocapitalize="characters" autocomplete="off" style="text-transform:uppercase"><input id="exAmt" type="number" inputmode="decimal" placeholder="Amount"></div>
   <div class="chips" id="exChips"></div>
   <div style="margin-top:6px"><button class="btn sec" id="exAdd">Add expense line</button></div>
   <div id="exList" style="margin-top:8px"></div>
@@ -266,7 +266,7 @@ input[type=date]{width:100%;font-size:16px;padding:9px;border:1px solid var(--li
     <div class="mute" style="margin-top:8px">Account code for small expenses</div>
     <input id="expCode" type="text" style="margin-top:4px;text-transform:uppercase">
     <div class="mute" style="margin-top:8px">Expense bundle row narration</div>
-    <input id="expNarr" type="text" style="margin-top:4px">
+    <input id="expNarr" type="text" style="margin-top:4px;text-transform:uppercase" autocapitalize="characters">
     <div class="two" style="margin-top:10px"><button class="btn sec" id="saveCodes">Save settings</button><button class="btn sec" id="dlSetup">Download my setup file</button></div>
     <div class="mute" style="margin-top:6px">The setup file holds only your settings (name, codes, shortcuts) — never entries. Use it to set up another phone or a copy of this tool.</div>
     <div class="mute" style="margin-top:8px">Rate alert tolerance (% from the account's usual rate)</div><input id="tolRate" type="text" inputmode="decimal" style="margin-top:4px">
@@ -370,7 +370,7 @@ input[type=date]{width:100%;font-size:16px;padding:9px;border:1px solid var(--li
 <script>
 (function(){
 var DEFAULT_CODES=[];
-var APP_VERSION='2026-10-26.3';
+var APP_VERSION='2026-10-27.1';
 var NARRS=ls('cashentry.narrs')||[];
 var EXPCODE=ls('cashentry.expcode')||'SHOP-EXP';
 var BIZ=ls('cashentry.biz')||'';
@@ -382,7 +382,7 @@ function ls(k,v){try{if(v===undefined){var s=localStorage.getItem(k);return s?JS
 function rm(k){try{localStorage.removeItem(k)}catch(e){}}
 var codes=ls(CKEY)||DEFAULT_CODES, use=ls(UKEY)||{};
 var S=ls(KEY)||{open:'',entries:[],exp:[],expNarr:'EXP',seq:1};
-if(!S.expNarr)S.expNarr='EXP';
+if(!S.expNarr)S.expNarr='EXP';S.expNarr=String(S.expNarr).toUpperCase();if(Array.isArray(S.exp))S.exp.forEach(function(x){if(x&&x.label)x.label=String(x.label).toUpperCase()});
 if(!Array.isArray(S.deals))S.deals=[];
 function newSid(){return's'+Date.now().toString(36)+Math.random().toString(36).slice(2,7)}
 if(!S.sid)S.sid=newSid();
@@ -554,12 +554,12 @@ $('dayTable').onclick=function(ev){
 
 // expenses
 function addExp(){
-  var l=$('exLabel').value.trim(),a=num($('exAmt').value);
+  var l=$('exLabel').value.trim().toUpperCase(),a=num($('exAmt').value);
   if(!l||a<=0){toast('Enter a label and an amount');return}
   S.exp.push({label:l,amt:a,own:false});save();$('exLabel').value='';$('exAmt').value='';all();$('exLabel').focus();
 }
 $('exAdd').onclick=addExp;
-$('exChips').onclick=function(e){var n=e.target.getAttribute&&e.target.getAttribute('data-x');if(n){$('exLabel').value=n;$('exAmt').focus()}};
+$('exChips').onclick=function(e){var n=e.target.getAttribute&&e.target.getAttribute('data-x');if(n){$('exLabel').value=n.toUpperCase();$('exAmt').focus()}};
 $('exList').onclick=function(e){var d=e.target.getAttribute&&e.target.getAttribute('data-xd');if(d!==null&&d!==undefined){S.exp.splice(+d,1);save();all()}};
 $('exList').onchange=function(e){var o=e.target.getAttribute&&e.target.getAttribute('data-own');if(o!==null&&o!==undefined){S.exp[+o].own=e.target.checked;save();all()}};
 $('exCopy').onclick=function(){
@@ -567,7 +567,7 @@ $('exCopy').onclick=function(){
   var t=0;var s=S.exp.map(function(x){t+=x.amt;return x.label+' '+plain(x.amt)}).join('\n');
   copyText(s+'\nTotal '+plain(r2(t)),'Breakdown copied');
 };
-$('expNarr').oninput=function(){S.expNarr=this.value.trim()||'EXP';save();renderExp();renderDay();renderCopy()};
+$('expNarr').oninput=function(){this.value=this.value.toUpperCase();S.expNarr=this.value.trim()||'EXP';save();renderExp();renderDay();renderCopy()};
 
 // copy
 $('copy').onclick=function(){
@@ -605,7 +605,7 @@ $('saveCodes').onclick=function(){
   NARRS=splitLines($('narrsBox').value);ls('cashentry.narrs',NARRS);
   EXPCODE=($('expCode').value.trim().toUpperCase())||'SHOP-EXP';ls('cashentry.expcode',EXPCODE);
   BIZ=$('bizIn').value.trim();ls('cashentry.biz',BIZ);
-  S.expNarr=$('expNarr').value.trim()||'EXP';save();
+  S.expNarr=($('expNarr').value.trim()||'EXP').toUpperCase();$('expNarr').value=S.expNarr;save();
   MODS={deals:$('modDeals').checked,exp:$('modExp').checked};ls('cashentry.mods',MODS);
   var tr=parseFloat($('tolRate').value),tb=parseFloat($('tolBatch').value);TOL={rate:tr>0?tr:4,batch:tb>0?tb:1};ls('cashentry.tol',TOL);HIST=null;
   applyMods();toast('Settings saved: '+c.length+' codes, '+NARRS.length+' shortcuts');all();
@@ -948,6 +948,7 @@ $('recvRep').onclick=function(){
 
 // ===== permanent ledger (stored in IndexedDB) =====
 var L=null,CACHE=null,dbH=null,dbTried=false;
+function lateS(e){return e.os!=null?e.os:1e9+e.s}
 function newLedger(){return{v:1,types:{},reserve:'RESERVE',crown:{code:'CROWN',open:0},ob:null,days:[],late:[],wait:[],commCode:'COMM',seq:1,chg:0,bak:0}}
 function fixLedger(x){x=x||newLedger();x.days=x.days||[];x.late=x.late||[];x.wait=x.wait||[];x.seq=x.seq||1;x.commCode=x.commCode==null?'COMM':x.commCode;x.crown=x.crown||{code:'CROWN',open:0};x.types=x.types||{};x.reserve=x.reserve||'RESERVE';x.chg=x.chg||0;x.bak=x.bak||0;x.ob=x.ob||null;return x}
 function idb(cb){
@@ -989,7 +990,7 @@ function events(){
     (d.deals||[]).forEach(function(x){ev.push({d:d.date,k:0,s:x.s,c:x.c,n:dealNarr(x),o:x.ps==='S'?x.inr:0,i:x.ps==='P'?x.inr:0,cr:0,ci:0})});
     (d.ent||[]).forEach(function(e){ev.push({d:d.date,k:1,s:e.s,c:e.c,n:e.n,o:e.o,i:e.i,cr:e.cr,ci:e.ci})});
   });
-  L.late.forEach(function(e){if(ob&&e.d<ob)return;ev.push({d:e.d,k:1,s:1e9+e.s,c:e.c,n:e.n,o:e.o,i:e.i,cr:e.cr,ci:e.ci})});
+  L.late.forEach(function(e){if(ob&&e.d<ob)return;ev.push({d:e.d,k:1,s:lateS(e),c:e.c,n:e.n,o:e.o,i:e.i,cr:e.cr,ci:e.ci})});
   return(CACHE=ev);
 }
 // net = IN minus OUT.  negative = they owe us (OUT), positive = we owe them (IN)
@@ -1411,7 +1412,7 @@ function dayModelToday(){
 function dayModelPosted(d){
   var hasExp=Array.isArray(d.exp);
   return{date:d.date,open:d.open,close:d.close,
-    rows:(d.ent||[]).filter(function(e){return !(hasExp&&e.x)}).sort(function(a,b){return a.s-b.s}).concat(dayExtras(d.date)).map(function(e){return{c:e.c,n:e.n,o:e.o,i:e.i,cr:e.cr,ci:e.ci}}),
+    rows:(d.ent||[]).filter(function(e){return !(hasExp&&e.x)}).concat(dayExtras(d.date)).sort(function(a,b){return a.s-b.s}).map(function(e){return{c:e.c,n:e.n,o:e.o,i:e.i,cr:e.cr,ci:e.ci}}),
     exp:hasExp?d.exp.map(function(x){return{label:x.label,amt:x.amt}}):[]};
 }
 function dayCanvases(m){
@@ -1684,7 +1685,7 @@ $('waitList').onclick=function(e){
     if(!c){toast('Type the account code first');return}
     if(!known(c)){toast('“'+c+'” is not in your account list');return}
     var ix=-1;L.wait.forEach(function(w,i){if(w.id===a)ix=i});if(ix<0)return;
-    var w=L.wait[ix];L.wait.splice(ix,1);L.late.push({d:w.d,s:L.seq++,c:c,n:w.n,o:w.o,i:w.i,cr:w.cr,ci:w.ci});
+    var w=L.wait[ix];L.wait.splice(ix,1);L.late.push({d:w.d,s:L.seq++,os:waitS(w)<2e9?waitS(w):undefined,c:c,n:w.n,o:w.o,i:w.i,cr:w.cr,ci:w.ci});
     ldSave(function(ok){if(!ok){L.late.pop();L.wait.splice(ix,0,w);CACHE=null}renderLedger();if(ok)toast('Added to '+c)});
   }
   if(d){
@@ -1730,8 +1731,7 @@ function reopenDay(id){
   ldSave(function(ok){
     if(!ok){L.days=keep;L.wait=keepW;L.late=keepL;CACHE=null;return}
     var n={open:String(day.open||''),entries:[],exp:[],expNarr:S.expNarr,seq:S.seq,deals:[],date:day.date,sid:day.sid||newSid()};
-    (day.ent||[]).forEach(function(e){if(e.x&&day.exp)return;n.entries.push({id:'e'+(n.seq++),code:e.c,narr:e.n,out:e.o,inn:e.i,cr:e.cr,ci:e.ci})});
-    back.forEach(function(e){n.entries.push({id:'e'+(n.seq++),code:e.c,narr:e.n,out:e.o,inn:e.i,cr:e.cr,ci:e.ci})});
+    (day.ent||[]).filter(function(e){return !(e.x&&day.exp)}).concat(back).sort(function(a,b){return a.s-b.s}).forEach(function(e){n.entries.push({id:'e'+(n.seq++),code:e.c,narr:e.n,out:e.o,inn:e.i,cr:e.cr,ci:e.ci})});
     (day.exp||[]).forEach(function(x){n.exp.push({label:x.label,amt:x.amt,own:!!x.own})});
     (day.deals||[]).forEach(function(x){n.deals.push({code:x.c,vol:x.v,op:x.op,rate:x.r,ps:x.ps,inr:x.inr,b:x.b||0})});
     S=n;save();f.review=false;all();setView('cash');toast('Day reopened on the Cash book tab'+(back.length?' with '+back.length+' waiting/late-coded row(s) put back':'')+' — review it, then post it again');
@@ -1741,10 +1741,11 @@ function reopenDay(id){
 // ---- find an entry + posted-day view
 // rows of a posted day that are NOT in day.ent: entries posted without a code (L.wait) and entries whose code was added later (L.late).
 // Their cash is part of the day's closing cash, so every day total must include them.
+function waitS(w){var n=parseInt(String(w.id).slice(1),10);return isNaN(n)?2e9:n}
 function dayExtras(date){
   var a=[];
-  (L.wait||[]).forEach(function(w){if(w.d===date)a.push({c:'',n:w.n,o:w.o||0,i:w.i||0,cr:w.cr||0,ci:w.ci||0,s:2e9+(parseInt(String(w.id).slice(1),10)||0),w:'wait'})});
-  (L.late||[]).forEach(function(e){if(e.d===date)a.push({c:e.c,n:e.n,o:e.o||0,i:e.i||0,cr:e.cr||0,ci:e.ci||0,s:1e9+e.s,w:'late'})});
+  (L.wait||[]).forEach(function(w){if(w.d===date)a.push({c:'',n:w.n,o:w.o||0,i:w.i||0,cr:w.cr||0,ci:w.ci||0,s:waitS(w),w:'wait'})});
+  (L.late||[]).forEach(function(e){if(e.d===date)a.push({c:e.c,n:e.n,o:e.o||0,i:e.i||0,cr:e.cr||0,ci:e.ci||0,s:lateS(e),w:'late'})});
   return a;
 }
 function dayById(id){for(var i=0;i<L.days.length;i++)if(L.days[i].id===id)return L.days[i];return null}
@@ -1753,7 +1754,7 @@ function renderDayView(){
   var c=$('dayViewCard');if(!f.vw){c.style.display='none';return}
   var d=dayById(f.vw);if(!d){f.vw=null;c.style.display='none';return}
   var sd=sortedDays(),ix=sd.indexOf(d),o=0,i=0,cr=0,ci=0;
-  var ent=(d.ent||[]).slice().sort(function(a,b){return a.s-b.s}).concat(dayExtras(d.date));
+  var ent=(d.ent||[]).concat(dayExtras(d.date)).sort(function(a,b){return a.s-b.s});
   var h='<div style="display:flex;justify-content:space-between;align-items:center"><h2 style="margin:0">'+fd(d.date)+'</h2><button class="btn sec sm" id="vwClose">Close</button></div>';
   h+='<div class="two" style="margin-top:6px"><div><div class="mute">Opening cash</div><b>'+fmt(d.open)+'</b></div><div><div class="mute">Closing cash</div><b>'+fmt(d.close)+'</b></div></div>';
   if((d.deals||[]).length){
@@ -1852,7 +1853,7 @@ $('dayViewCard').onclick=function(e){
   else if(id==='vwPrev'&&ix>0){f.ed=null;f.dpEd=null;f.vw=sd[ix-1].id;f.hl=null;renderDayView()}
   else if(id==='vwNext'&&ix<sd.length-1){f.ed=null;f.dpEd=null;f.vw=sd[ix+1].id;f.hl=null;renderDayView()}
   else if(id==='vwImg'){sendDayImage(dayModelPosted(d))}
-  else if(id==='vwCopy'){copyText((d.ent||[]).slice().sort(function(a,b){return a.s-b.s}).concat(dayExtras(d.date)).map(function(e){return[e.c,e.n,e.o||'',e.i||'',e.cr||'',e.ci||''].join('\t')}).join('\n'),'Rows copied')}
+  else if(id==='vwCopy'){copyText((d.ent||[]).concat(dayExtras(d.date)).sort(function(a,b){return a.s-b.s}).map(function(e){return[e.c,e.n,e.o||'',e.i||'',e.cr||'',e.ci||''].join('\t')}).join('\n'),'Rows copied')}
 };
 function findEntries(q){
   q=q.trim().toUpperCase();if(!q)return[];
@@ -2085,8 +2086,8 @@ function xlsData(){
     (d.ent||[]).forEach(function(e){cash.push({d:d.date,s:e.s,c:e.c,n:e.n,o:e.o,i:e.i,cr:e.cr,ci:e.ci})});
     (d.deals||[]).forEach(function(x){deals.push({d:d.date,s:x.s,c:x.c,v:x.v,op:x.op,r:x.r,ps:x.ps})});
   });
-  (L.late||[]).forEach(function(e){cash.push({d:e.d,s:1e9+e.s,c:e.c,n:e.n,o:e.o,i:e.i,cr:e.cr,ci:e.ci})});
-  (L.wait||[]).forEach(function(w){cash.push({d:w.d,s:2e9,c:'',n:w.n,o:w.o,i:w.i,cr:w.cr,ci:w.ci})});
+  (L.late||[]).forEach(function(e){cash.push({d:e.d,s:lateS(e),c:e.c,n:e.n,o:e.o,i:e.i,cr:e.cr,ci:e.ci})});
+  (L.wait||[]).forEach(function(w){cash.push({d:w.d,s:waitS(w),c:'',n:w.n,o:w.o,i:w.i,cr:w.cr,ci:w.ci})});
   function by(a,b){return a.d<b.d?-1:a.d>b.d?1:a.s-b.s}
   cash.sort(by);deals.sort(by);
   return{cash:cash,deals:deals};
