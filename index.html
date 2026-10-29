@@ -370,7 +370,7 @@ input[type=date]{width:100%;font-size:16px;padding:9px;border:1px solid var(--li
 <script>
 (function(){
 var DEFAULT_CODES=[];
-var APP_VERSION='2026-10-27.1';
+var APP_VERSION='2026-10-29.1';
 var NARRS=ls('cashentry.narrs')||[];
 var EXPCODE=ls('cashentry.expcode')||'SHOP-EXP';
 var BIZ=ls('cashentry.biz')||'';
@@ -500,7 +500,7 @@ function renderRestore(){
   $('restoreRow').style.display=ok?'block':'none';
   if(l&&!ok)rm(LKEY);
 }
-function all(){renderBakNudge();renderTop();renderForm();renderExp();renderDay();renderCopy();renderRestore();renderClose();renderPaper();$('open').value=S.open;$('expNarr').value=S.expNarr}
+function all(){if(typeof L!=='undefined'&&L&&$('crownBody'))renderCrown();renderBakNudge();renderTop();renderForm();renderExp();renderDay();renderCopy();renderRestore();renderClose();renderPaper();$('open').value=S.open;$('expNarr').value=S.expNarr}
 
 function resetForm(){
   $('code').value='';$('amt').value='';$('comm').value='';$('narr').value='';
@@ -1081,9 +1081,9 @@ function oi(n){return n<0?'<span class="oo">OUT '+fmt2(-n)+'</span>':n>0?'<span 
 
 // ----- Ledger view -----
 function renderCrown(){
-  var c=crownPos(),ex=crownPos(S.deals||[]),h='<div class="two"><div><div class="mute">Opening</div><b>'+signed(c.open)+'</b></div><div><div class="mute">Purchased (P)</div><b class="ii">'+fmt2(c.p)+'</b></div><div><div class="mute">Sold (S)</div><b class="oo">'+fmt2(c.s)+'</div></div></b>';
-  h='<div class="two"><div class="bcard" style="margin:0"><div class="mute">NET AED VOLUME HELD ('+esc(c.code)+')</div><div class="bigbal" style="font-size:24px">'+signed(c.net)+'</div></div><div class="bcard" style="margin:0"><div class="mute">Opening '+signed(c.open)+'</div><div class="mute"><span class="ii">+ '+fmt2(c.p)+'</span> bought · <span class="oo">− '+fmt2(c.s)+'</span> sold</div></div></div>';
-  if((S.deals||[]).some(function(x){return x.code===c.code}))h+='<div class="mute" style="margin-top:6px">With the deals on today\'s sheet (not posted yet): '+signed(ex.net)+'</div>';
+  var c=crownPos(),ex=crownPos(S.deals||[]),dif=r2(ex.net-c.net),h;
+  h='<div class="two"><div class="bcard" style="margin:0"><div class="mute">NET AED VOLUME HELD ('+esc(c.code)+') · LIVE</div><div class="bigbal" style="font-size:24px">'+signed(ex.net)+'</div></div><div class="bcard" style="margin:0"><div class="mute">Opening '+signed(ex.open)+'</div><div class="mute"><span class="ii">+ '+fmt2(ex.p)+'</span> bought · <span class="oo">− '+fmt2(ex.s)+'</span> sold</div></div></div>';
+  if(ex.n>c.n)h+='<div class="mute" style="margin-top:6px">Includes today\'s sheet, not posted yet ('+(ex.n-c.n)+' deal'+(ex.n-c.n>1?'s':'')+', '+(dif>0?'+':'')+signed(dif)+'). Posted ledger only: '+signed(c.net)+'</div>';
   $('crownBody').innerHTML=h;
 }
 function renderLedger(){
