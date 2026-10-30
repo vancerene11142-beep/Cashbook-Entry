@@ -370,7 +370,7 @@ input[type=date]{width:100%;font-size:16px;padding:9px;border:1px solid var(--li
 <script>
 (function(){
 var DEFAULT_CODES=[];
-var APP_VERSION='2026-10-29.1';
+var APP_VERSION='2026-10-30.1';
 var NARRS=ls('cashentry.narrs')||[];
 var EXPCODE=ls('cashentry.expcode')||'SHOP-EXP';
 var BIZ=ls('cashentry.biz')||'';
@@ -1764,7 +1764,7 @@ function renderDayView(){
   h+='<div class="mute" style="margin-top:10px">Cash book ('+ent.length+' rows)</div><table class="vt"><tr class="vh"><td>Code</td><td>Narration</td><td class="num">OUT</td><td class="num">IN</td><td></td></tr>';
   ent.forEach(function(e){
     o+=e.o;i+=e.i;cr+=e.cr||0;ci+=e.ci||0;
-    h+='<tr'+(f.hl===e.s?' class="hit"':'')+'><td><b>'+(e.w==='wait'?'<span class="oo">? WAITING</span>':esc(e.c))+'</b>'+(e.w==='late'?'<div class="mute">code added later</div>':'')+'</td><td>'+esc(e.n)+((e.cr||e.ci)?'<div class="mute">Comm '+(e.cr?'R '+fmt2(e.cr):'')+(e.ci?'I '+fmt2(e.ci):'')+'</div>':'')+'</td><td class="num oo">'+(e.o?fmt2(e.o):'')+'</td><td class="num ii">'+(e.i?fmt2(e.i):'')+'</td><td>'+(e.w?'':'<button class="act" style="border:0;background:none;color:var(--acc);font-size:14px" data-ed="'+e.s+'">edit</button>')+'</td></tr>';
+    h+='<tr'+(f.hl===e.s?' class="hit"':'')+'><td><b>'+(e.w==='wait'?'<span class="oo">? WAITING</span>':esc(e.c))+'</b>'+(e.w==='late'?'<div class="mute">code added later</div>':'')+'</td><td>'+esc(e.n)+((e.cr||e.ci)?'<div class="mute">Comm '+(e.cr?'R '+fmt2(e.cr):'')+(e.ci?'I '+fmt2(e.ci):'')+'</div>':'')+'</td><td class="num oo">'+(e.o?fmt2(e.o):'')+'</td><td class="num ii">'+(e.i?fmt2(e.i):'')+'</td><td><button class="act" style="border:0;background:none;color:var(--acc);font-size:14px" data-ed="'+e.s+'">edit</button></td></tr>';
     if(f.ed===e.s)h+='<tr><td colspan="5"><div class="bcard" style="background:var(--bg)"><div class="mute">Correct this entry</div>'
       +'<input id="edC" type="text" autocapitalize="characters" autocomplete="off" value="'+esc(e.c)+'" style="margin:4px 0;text-transform:uppercase">'
       +'<input id="edN" type="text" autocapitalize="characters" autocomplete="off" value="'+esc(e.n)+'" style="margin:4px 0;text-transform:uppercase">'
@@ -1806,19 +1806,35 @@ function applyDealEdit(del){
 }
 function applyEdit(del){
   var d=dayById(f.vw);if(!d)return;
-  var e=null;(d.ent||[]).forEach(function(x){if(x.s===f.ed)e=x});if(!e)return;
+  var e=null,kind='ent',lt=null,wt=null;
+  (d.ent||[]).forEach(function(x){if(x.s===f.ed)e=x});
+  if(!e){
+    (L.late||[]).forEach(function(x){if(x.d===d.date&&lateS(x)===f.ed){lt=x}});
+    if(lt){kind='late';e=lt}
+    else{(L.wait||[]).forEach(function(x){if(x.d===d.date&&waitS(x)===f.ed){wt=x}});if(wt){kind='wait';e={c:'',n:wt.n,o:wt.o,i:wt.i,cr:wt.cr,ci:wt.ci}}}
+  }
+  if(!e)return;
   var msg=$('edMsg');
   function bad(t){msg.innerHTML='<div class="flag bad">'+esc(t)+'</div>'}
   var code=$('edC').value.trim().toUpperCase(),n=$('edN').value.trim().toUpperCase(),o=num($('edO').value),i=num($('edI').value),cr=num($('edR').value),ci=num($('edIc').value);
   if(!del){
-    if(!code){bad('Account code is needed. Delete the entry if it was a mistake.');return}
-    if(acctList().indexOf(code)<0){bad(code+' is not in the account list. Add it first (Ledger → Accounts and types).');return}
+    if(!code&&kind!=='wait'){bad('Account code is needed. Delete the entry if it was a mistake.');return}
+    if(code&&acctList().indexOf(code)<0){bad(code+' is not in the account list. Add it first (Ledger → Accounts and types).');return}
     if(!(o||i||cr||ci)){bad('Enter an amount, or delete the entry.');return}
   }
   var oldClose=d.close,sd=sortedDays(),ix=sd.indexOf(d);
   snapshot(del?'before deleting a posted entry':'before correcting a posted entry');
   var before=JSON.stringify(e);
-  if(del)d.ent=d.ent.filter(function(x){return x!==e});else{e.c=code;e.n=n;e.o=o;e.i=i;e.cr=cr;e.ci=ci}
+  if(kind==='ent'){
+    if(del)d.ent=d.ent.filter(function(x){return x!==e});else{e.c=code;e.n=n;e.o=o;e.i=i;e.cr=cr;e.ci=ci}
+  }else if(kind==='late'){
+    if(del)L.late=L.late.filter(function(x){return x!==lt});else{lt.c=code;lt.n=n;lt.o=o;lt.i=i;lt.cr=cr;lt.ci=ci}
+  }else{
+    if(del)L.wait=L.wait.filter(function(x){return x!==wt});
+    else if(code){L.wait=L.wait.filter(function(x){return x!==wt});L.late.push({d:wt.d,s:L.seq++,os:waitS(wt)<2e9?waitS(wt):undefined,c:code,n:n,o:o,i:i,cr:cr,ci:ci})}
+    else{wt.n=n;wt.o=o;wt.i=i;wt.cr=cr;wt.ci=ci}
+  }
+  CACHE=null;
   var to=0,ti=0;(d.ent||[]).concat(dayExtras(d.date)).forEach(function(x){to+=x.o;ti+=x.i});
   var nc=r2(num(d.open)+ti-to),delta=r2(nc-oldClose),note='';
   d.close=nc;
