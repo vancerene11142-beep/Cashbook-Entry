@@ -370,7 +370,7 @@ input[type=date]{width:100%;font-size:16px;padding:9px;border:1px solid var(--li
 <script>
 (function(){
 var DEFAULT_CODES=[];
-var APP_VERSION='2026-10-30.2';
+var APP_VERSION='2026-10-31.1';
 var NARRS=ls('cashentry.narrs')||[];
 var EXPCODE=ls('cashentry.expcode')||'SHOP-EXP';
 var BIZ=ls('cashentry.biz')||'';
@@ -1046,6 +1046,15 @@ function statement(code,from,to,incl){
 }
 function pendCount(code){var n=0;pendingEv().forEach(function(e){if(e.c===code)n++});return n}
 function nowStamp(){var d=new Date();return fd(today())+' '+z2(d.getHours())+':'+z2(d.getMinutes())}
+function crownRun(){
+  var cr=L.crown||{code:'CROWN',open:0},ob=L.ob?L.ob.date:'',pos=num(cr.open),map={},sheet=[];
+  sortedDays().forEach(function(d){
+    if(ob&&d.date<ob)return;
+    (d.deals||[]).slice().sort(function(a,b){return a.s-b.s}).forEach(function(x){if(x.c===cr.code)pos=r2(pos+(x.ps==='P'?x.v:-x.v));map[d.id+'|'+x.s]=pos});
+  });
+  (S.deals||[]).forEach(function(x){if(x.code===cr.code)pos=r2(pos+(x.ps==='P'?x.vol:-x.vol));sheet.push(pos)});
+  return{map:map,sheet:sheet};
+}
 function crownPos(extra){
   var cr=L.crown||{code:'CROWN',open:0},ob=L.ob?L.ob.date:'',p=0,sl=0,n=0;
   L.days.forEach(function(d){if(ob&&d.date<ob)return;(d.deals||[]).forEach(function(x){if(x.c===cr.code){n++;if(x.ps==='P')p+=x.v;else sl+=x.v}})});
@@ -1763,8 +1772,8 @@ function renderDayView(){
   var h='<div style="display:flex;justify-content:space-between;align-items:center"><h2 style="margin:0">'+fd(d.date)+'</h2><button class="btn sec sm" id="vwClose">Close</button></div>';
   h+='<div class="two" style="margin-top:6px"><div><div class="mute">Opening cash</div><b>'+fmt(d.open)+'</b></div><div><div class="mute">Closing cash</div><b>'+fmt(d.close)+'</b></div></div>';
   if((d.deals||[]).length){
-    var dd=d.deals.slice().sort(function(a,b){return a.s-b.s});
-    h+='<div class="mute" style="margin-top:10px">Currency deals ('+dd.length+')</div><table class="vt">'+dd.map(function(x){return'<tr><td><b>'+esc(x.c)+'</b></td><td>'+esc(dealNarr(x))+'</td><td class="num '+(x.ps==='S'?'oo':'ii')+'">'+(x.ps==='S'?'OUT ':'IN ')+fmt2(x.inr)+'</td><td><button class="act" style="border:0;background:none;color:var(--acc);font-size:14px" data-dp="'+x.s+'">edit</button></td></tr>'+(f.dpEd===x.s?'<tr><td colspan="4">'+dealFormHtml('dp',x)+'<div style="margin-top:2px"><button class="act" style="border:0;background:none;color:var(--bad);font-size:14px" id="dpDel">'+(f.dpDel?'sure? tap again to delete this deal':'delete this deal')+'</button></div></td></tr>':'')}).join('')+'</table>';
+    var dd=d.deals.slice().sort(function(a,b){return a.s-b.s}),cru=crownRun();
+    h+='<div class="mute" style="margin-top:10px">Currency deals ('+dd.length+')</div><table class="vt"><tr class="vh"><td>Account</td><td>Deal</td><td class="num">Amount</td><td class="num">Crown AED</td><td></td></tr>'+dd.map(function(x){return'<tr><td><b>'+esc(x.c)+'</b></td><td>'+esc(dealNarr(x))+'</td><td class="num '+(x.ps==='S'?'oo':'ii')+'">'+(x.ps==='S'?'OUT ':'IN ')+fmt2(x.inr)+'</td><td class="num">'+(cru.map[d.id+'|'+x.s]==null?'':signed(cru.map[d.id+'|'+x.s]))+'</td><td><button class="act" style="border:0;background:none;color:var(--acc);font-size:14px" data-dp="'+x.s+'">edit</button></td></tr>'+(f.dpEd===x.s?'<tr><td colspan="5">'+dealFormHtml('dp',x)+'<div style="margin-top:2px"><button class="act" style="border:0;background:none;color:var(--bad);font-size:14px" id="dpDel">'+(f.dpDel?'sure? tap again to delete this deal':'delete this deal')+'</button></div></td></tr>':'')}).join('')+'</table>';
   }
   h+='<div class="mute" style="margin-top:10px">Cash book ('+ent.length+' rows)</div><table class="vt"><tr class="vh"><td>Code</td><td>Narration</td><td class="num">OUT</td><td class="num">IN</td><td></td></tr>';
   ent.forEach(function(e){
@@ -2581,7 +2590,8 @@ function renderDealsToday(){
   $('dealsLink').innerHTML=dl.length?'<button class="pill" id="goDeals">'+dl.length+' deal'+(dl.length>1?'s':'')+' on today\'s sheet — see Deals tab →</button>':'';
   if(!dl.length){$('dealsToday').innerHTML='';$('dealsStats').innerHTML='';return}
   var fl=L?dealFlags(dl):dl.map(function(){return''});
-  $('dealsToday').innerHTML=dl.map(function(x,ix){return'<div class="exrow"><span><b>'+esc(x.code)+'</b> '+x.vol+' '+x.op+' '+x.rate+' ('+x.ps+') = '+fmt2(x.inr)+(fl[ix]?'<div class="flag warn" style="margin:2px 0 0">'+esc(fl[ix])+'</div>':'')+'</span><div style="flex:none;white-space:nowrap"><button data-de="'+ix+'" style="color:var(--acc);font-size:14px;margin-right:4px">edit</button><button data-dd="'+ix+'">'+(f.dd===ix?'sure?':'✕')+'</button></div></div>'+(f.dedT===ix?dealFormHtml('dt',{c:x.code,v:x.vol,r:x.rate,ps:x.ps,op:x.op}):'')}).join('');
+  var cru=L?crownRun():null;
+  $('dealsToday').innerHTML=dl.map(function(x,ix){return'<div class="exrow"><span><b>'+esc(x.code)+'</b> '+x.vol+' '+x.op+' '+x.rate+' ('+x.ps+') = '+fmt2(x.inr)+(cru?'<div class="mute">Crown AED position: <b>'+signed(cru.sheet[ix])+'</b></div>':'')+(fl[ix]?'<div class="flag warn" style="margin:2px 0 0">'+esc(fl[ix])+'</div>':'')+'</span><div style="flex:none;white-space:nowrap"><button data-de="'+ix+'" style="color:var(--acc);font-size:14px;margin-right:4px">edit</button><button data-dd="'+ix+'">'+(f.dd===ix?'sure?':'✕')+'</button></div></div>'+(f.dedT===ix?dealFormHtml('dt',{c:x.code,v:x.vol,r:x.rate,ps:x.ps,op:x.op}):'')}).join('');
   var dp=dealsProfit(dl),h='';
   batchStats(dl).forEach(function(b){h+='<div class="flag '+(b.bad?'warn':'okf')+'">Message '+b.i+': purchases '+fmt2(b.p)+' · sales '+fmt2(b.s)+(b.bad?' — differ by '+fmt2(Math.abs(b.diff))+' (stock kept with Crown?)':' — balanced')+'</div>'});
   h+='<div class="mute">Deals profit (sales − purchases, INR): <b>'+signed(dp.profit)+'</b> · '+profitMsg(dp.profit)+'</div>';
