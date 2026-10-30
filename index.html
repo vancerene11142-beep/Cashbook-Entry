@@ -370,7 +370,7 @@ input[type=date]{width:100%;font-size:16px;padding:9px;border:1px solid var(--li
 <script>
 (function(){
 var DEFAULT_CODES=[];
-var APP_VERSION='2026-10-30.1';
+var APP_VERSION='2026-10-30.2';
 var NARRS=ls('cashentry.narrs')||[];
 var EXPCODE=ls('cashentry.expcode')||'SHOP-EXP';
 var BIZ=ls('cashentry.biz')||'';
@@ -994,10 +994,11 @@ function events(){
   return(CACHE=ev);
 }
 // net = IN minus OUT.  negative = they owe us (OUT), positive = we owe them (IN)
-function balances(to){
+function tbIncl(){return L&&pendingEv().length>0&&f.tbPend!==false}
+function balances(to,incl){
   var net={},cm=0,cc=L.commCode;
   if(L.ob)Object.keys(L.ob.rows).forEach(function(c){var r=L.ob.rows[c];net[c]=(r[1]||0)-(r[0]||0)});
-  events().forEach(function(e){if(to&&e.d>to)return;var v=e.i-e.o;if(e.c!==cc)v+=e.ci-e.cr;net[e.c]=(net[e.c]||0)+v;cm+=e.cr-e.ci});
+  (incl?events().concat(pendingEv()):events()).forEach(function(e){if(to&&e.d>to)return;var v=e.i-e.o;if(e.c!==cc)v+=e.ci-e.cr;net[e.c]=(net[e.c]||0)+v;cm+=e.cr-e.ci});
   if(cc&&Math.abs(cm)>0.0001)net[cc]=(net[cc]||0)+cm;
   Object.keys(net).forEach(function(k){net[k]=r2(net[k])});
   return net;
@@ -1016,7 +1017,7 @@ function perLabel(rg){return(!rg[0]&&!rg[1])?'All entries':((rg[0]?fd(rg[0]):'st
 function pendingEv(){
   var ev=[],d=S.date||today();
   (S.deals||[]).forEach(function(x,ix){ev.push({d:d,k:0,s:2e9+ix,c:x.code,n:dealNarr({v:x.vol,op:x.op,r:x.rate,ps:x.ps}),o:x.ps==='S'?x.inr:0,i:x.ps==='P'?x.inr:0,cr:0,ci:0,p:1})});
-  (S.entries||[]).forEach(function(e,ix){if(e.code)ev.push({d:d,k:1,s:2e9+ix,c:e.code,n:e.narr,o:e.out||0,i:e.inn||0,cr:e.cr||0,ci:e.ci||0,p:1})});
+  rows().forEach(function(e,ix){if(e.code)ev.push({d:d,k:1,s:2e9+ix,c:e.code,n:e.narr,o:e.out||0,i:e.inn||0,cr:e.cr||0,ci:e.ci||0,p:1})});
   return ev;
 }
 function statement(code,from,to,incl){
@@ -1128,7 +1129,7 @@ function renderStatement(){
   out.innerHTML=h;
 }
 function renderBalList(){
-  var net=balances(),keys=Object.keys(net);
+  var inc=tbIncl(),pn=pendingEv().length,net=balances(null,inc),keys=Object.keys(net);
   if(f.hz===undefined)f.hz=true;
   if(f.hz)keys=keys.filter(function(k){return Math.abs(net[k])>=0.005});
   else{codes.forEach(function(c){if(keys.indexOf(c)<0)keys.push(c)});keys=keys.map(function(k){return k})}
@@ -1136,7 +1137,9 @@ function renderBalList(){
   keys.sort(f.big?function(a,b){return Math.abs(net[b]||0)-Math.abs(net[a]||0)||(a<b?-1:1)}:function(a,b){return a<b?-1:a>b?1:0});
   var to=0,ti=0;
   keys.forEach(function(k){var v=net[k]||0;if(v<0)to-=v;else ti+=v});
-  var h='<table class="stmt"><tr><th>Account</th><th class="n">OUT (they owe us)</th><th class="n">IN (we owe them)</th></tr>';
+  var nu=S.entries.filter(function(e){return !e.code}).length;
+  var h=pn?'<div class="flag warn" style="margin:0 0 8px"><b>'+pn+' line'+(pn>1?'s':'')+' from today\'s sheet '+(inc?'included':'not included')+' (not posted yet).</b>'+(nu?' '+nu+' row'+(nu>1?'s':'')+' without a code '+(nu>1?'are':'is')+' left out.':'')+' <button class="chip'+(inc?' on':'')+'" id="tbPendBtn">'+(inc?'Live: tap for posted only':'Posted only: tap for live')+'</button></div>':'';
+  h+='<table class="stmt"><tr><th>Account</th><th class="n">OUT (they owe us)</th><th class="n">IN (we owe them)</th></tr>';
   var shown=f.allRows?keys:keys.slice(0,15);
   shown.forEach(function(k){var v=net[k]||0;h+='<tr class="arow" data-c="'+esc(k)+'"><td><b>'+esc(k)+'</b></td><td class="n oo">'+(v<0?fmt2(-v):'')+'</td><td class="n ii">'+(v>0?fmt2(v):'')+'</td></tr>'});
   h+='<tr class="tot"><td>Total ('+keys.length+')</td><td class="n oo">'+fmt2(to)+'</td><td class="n ii">'+fmt2(ti)+'</td></tr></table>';
@@ -1504,7 +1507,7 @@ $('shareImg').onclick=function(){sendDayImage(dayModelToday())};
 
 // ===== trial balance picture =====
 function tbList(){
-  var net=balances(),keys=Object.keys(net).filter(function(k){return Math.abs(net[k])>=0.005});
+  var net=balances(null,tbIncl()),keys=Object.keys(net).filter(function(k){return Math.abs(net[k])>=0.005});
   if(f.ty)keys=keys.filter(function(k){return typeOf(k)===f.ty});
   keys.sort(f.big?function(a,b){return Math.abs(net[b]||0)-Math.abs(net[a]||0)||(a<b?-1:1)}:function(a,b){return a<b?-1:a>b?1:0});
   return keys.map(function(k){var v=net[k];return{c:k,o:v<0?-v:0,i:v>0?v:0}});
@@ -1526,6 +1529,7 @@ function tbCanvases(){
     if(first){
       T('TRIAL BALANCE'+(f.ty?' — '+f.ty.toUpperCase():''),28,128,{sz:18,c:GREY});
       T('As on '+fd(today()),28,166,{b:1,sz:36});
+      if(tbIncl())T('Includes '+pendingEv().length+' unposted line(s) of today',W-28,166,{a:'right',sz:17,c:'#9a5b00'});
       T(rowsL.length+' accounts',W-28,128,{a:'right',sz:20,c:GREY});
       if(last)T('Posted up to '+fd(last),W-28,160,{a:'right',sz:20,c:GREY});
       var cw=(W-56-16)/2,cards=[['TOTAL OUT (they owe us)',to,RED],['TOTAL IN (we owe them)',ti,GRN]];
@@ -1666,7 +1670,8 @@ $('stOut').onclick=function(e){
 };
 $('stOut').onchange=function(e){var t=e.target;if(t.id==='pf'){f.pf=t.value;renderStatement()}else if(t.id==='pt'){f.pt=t.value;renderStatement()}};
 $('balMore').onclick=function(e){if(e.target.id==='balToggle'){f.allRows=!f.allRows;renderBalList()}};
-$('balList').onclick=function(e){var tr=e.target.closest&&e.target.closest('tr[data-c]');if(tr){var c=tr.getAttribute('data-c');$('stIn').value=c;f.stCode=c;f.stAll=false;renderStatement();$('stIn').scrollIntoView({behavior:'smooth',block:'start'})}};
+$('balList').onclick=function(e){if(e.target.id==='tbPendBtn'){f.tbPend=f.tbPend===false;renderBalList();return}
+  var tr=e.target.closest&&e.target.closest('tr[data-c]');if(tr){var c=tr.getAttribute('data-c');$('stIn').value=c;f.stCode=c;f.stAll=false;renderStatement();$('stIn').scrollIntoView({behavior:'smooth',block:'start'})}};
 $('srtAZ').onclick=function(){f.big=false;renderBalList()};$('srtBig').onclick=function(){f.big=true;renderBalList()};
 $('hideZero').onclick=function(){f.hz=!f.hz;renderBalList()};
 
