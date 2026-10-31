@@ -370,7 +370,7 @@ input[type=date]{width:100%;font-size:16px;padding:9px;border:1px solid var(--li
 <script>
 (function(){
 var DEFAULT_CODES=[];
-var APP_VERSION='2026-10-31.1';
+var APP_VERSION='2026-10-31.2';
 var NARRS=ls('cashentry.narrs')||[];
 var EXPCODE=ls('cashentry.expcode')||'SHOP-EXP';
 var BIZ=ls('cashentry.biz')||'';
@@ -1046,15 +1046,23 @@ function statement(code,from,to,incl){
 }
 function pendCount(code){var n=0;pendingEv().forEach(function(e){if(e.c===code)n++});return n}
 function nowStamp(){var d=new Date();return fd(today())+' '+z2(d.getHours())+':'+z2(d.getMinutes())}
-function crownRun(){
-  var cr=L.crown||{code:'CROWN',open:0},ob=L.ob?L.ob.date:'',pos=num(cr.open),map={},sheet=[];
+function crownRows(){
+  var cr=L.crown||{code:'CROWN',open:0},ob=L.ob?L.ob.date:'',pos=num(cr.open),rows=[],open=pos;
   sortedDays().forEach(function(d){
     if(ob&&d.date<ob)return;
-    (d.deals||[]).slice().sort(function(a,b){return a.s-b.s}).forEach(function(x){if(x.c===cr.code)pos=r2(pos+(x.ps==='P'?x.v:-x.v));map[d.id+'|'+x.s]=pos});
+    (d.deals||[]).slice().sort(function(a,b){return a.s-b.s}).forEach(function(x){if(x.c!==cr.code)return;var v=x.ps==='P'?x.v:-x.v;pos=r2(pos+v);rows.push({d:d.date,ps:x.ps,vol:x.v,rate:x.r,op:x.op,v:v,pos:pos})});
   });
-  (S.deals||[]).forEach(function(x){if(x.code===cr.code)pos=r2(pos+(x.ps==='P'?x.vol:-x.vol));sheet.push(pos)});
-  return{map:map,sheet:sheet};
+  (S.deals||[]).forEach(function(x){if(x.code!==cr.code)return;var v=x.ps==='P'?x.vol:-x.vol;pos=r2(pos+v);rows.push({d:S.date||today(),ps:x.ps,vol:x.vol,rate:x.rate,op:x.op,v:v,pos:pos,p:1})});
+  return{open:open,rows:rows,pos:pos};
 }
+function crownView(){
+  var all=crownRows(),per=f.cwPer||'all',t=today(),from='';
+  if(per==='month')from=t.slice(0,8)+'01';else if(per==='30')from=addDay(t,-29);
+  var rows=all.rows.filter(function(r){return !from||r.d>=from}),open=all.open,k;
+  if(from){var before=all.rows.filter(function(r){return r.d<from});if(before.length)open=before[before.length-1].pos}
+  return{open:open,rows:rows,pos:rows.length?rows[rows.length-1].pos:open,from:from,per:per,code:(L.crown||{}).code||'CROWN'};
+}
+function dealTxt(r){return r.ps+' '+fmt2(r.vol)+' '+(r.op==='/'?'÷':'×')+' '+r.rate}
 function crownPos(extra){
   var cr=L.crown||{code:'CROWN',open:0},ob=L.ob?L.ob.date:'',p=0,sl=0,n=0;
   L.days.forEach(function(d){if(ob&&d.date<ob)return;(d.deals||[]).forEach(function(x){if(x.c===cr.code){n++;if(x.ps==='P')p+=x.v;else sl+=x.v}})});
@@ -1094,8 +1102,67 @@ function renderCrown(){
   var c=crownPos(),ex=crownPos(S.deals||[]),dif=r2(ex.net-c.net),h;
   h='<div class="two"><div class="bcard" style="margin:0"><div class="mute">NET AED VOLUME HELD ('+esc(c.code)+') · LIVE</div><div class="bigbal" style="font-size:24px">'+signed(ex.net)+'</div></div><div class="bcard" style="margin:0"><div class="mute">Opening '+signed(ex.open)+'</div><div class="mute"><span class="ii">+ '+fmt2(ex.p)+'</span> bought · <span class="oo">− '+fmt2(ex.s)+'</span> sold</div></div></div>';
   if(ex.n>c.n)h+='<div class="mute" style="margin-top:6px">Includes today\'s sheet, not posted yet ('+(ex.n-c.n)+' deal'+(ex.n-c.n>1?'s':'')+', '+(dif>0?'+':'')+signed(dif)+'). Posted ledger only: '+signed(c.net)+'</div>';
+  var cv=crownView(),per=cv.per;
+  function pc(k,l){return'<button class="chip'+(per===k?' on':'')+'" data-cw="'+k+'">'+l+'</button>'}
+  h+='<div class="chips" style="margin:10px 0 4px">'+pc('all','All')+pc('month','This month')+pc('30','Last 30 days')+'</div>';
+  var show=f.cwAll?cv.rows:cv.rows.slice(-12),cut=cv.rows.length-show.length;
+  h+='<table class="stmt"><tr><th>Date</th><th>Deal</th><th class="n">AED</th><th class="n">Position</th></tr><tr class="open"><td class="dt">'+(cv.from?fd(cv.from):'Opening')+'</td><td>'+(cv.from?'Brought forward':'Opening position')+'</td><td class="n"></td><td class="n">'+signed(cv.open)+'</td></tr>';
+  if(cut>0)h+='<tr><td colspan="4" class="mute" style="text-align:center"><button class="btn sec sm" id="cwMore">Show '+cut+' earlier row'+(cut>1?'s':'')+'</button></td></tr>';
+  show.forEach(function(r,ix){h+='<tr class="'+(r.p?'pend':ix%2?'':'alt')+'"><td class="dt">'+fd(r.d)+'</td><td>'+esc(dealTxt(r))+'</td><td class="n '+(r.v<0?'oo':'ii')+'">'+(r.v<0?'−':'+')+fmt2(Math.abs(r.v))+'</td><td class="n">'+signed(r.pos)+'</td></tr>'});
+  if(!cv.rows.length)h+='<tr><td colspan="4" class="mute">No '+esc(cv.code)+' deals in this period.</td></tr>';
+  h+='</table>';
+  if(cv.rows.some(function(r){return r.p}))h+='<div class="mute" style="margin-top:4px">Shaded rows are on today\'s sheet and not posted yet.</div>';
+  h+='<div style="margin-top:10px"><button class="btn" id="cwSend">Send Crown AED statement (image)</button></div>';
   $('crownBody').innerHTML=h;
 }
+$('crownBody').onclick=function(e){
+  var t=e.target,k=t.getAttribute&&t.getAttribute('data-cw');
+  if(k){f.cwPer=k;f.cwAll=false;renderCrown();return}
+  if(t.id==='cwMore'){f.cwAll=true;renderCrown();return}
+  if(t.id==='cwSend')sendCrownImage();
+};
+function crownCanvases(){
+  var cv=crownView(),W=900,rowH=40,PER=36,FONT='system-ui,Arial,sans-serif',RED='#c0392b',GRN='#1e8e4e',GREY='#6b7280',pages=[],i,rows=cv.rows;
+  for(i=0;i<rows.length;i+=PER)pages.push(rows.slice(i,i+PER));if(!pages.length)pages=[[]];
+  var np=pages.length,out=[],npend=rows.filter(function(r){return r.p}).length;
+  var lbl=cv.per==='month'?'This month':cv.per==='30'?'Last 30 days':'All deals';
+  pages.forEach(function(pr,pi){
+    var first=pi===0,last=pi===np-1,headH=first?290:110,footH=last?150:60;
+    var c=document.createElement('canvas');c.width=W;c.height=headH+40+(first?rowH:0)+pr.length*rowH+footH;
+    var g=c.getContext('2d');
+    function T(t,x,y,o){o=o||{};g.font=(o.b?'bold ':'')+(o.sz||21)+'px '+FONT;g.fillStyle=o.c||'#1b1f24';g.textAlign=o.a||'left';g.textBaseline='middle';g.fillText(t,x,y)}
+    g.fillStyle='#fff';g.fillRect(0,0,W,c.height);
+    g.fillStyle='#1f4fd8';g.fillRect(0,0,W,first?96:70);
+    T(BIZ||'Crown AED statement',28,first?48:35,{b:1,sz:32,c:'#fff'});
+    if(first){
+      T('AED VOLUME STATEMENT',28,128,{sz:18,c:GREY});T(cv.code,28,166,{b:1,sz:36});
+      T('Period: '+lbl,W-28,128,{a:'right',sz:20,c:GREY});T('As of: '+nowStamp(),W-28,160,{a:'right',sz:20,c:GREY});
+      var cw=(W-56-16)/2,cards=[['OPENING AED POSITION',cv.open],['CLOSING AED POSITION',cv.pos]];
+      cards.forEach(function(cd,k){var x=28+k*(cw+16),y0=196;g.fillStyle='#f4f5f7';g.fillRect(x,y0,cw,76);g.strokeStyle='#e2e5ea';g.strokeRect(x+.5,y0+.5,cw-1,75);T(cd[0],x+16,y0+22,{sz:16,c:GREY});T(signed(cd[1]),x+16,y0+52,{b:1,sz:32,c:cd[1]<0?RED:'#1b1f24'})});
+    }else T(cv.code+' — AED statement continued',28,92,{b:1,sz:22});
+    var y0=headH;g.fillStyle='#eef0f4';g.fillRect(0,y0,W,40);
+    T('Date',28,y0+20,{b:1,sz:18,c:GREY});T('Deal',190,y0+20,{b:1,sz:18,c:GREY});T('AED',590,y0+20,{b:1,sz:18,c:GREY,a:'right'});T('Position',W-28,y0+20,{b:1,sz:18,c:GREY,a:'right'});
+    var y=y0+40;
+    if(first){g.fillStyle='#f7ecd2';g.fillRect(0,y,W,rowH);T(cv.from?fd(cv.from):'Opening',28,y+20,{sz:18,c:GREY});T(cv.from?'Brought forward':'Opening position',190,y+20,{b:1});T(signed(cv.open),W-28,y+20,{a:'right',b:1});y+=rowH}
+    pr.forEach(function(r,ix){
+      var gi=pi*PER+ix;if(r.p){g.fillStyle='#fbe7c2';g.fillRect(0,y,W,rowH)}else if(gi%2===0){g.fillStyle='#eef3fd';g.fillRect(0,y,W,rowH)}
+      g.strokeStyle='#e2e5ea';g.beginPath();g.moveTo(0,y+rowH-.5);g.lineTo(W,y+rowH-.5);g.stroke();
+      T(fd(r.d),28,y+20,{sz:18,c:GREY});T(dealTxt(r),190,y+20);T((r.v<0?'−':'+')+fmt2(Math.abs(r.v)),590,y+20,{a:'right',c:r.v<0?RED:GRN});T(signed(r.pos),W-28,y+20,{a:'right'});
+      y+=rowH;
+    });
+    if(!rows.length){T('No deals in this period.',190,y+24,{c:GREY});y+=rowH}
+    if(last){
+      g.strokeStyle='#1b1f24';g.lineWidth=2;g.beginPath();g.moveTo(0,y+4);g.lineTo(W,y+4);g.stroke();g.lineWidth=1;
+      T('Closing AED position',190,y+40,{b:1,sz:24});T(signed(cv.pos),W-28,y+40,{a:'right',b:1,sz:28});
+      T('P = purchased (position goes up) · S = sold (position goes down)',28,y+92,{sz:16,c:GREY});
+      if(npend)T('Shaded rows: '+npend+' deal(s) on today\'s sheet, not yet posted.',28,y+118,{sz:16,c:'#9a5b00'});
+    }
+    if(np>1)T('Page '+(pi+1)+' of '+np,W-28,c.height-24,{a:'right',sz:16,c:GREY});
+    out.push(c);
+  });
+  return out;
+}
+function sendCrownImage(){shareImages(crownCanvases(),'crown-aed-'+today(),'Crown AED statement','Crown AED statement')}
 function renderLedger(){
   if(!L){$('ledBanner').innerHTML='<div class="card"><div class="mute">Opening the ledger…</div></div>';return}
   renderLedBanner();renderCrown();renderStatement();renderTypeBar();renderBalList();renderMonth();renderAccts();renderWait();renderPosted();renderOb();renderLedBak();renderDayView();if($('fqIn').value)renderFind();
@@ -1772,8 +1839,8 @@ function renderDayView(){
   var h='<div style="display:flex;justify-content:space-between;align-items:center"><h2 style="margin:0">'+fd(d.date)+'</h2><button class="btn sec sm" id="vwClose">Close</button></div>';
   h+='<div class="two" style="margin-top:6px"><div><div class="mute">Opening cash</div><b>'+fmt(d.open)+'</b></div><div><div class="mute">Closing cash</div><b>'+fmt(d.close)+'</b></div></div>';
   if((d.deals||[]).length){
-    var dd=d.deals.slice().sort(function(a,b){return a.s-b.s}),cru=crownRun();
-    h+='<div class="mute" style="margin-top:10px">Currency deals ('+dd.length+')</div><table class="vt"><tr class="vh"><td>Account</td><td>Deal</td><td class="num">Amount</td><td class="num">Crown AED</td><td></td></tr>'+dd.map(function(x){return'<tr><td><b>'+esc(x.c)+'</b></td><td>'+esc(dealNarr(x))+'</td><td class="num '+(x.ps==='S'?'oo':'ii')+'">'+(x.ps==='S'?'OUT ':'IN ')+fmt2(x.inr)+'</td><td class="num">'+(cru.map[d.id+'|'+x.s]==null?'':signed(cru.map[d.id+'|'+x.s]))+'</td><td><button class="act" style="border:0;background:none;color:var(--acc);font-size:14px" data-dp="'+x.s+'">edit</button></td></tr>'+(f.dpEd===x.s?'<tr><td colspan="5">'+dealFormHtml('dp',x)+'<div style="margin-top:2px"><button class="act" style="border:0;background:none;color:var(--bad);font-size:14px" id="dpDel">'+(f.dpDel?'sure? tap again to delete this deal':'delete this deal')+'</button></div></td></tr>':'')}).join('')+'</table>';
+    var dd=d.deals.slice().sort(function(a,b){return a.s-b.s});
+    h+='<div class="mute" style="margin-top:10px">Currency deals ('+dd.length+')</div><table class="vt">'+dd.map(function(x){return'<tr><td><b>'+esc(x.c)+'</b></td><td>'+esc(dealNarr(x))+'</td><td class="num '+(x.ps==='S'?'oo':'ii')+'">'+(x.ps==='S'?'OUT ':'IN ')+fmt2(x.inr)+'</td><td><button class="act" style="border:0;background:none;color:var(--acc);font-size:14px" data-dp="'+x.s+'">edit</button></td></tr>'+(f.dpEd===x.s?'<tr><td colspan="4">'+dealFormHtml('dp',x)+'<div style="margin-top:2px"><button class="act" style="border:0;background:none;color:var(--bad);font-size:14px" id="dpDel">'+(f.dpDel?'sure? tap again to delete this deal':'delete this deal')+'</button></div></td></tr>':'')}).join('')+'</table>';
   }
   h+='<div class="mute" style="margin-top:10px">Cash book ('+ent.length+' rows)</div><table class="vt"><tr class="vh"><td>Code</td><td>Narration</td><td class="num">OUT</td><td class="num">IN</td><td></td></tr>';
   ent.forEach(function(e){
@@ -2590,8 +2657,7 @@ function renderDealsToday(){
   $('dealsLink').innerHTML=dl.length?'<button class="pill" id="goDeals">'+dl.length+' deal'+(dl.length>1?'s':'')+' on today\'s sheet — see Deals tab →</button>':'';
   if(!dl.length){$('dealsToday').innerHTML='';$('dealsStats').innerHTML='';return}
   var fl=L?dealFlags(dl):dl.map(function(){return''});
-  var cru=L?crownRun():null;
-  $('dealsToday').innerHTML=dl.map(function(x,ix){return'<div class="exrow"><span><b>'+esc(x.code)+'</b> '+x.vol+' '+x.op+' '+x.rate+' ('+x.ps+') = '+fmt2(x.inr)+(cru?'<div class="mute">Crown AED position: <b>'+signed(cru.sheet[ix])+'</b></div>':'')+(fl[ix]?'<div class="flag warn" style="margin:2px 0 0">'+esc(fl[ix])+'</div>':'')+'</span><div style="flex:none;white-space:nowrap"><button data-de="'+ix+'" style="color:var(--acc);font-size:14px;margin-right:4px">edit</button><button data-dd="'+ix+'">'+(f.dd===ix?'sure?':'✕')+'</button></div></div>'+(f.dedT===ix?dealFormHtml('dt',{c:x.code,v:x.vol,r:x.rate,ps:x.ps,op:x.op}):'')}).join('');
+  $('dealsToday').innerHTML=dl.map(function(x,ix){return'<div class="exrow"><span><b>'+esc(x.code)+'</b> '+x.vol+' '+x.op+' '+x.rate+' ('+x.ps+') = '+fmt2(x.inr)+(fl[ix]?'<div class="flag warn" style="margin:2px 0 0">'+esc(fl[ix])+'</div>':'')+'</span><div style="flex:none;white-space:nowrap"><button data-de="'+ix+'" style="color:var(--acc);font-size:14px;margin-right:4px">edit</button><button data-dd="'+ix+'">'+(f.dd===ix?'sure?':'✕')+'</button></div></div>'+(f.dedT===ix?dealFormHtml('dt',{c:x.code,v:x.vol,r:x.rate,ps:x.ps,op:x.op}):'')}).join('');
   var dp=dealsProfit(dl),h='';
   batchStats(dl).forEach(function(b){h+='<div class="flag '+(b.bad?'warn':'okf')+'">Message '+b.i+': purchases '+fmt2(b.p)+' · sales '+fmt2(b.s)+(b.bad?' — differ by '+fmt2(Math.abs(b.diff))+' (stock kept with Crown?)':' — balanced')+'</div>'});
   h+='<div class="mute">Deals profit (sales − purchases, INR): <b>'+signed(dp.profit)+'</b> · '+profitMsg(dp.profit)+'</div>';
