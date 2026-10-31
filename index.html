@@ -370,7 +370,7 @@ input[type=date]{width:100%;font-size:16px;padding:9px;border:1px solid var(--li
 <script>
 (function(){
 var DEFAULT_CODES=[];
-var APP_VERSION='2026-10-31.2';
+var APP_VERSION='2026-10-31.3';
 var NARRS=ls('cashentry.narrs')||[];
 var EXPCODE=ls('cashentry.expcode')||'SHOP-EXP';
 var BIZ=ls('cashentry.biz')||'';
@@ -1103,6 +1103,8 @@ function renderCrown(){
   h='<div class="two"><div class="bcard" style="margin:0"><div class="mute">NET AED VOLUME HELD ('+esc(c.code)+') · LIVE</div><div class="bigbal" style="font-size:24px">'+signed(ex.net)+'</div></div><div class="bcard" style="margin:0"><div class="mute">Opening '+signed(ex.open)+'</div><div class="mute"><span class="ii">+ '+fmt2(ex.p)+'</span> bought · <span class="oo">− '+fmt2(ex.s)+'</span> sold</div></div></div>';
   if(ex.n>c.n)h+='<div class="mute" style="margin-top:6px">Includes today\'s sheet, not posted yet ('+(ex.n-c.n)+' deal'+(ex.n-c.n>1?'s':'')+', '+(dif>0?'+':'')+signed(dif)+'). Posted ledger only: '+signed(c.net)+'</div>';
   var cv=crownView(),per=cv.per;
+  h+='<div style="margin-top:10px"><button class="btn sec" id="cwToggle">'+(f.cwOpen?'Hide AED statement':'Show AED statement ('+cv.rows.length+' deal'+(cv.rows.length===1?'':'s')+')')+'</button></div>';
+  if(!f.cwOpen){$('crownBody').innerHTML=h;return}
   function pc(k,l){return'<button class="chip'+(per===k?' on':'')+'" data-cw="'+k+'">'+l+'</button>'}
   h+='<div class="chips" style="margin:10px 0 4px">'+pc('all','All')+pc('month','This month')+pc('30','Last 30 days')+'</div>';
   var show=f.cwAll?cv.rows:cv.rows.slice(-12),cut=cv.rows.length-show.length;
@@ -1117,6 +1119,7 @@ function renderCrown(){
 }
 $('crownBody').onclick=function(e){
   var t=e.target,k=t.getAttribute&&t.getAttribute('data-cw');
+  if(t.id==='cwToggle'){f.cwOpen=!f.cwOpen;renderCrown();return}
   if(k){f.cwPer=k;f.cwAll=false;renderCrown();return}
   if(t.id==='cwMore'){f.cwAll=true;renderCrown();return}
   if(t.id==='cwSend')sendCrownImage();
