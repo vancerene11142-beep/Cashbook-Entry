@@ -370,7 +370,7 @@ input[type=date]{width:100%;font-size:16px;padding:9px;border:1px solid var(--li
 <script>
 (function(){
 var DEFAULT_CODES=[];
-var APP_VERSION='2026-10-31.3';
+var APP_VERSION='2026-11-02.1';
 var NARRS=ls('cashentry.narrs')||[];
 var EXPCODE=ls('cashentry.expcode')||'SHOP-EXP';
 var BIZ=ls('cashentry.biz')||'';
@@ -1653,7 +1653,7 @@ function monthSummary(m){
   var pre=m?m+'-':'',end=m?m+'-31':'9999-12-31',dp=0,cm=0,ex=0;
   events().forEach(function(e){
     if(m&&e.d.slice(0,8)!==pre)return;
-    if(e.k===0)dp+=e.o-e.i;
+    if(e.k===0){dp+=e.o-e.i;if(L.commCode&&e.c===L.commCode)cm+=e.i-e.o;if(typeOf(e.c)==='Expense')ex+=e.o-e.i}   // a deal booked on COMMISSION or an Expense account: its INR also counts as commission / expense, so the books still tally
     else{cm+=e.cr-e.ci;if(L.commCode&&e.c===L.commCode)cm+=e.i-e.o;if(typeOf(e.c)==='Expense')ex+=e.o-e.i}
   });
   L.wait.forEach(function(w){if(!m||String(w.d).slice(0,8)===pre)cm+=(w.cr||0)-(w.ci||0)});
