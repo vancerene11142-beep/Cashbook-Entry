@@ -370,7 +370,7 @@ input[type=date]{width:100%;font-size:16px;padding:9px;border:1px solid var(--li
 <script>
 (function(){
 var DEFAULT_CODES=[];
-var APP_VERSION='2026-11-02.1';
+var APP_VERSION='2026-11-02.3';
 var NARRS=ls('cashentry.narrs')||[];
 var EXPCODE=ls('cashentry.expcode')||'SHOP-EXP';
 var BIZ=ls('cashentry.biz')||'';
@@ -947,7 +947,7 @@ $('recvRep').onclick=function(){
 
 
 // ===== permanent ledger (stored in IndexedDB) =====
-var L=null,CACHE=null,dbH=null,dbTried=false;
+var L=null,CACHE=null,dbH=null,dbTried=false,ARCH_END='';
 function lateS(e){return e.os!=null?e.os:1e9+e.s}
 function newLedger(){return{v:1,types:{},reserve:'RESERVE',crown:{code:'CROWN',open:0},ob:null,days:[],late:[],wait:[],commCode:'COMM',seq:1,chg:0,bak:0}}
 function fixLedger(x){x=x||newLedger();x.days=x.days||[];x.late=x.late||[];x.wait=x.wait||[];x.seq=x.seq||1;x.commCode=x.commCode==null?'COMM':x.commCode;x.crown=x.crown||{code:'CROWN',open:0};x.types=x.types||{};x.reserve=x.reserve||'RESERVE';x.chg=x.chg||0;x.bak=x.bak||0;x.ob=x.ob||null;return x}
@@ -987,10 +987,11 @@ function events(){
   var ev=[],ob=L.ob?L.ob.date:'';
   L.days.forEach(function(d){
     if(ob&&d.date<ob)return;
+    if(ARCH_END&&d.date>=ARCH_END)return;
     (d.deals||[]).forEach(function(x){ev.push({d:d.date,k:0,s:x.s,c:x.c,n:dealNarr(x),o:x.ps==='S'?x.inr:0,i:x.ps==='P'?x.inr:0,cr:0,ci:0})});
     (d.ent||[]).forEach(function(e){ev.push({d:d.date,k:1,s:e.s,c:e.c,n:e.n,o:e.o,i:e.i,cr:e.cr,ci:e.ci})});
   });
-  L.late.forEach(function(e){if(ob&&e.d<ob)return;ev.push({d:e.d,k:1,s:lateS(e),c:e.c,n:e.n,o:e.o,i:e.i,cr:e.cr,ci:e.ci})});
+  L.late.forEach(function(e){if(ob&&e.d<ob)return;if(ARCH_END&&e.d>=ARCH_END)return;ev.push({d:e.d,k:1,s:lateS(e),c:e.c,n:e.n,o:e.o,i:e.i,cr:e.cr,ci:e.ci})});
   return(CACHE=ev);
 }
 // net = IN minus OUT.  negative = they owe us (OUT), positive = we owe them (IN)
@@ -1020,7 +1021,21 @@ function pendingEv(){
   rows().forEach(function(e,ix){if(e.code)ev.push({d:d,k:1,s:2e9+ix,c:e.code,n:e.narr,o:e.out||0,i:e.inn||0,cr:e.cr||0,ci:e.ci||0,p:1})});
   return ev;
 }
+// statements for months before the current opening-balance date use the archived opening balances (L.obHist)
+function archFor(from){
+  if(!L||!L.ob||!L.obHist||!L.obHist.length||!from||from>=L.ob.date)return null;
+  var best=null;L.obHist.forEach(function(h){if(h.date<=from&&(!best||h.date>best.date))best=h});return best;
+}
 function statement(code,from,to,incl){
+  if(!ARCH_END){
+    var A=archFor(from);
+    if(A){
+      var cur=L.ob,end=cur.date,t2=(!to||to>=end)?addDay(end,-1):to,res;
+      L.ob=A;ARCH_END=end;CACHE=null;
+      try{res=statement(code,from,t2,false)}finally{L.ob=cur;ARCH_END='';CACHE=null}
+      return res;
+    }
+  }
   var cc=L.commCode,list=[],ob=0,obr=null,cm=0,npend=0;
   if(L.ob&&L.ob.rows[code]){obr=L.ob.rows[code];ob=(obr[1]||0)-(obr[0]||0)}
   var evs=events();if(incl&&(!to||to>=(S.date||today())))evs=evs.concat(pendingEv());
@@ -1248,6 +1263,7 @@ function renderOb(){
   var cur=$('obCur');
   if(L.ob){var o=0,i=0,n=0;Object.keys(L.ob.rows).forEach(function(k){o+=L.ob.rows[k][0]||0;i+=L.ob.rows[k][1]||0;n++});cur.textContent='Saved: '+n+' accounts, balances start '+fd(L.ob.date)+', OUT '+fmt2(o)+' · IN '+fmt2(i)+'.'}
   else cur.textContent='Nothing saved yet.';
+  if(L.ob&&L.obHist&&L.obHist.length)cur.textContent+=' Earlier months are kept automatically (from '+fd(L.obHist.map(function(h){return h.date}).sort()[0])+') so their statements can still be sent.';
   if(!$('obDate').value)$('obDate').value=L.ob?L.ob.date:'';
   if(document.activeElement!==$('commCode'))$('commCode').value=L.commCode||'';
   if(document.activeElement!==$('crownCode'))$('crownCode').value=(L.crown||{}).code||'CROWN';
@@ -2030,12 +2046,13 @@ $('obSave').onclick=function(){
   if(L.ob&&f.obc!==1){f.obc=1;b.textContent='Replace the saved balances? Tap again';clearTimeout(f.obt);f.obt=setTimeout(function(){f.obc=null;b.textContent='Save opening balances'},4000);return}
   f.obc=null;
   snapshot('before saving opening balances');
-  var old=L.ob,rows={},added=0;
+  var old=L.ob,oldH=L.obHist,rows={},added=0;
+  if(old&&old.date!==date){L.obHist=(L.obHist||[]).filter(function(h){return h.date!==old.date}).concat([{date:old.date,rows:old.rows}])}
   obP.rows.forEach(function(r){rows[r.code]=[r.o,r.i];if(codes.indexOf(r.code)<0){codes.push(r.code);added++}});
   codes.sort();ls(CKEY,codes);$('codesBox').value=codes.join('\n');
   L.ob={date:date,rows:rows};
   var oldT=L.types;L.types=Object.assign({},L.types||{});obP.rows.forEach(function(r){var ty=normType(r.t);if(ty)L.types[r.code]=ty});
-  ldSave(function(ok){if(!ok){L.ob=old;L.types=oldT}else{$('obText').value='';obP=null;$('obInfo').innerHTML='';$('obSave').disabled=true;toast('Saved '+Object.keys(rows).length+' balances'+(added?' · '+added+' codes added':''))}b.textContent='Save opening balances';renderLedger();all()});
+  ldSave(function(ok){if(!ok){L.ob=old;L.types=oldT;L.obHist=oldH}else{$('obText').value='';obP=null;$('obInfo').innerHTML='';$('obSave').disabled=true;toast('Saved '+Object.keys(rows).length+' balances'+(added?' · '+added+' codes added':''))}b.textContent='Save opening balances';renderLedger();all()});
 };
 $('obDate').onchange=function(){};
 $('crownCode').onchange=$('crownOpen').onchange=function(){
