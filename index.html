@@ -370,7 +370,7 @@ input[type=date]{width:100%;font-size:16px;padding:9px;border:1px solid var(--li
 <script>
 (function(){
 var DEFAULT_CODES=[];
-var APP_VERSION='2026-11-02.3';
+var APP_VERSION='2026-11-03.1';
 var NARRS=ls('cashentry.narrs')||[];
 var EXPCODE=ls('cashentry.expcode')||'SHOP-EXP';
 var BIZ=ls('cashentry.biz')||'';
@@ -1727,11 +1727,40 @@ function renderAccts(){
   L.wait.forEach(function(w){if(w.c)used[w.c]=1});
   $('acList').innerHTML=list.map(function(c){
     var ty=typeOf(c);
-    return'<div class="exrow"><span><b>'+esc(c)+'</b></span><select data-ac="'+esc(c)+'" style="font-size:15px;padding:6px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink)"><option value="">—</option>'+TYPES.map(function(t){return'<option'+(t===ty?' selected':'')+'>'+t+'</option>'}).join('')+'</select>'+(used[c]?'':'<button class="act" style="border:0;background:none;color:var(--bad);font-size:13px" data-rm="'+esc(c)+'">'+(f.rm===c?'sure? tap again':'remove')+'</button>')+'</div>';
+    return'<div class="exrow"><span><b>'+esc(c)+'</b></span><select data-ac="'+esc(c)+'" style="font-size:15px;padding:6px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink)"><option value="">—</option>'+TYPES.map(function(t){return'<option'+(t===ty?' selected':'')+'>'+t+'</option>'}).join('')+'</select>'+'<button class="act" style="border:0;background:none;color:var(--acc);font-size:13px" data-rn="'+esc(c)+'">rename</button>'+(used[c]?'':'<button class="act" style="border:0;background:none;color:var(--bad);font-size:13px" data-rm="'+esc(c)+'">'+(f.rm===c?'sure? tap again':'remove')+'</button>')+'</div>';
   }).join('')+(acctList().length>80&&!q?'<div class="mute">Showing 80 — type to find others.</div>':'');
 }
 $('acQ').oninput=renderAccts;
+// rename an account code everywhere (today's sheet, posted ledger, opening balances, types, special codes)
+function renameCode(oldC,newC,done){
+  newC=String(newC||'').trim().toUpperCase();
+  if(!newC||newC===oldC){done(false,'No change');return}
+  if(/[*?~]/.test(newC)){done(false,'The name cannot contain * ? or ~');return}
+  var exists=codes.indexOf(newC)>=0||(L&&((L.ob&&L.ob.rows[newC])||(L.types&&L.types[newC])||acctList().indexOf(newC)>=0));
+  if(exists){done(false,newC+' already exists. Rename to a name that is not in use.');return}
+  snapshot('before renaming '+oldC);
+  var n=0;
+  function fix(o,k){if(o&&o[k]===oldC){o[k]=newC;n++}}
+  codes=codes.map(function(x){return x===oldC?newC:x});codes.sort();ls(CKEY,codes);$('codesBox').value=codes.join('\n');
+  if(use[oldC]!=null){use[newC]=(use[newC]||0)+use[oldC];delete use[oldC];ls(UKEY,use)}
+  (S.entries||[]).forEach(function(e){fix(e,'code')});(S.deals||[]).forEach(function(x){fix(x,'code')});
+  if(EXPCODE===oldC){EXPCODE=newC;ls('cashentry.expcode',EXPCODE)}
+  Object.keys(D.ov||{}).forEach(function(k){var o=D.ov[k];if(o&&typeof o==='object')Object.keys(o).forEach(function(q){if(o[q]===oldC)o[q]=newC})});dsave();
+  save();
+  if(L){
+    L.days.forEach(function(d){(d.ent||[]).forEach(function(e){fix(e,'c')});(d.deals||[]).forEach(function(x){fix(x,'c')})});
+    (L.late||[]).forEach(function(e){fix(e,'c')});(L.wait||[]).forEach(function(e){fix(e,'c')});
+    function rk(o){if(o&&o[oldC]!==undefined){o[newC]=o[oldC];delete o[oldC];n++}}
+    if(L.ob)rk(L.ob.rows);(L.obHist||[]).forEach(function(h){rk(h.rows)});rk(L.types);
+    if(L.commCode===oldC)L.commCode=newC;if(L.reserve===oldC)L.reserve=newC;if(L.crown&&L.crown.code===oldC)L.crown.code=newC;
+    if(f.stCode===oldC){f.stCode=newC;$('stIn').value=newC}
+  }
+  if(L)ldSave(function(){all();renderLedger();done(true,oldC+' is now '+newC+' ('+n+' places updated)')});
+  else{all();done(true,oldC+' is now '+newC)}
+}
 $('acList').onclick=function(e){
+  var rn=e.target.getAttribute&&e.target.getAttribute('data-rn');
+  if(rn&&L){var nn=window.prompt('New name for '+rn+' (it changes everywhere: today, the ledger, opening balances)',rn);if(nn===null)return;renameCode(rn,nn,function(ok,msg){toast(msg)});return}
   var c=e.target.getAttribute&&e.target.getAttribute('data-rm');if(!c||!L)return;
   if(f.rm!==c){f.rm=c;renderAccts();clearTimeout(f.rmt);f.rmt=setTimeout(function(){f.rm=null;renderAccts()},4000);return}
   f.rm=null;
