@@ -370,7 +370,7 @@ input[type=date]{width:100%;font-size:16px;padding:9px;border:1px solid var(--li
 <script>
 (function(){
 var DEFAULT_CODES=[];
-var APP_VERSION='2026-11-04.1';
+var APP_VERSION='2026-11-04.2';
 var NARRS=ls('cashentry.narrs')||[];
 var EXPCODE=ls('cashentry.expcode')||'SHOP-EXP';
 var BIZ=ls('cashentry.biz')||'';
@@ -1222,6 +1222,7 @@ function renderStatement(){
   });
   if(!s.rows.length)h+='<tr><td colspan="5" class="mute">No entries in this period.</td></tr>';
   h+='</table><div style="margin-top:10px"><button class="btn" id="stSend">Send statement (image)</button></div>';
+  if(s.rows.length)h+='<div style="margin-top:8px"><button class="btn sec" id="stCopy">Copy these rows (for the BKR sub-account tool)</button></div>';
   out.innerHTML=h;
 }
 function renderBalList(){
@@ -1494,6 +1495,12 @@ function waitCanvases(){
 function sendWait(){
   if(!waitItems().length){toast('Nothing is waiting for a code');return}
   shareImages(waitCanvases(),'waiting-entries-'+today(),'Entries waiting for account code','Waiting entries');
+}
+function copyStatementRows(){
+  var code=f.stCode;if(!code||!L)return;
+  var rg=perRange(),s=statement(code,rg[0],rg[1],pendCount(code)>0&&f.stPend!==false);
+  var clean=function(x){return String(x==null?'':x).replace(/[\t\r\n]+/g,' ').trim()};
+  copyText(s.rows.map(function(r){return[fd(r.d),clean(r.n),r.o?plain(r.o):'',r.i?plain(r.i):''].join('\t')}).join('\n'),s.rows.length+' rows copied ('+perLabel(rg)+')');
 }
 function sendStatement(){
   var code=f.stCode;if(!code||!L)return;
@@ -1789,6 +1796,7 @@ $('stOut').onclick=function(e){
   if(t.id==='stMore'){f.stAll=true;renderStatement()}
   else if(t.id==='stPend'){f.stPend=f.stPend===false;renderStatement()}
   else if(t.id==='stSend')sendStatement();
+  else if(t.id==='stCopy')copyStatementRows();
   else if(t.getAttribute&&t.getAttribute('data-per')){f.per=t.getAttribute('data-per');f.stAll=false;renderStatement()}
 };
 $('stOut').onchange=function(e){var t=e.target;if(t.id==='pf'){f.pf=t.value;renderStatement()}else if(t.id==='pt'){f.pt=t.value;renderStatement()}};
