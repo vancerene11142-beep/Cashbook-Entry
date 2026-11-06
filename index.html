@@ -370,7 +370,7 @@ input[type=date]{width:100%;font-size:16px;padding:9px;border:1px solid var(--li
 <script>
 (function(){
 var DEFAULT_CODES=[];
-var APP_VERSION='2026-11-04.3';
+var APP_VERSION='2026-11-06.1';
 var NARRS=ls('cashentry.narrs')||[];
 var EXPCODE=ls('cashentry.expcode')||'SHOP-EXP';
 var BIZ=ls('cashentry.biz')||'';
@@ -1665,6 +1665,15 @@ function normType(t){t=String(t||'').trim().toLowerCase();for(var i=0;i<TYPES.le
 function typeOf(c){return(L&&L.types&&L.types[c])||''}
 function lastDayOf(m){var p=m.split('-'),d=new Date(+p[0],+p[1],0);return m+'-'+z2(d.getDate())}
 function monthSummary(m){
+  if(m&&!ARCH_END){   // an earlier month: use the opening balances saved when the current ones replaced them
+    var A=archFor(m+'-01');
+    if(A){
+      var cur=L.ob,end=cur.date,res;
+      L.ob=A;ARCH_END=end;CACHE=null;
+      try{res=monthSummary(m)}finally{L.ob=cur;ARCH_END='';CACHE=null}
+      return res;
+    }
+  }
   var pre=m?m+'-':'',end=m?m+'-31':'9999-12-31',dp=0,cm=0,ex=0;
   events().forEach(function(e){
     if(m&&e.d.slice(0,8)!==pre)return;
@@ -1683,6 +1692,10 @@ function renderMonth(){
   var m=$('monthIn').value,box=$('monthBody');
   if(!m){box.innerHTML='';return}
   var r=monthSummary(m);
+  if(L.ob&&L.ob.date&&m+'-01'<L.ob.date&&!archFor(m+'-01')){
+    box.innerHTML='<div class="flag warn">This month is before your current opening balances ('+fd(L.ob.date)+') and no earlier opening balances were kept, so its profit and expenses cannot be worked out here. Load that month\'s workbook (Load workbook) to see it.</div>';
+    return;
+  }
   function row(l,v,cls){return'<tr><td>'+l+'</td><td class="n '+(cls||'')+'">'+v+'</td></tr>'}
   box.innerHTML='<table class="stmt">'
     +row('Cash in hand'+(r.cashDate?' (closing, '+fd(r.cashDate)+')':''),r.cash==null?'—':fmt2(r.cash))
