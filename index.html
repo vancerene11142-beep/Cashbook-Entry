@@ -370,7 +370,7 @@ input[type=date]{width:100%;font-size:16px;padding:9px;border:1px solid var(--li
 <script>
 (function(){
 var DEFAULT_CODES=[];
-var APP_VERSION='2026-11-06.1';
+var APP_VERSION='2026-11-06.2';
 var NARRS=ls('cashentry.narrs')||[];
 var EXPCODE=ls('cashentry.expcode')||'SHOP-EXP';
 var BIZ=ls('cashentry.biz')||'';
@@ -1664,23 +1664,26 @@ var TYPES=['Customer','Correspondent','Internal','Expense'];
 function normType(t){t=String(t||'').trim().toLowerCase();for(var i=0;i<TYPES.length;i++)if(TYPES[i].toLowerCase()===t)return TYPES[i];return''}
 function typeOf(c){return(L&&L.types&&L.types[c])||''}
 function lastDayOf(m){var p=m.split('-'),d=new Date(+p[0],+p[1],0);return m+'-'+z2(d.getDate())}
+// a month that starts before the current opening-balance date is worked out in two parts:
+// days before that date from the saved older opening balances, days from that date on from the current books
 function monthSummary(m){
-  if(m&&!ARCH_END){   // an earlier month: use the opening balances saved when the current ones replaced them
-    var A=archFor(m+'-01');
-    if(A){
-      var cur=L.ob,end=cur.date,res;
-      L.ob=A;ARCH_END=end;CACHE=null;
-      try{res=monthSummary(m)}finally{L.ob=cur;ARCH_END='';CACHE=null}
-      return res;
-    }
-  }
+  var A=(m&&!ARCH_END)?archFor(m+'-01'):null;
+  if(!A)return monthCore(m,false);
+  var cur=L.ob,end=cur.date,both=lastDayOf(m)>=end,a;
+  L.ob=A;ARCH_END=end;CACHE=null;
+  try{a=monthCore(m,both)}finally{L.ob=cur;ARCH_END='';CACHE=null}
+  if(!both)return a;
+  var b=monthCore(m,false),net=r2(a.dp+b.dp+a.cm+b.cm-a.ex-b.ex);
+  return{dp:r2(a.dp+b.dp),cm:r2(a.cm+b.cm),ex:r2(a.ex+b.ex),net:net,res:b.res,sug:r2(b.res+net),cash:b.cash,cashDate:b.cashDate,bal:b.bal};
+}
+function monthCore(m,skipWait){
   var pre=m?m+'-':'',end=m?m+'-31':'9999-12-31',dp=0,cm=0,ex=0;
   events().forEach(function(e){
     if(m&&e.d.slice(0,8)!==pre)return;
     if(e.k===0){dp+=e.o-e.i;if(L.commCode&&e.c===L.commCode)cm+=e.i-e.o;if(typeOf(e.c)==='Expense')ex+=e.o-e.i}   // a deal booked on COMMISSION or an Expense account: its INR also counts as commission / expense, so the books still tally
     else{cm+=e.cr-e.ci;if(L.commCode&&e.c===L.commCode)cm+=e.i-e.o;if(typeOf(e.c)==='Expense')ex+=e.o-e.i}
   });
-  L.wait.forEach(function(w){if(!m||String(w.d).slice(0,8)===pre)cm+=(w.cr||0)-(w.ci||0)});
+  if(!skipWait)L.wait.forEach(function(w){if(!m||String(w.d).slice(0,8)===pre)cm+=(w.cr||0)-(w.ci||0)});
   var net=r2(dp+cm-ex),bal=balances(end),res=bal[L.reserve||'RESERVE']||0,last=null;
   L.days.forEach(function(d){if(d.date<=end&&(!last||d.date>last.date))last=d});
   return{dp:r2(dp),cm:r2(cm),ex:r2(ex),net:net,res:res,sug:r2(res+net),cash:last?last.close:null,cashDate:last?last.date:'',bal:bal};
@@ -1705,6 +1708,7 @@ function renderMonth(){
     +'<tr class="tot"><td>NET PROFIT FOR THE MONTH</td><td class="n '+(r.net<0?'oo':'ii')+'">'+signed(r.net)+'</td></tr>'
     +row('Current RESERVE balance',signed(r.res))
     +'<tr class="tot"><td>Suggested new RESERVE</td><td class="n">'+signed(r.sug)+'</td></tr></table>'
+    +((!r.dp&&!r.cm&&!r.ex&&L.days.some(function(d){return d.date.slice(0,7)===m}))?'<div class="flag warn" style="margin-top:8px">'+L.days.filter(function(d){return d.date.slice(0,7)===m}).length+' day(s) of this month are saved but nothing was counted. Opening balances are dated '+(L.ob?fd(L.ob.date):'—')+(L.obHist&&L.obHist.length?' (earlier ones kept: '+L.obHist.map(function(h){return fd(h.date)}).join(', ')+')':' (no earlier ones kept)')+'. Days before the opening-balance date are not counted.</div>':'')
     +'<div class="mute" style="margin-top:6px">Same rules as the Excel Monthly Summary. Commission profit = commission received minus issued, plus cash IN minus cash OUT on the commission account. Expenses are accounts of type Expense'+(Object.keys(L.types||{}).length?'':' — <b>no account types loaded yet</b> (paste the Chart of Accounts under Opening balances, or set types under Accounts and types)')+'.</div>';
 }
 $('monthIn').onchange=renderMonth;
