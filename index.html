@@ -94,6 +94,46 @@ input[type=date]{width:100%;font-size:16px;padding:9px;border:1px solid var(--li
 .bnav button i{font-style:normal;font-size:20px;line-height:1.1}
 .bnav button.on{color:var(--acc)}
 .pill{display:inline-block;border:1px solid var(--line);background:var(--bg);border-radius:999px;padding:7px 12px;font-size:14px;color:var(--acc);font-weight:600}
+
+/* ---- polish v45 ---- */
+td.n,th.n{white-space:nowrap}
+.fx{white-space:nowrap;margin-left:8px}
+.fh h2{min-width:0}
+
+:root{--bg:#f2f4f8;--line:#e4e8ef;--sh:0 1px 2px rgba(20,30,60,.05),0 6px 18px rgba(20,30,60,.06)}
+@media(prefers-color-scheme:dark){:root{--bg:#0f1317;--sh:0 1px 2px rgba(0,0,0,.4)}}
+body{font-size:16px}
+.top{box-shadow:0 1px 0 var(--line),0 6px 16px rgba(20,30,60,.05);padding:10px 14px 8px}
+.bal b{font-size:28px;letter-spacing:-.01em;font-variant-numeric:tabular-nums}
+.sub{font-size:12.5px;gap:12px}
+.card{border-radius:18px;box-shadow:var(--sh);border-color:transparent;padding:14px;margin:12px 0}
+h2{font-size:12.5px;letter-spacing:.09em;margin:0}
+.fb{margin-top:10px}
+.fh{display:flex;align-items:center;justify-content:space-between;cursor:pointer;min-height:26px}
+.fx{font-size:12.5px;color:var(--acc);font-weight:600;padding:4px 2px}
+.card.folded .fb{display:none}
+.card.folded .fh h2:after{content:"";}
+input[type=text],input[type=number],input[type=search],textarea{border-radius:12px;padding:11px 12px;border-color:transparent;background:var(--bg)}
+input:focus,textarea:focus{outline:2px solid var(--acc);outline-offset:-1px;background:var(--card)}
+.btn{border-radius:14px;box-shadow:0 2px 8px rgba(31,79,216,.25)}
+.btn.sec{box-shadow:none;background:var(--bg);border-color:transparent}
+.side{padding:13px;font-size:18px;border-radius:14px;border-width:0;background:var(--bg)}
+.chip{border-color:transparent;font-size:13.5px;padding:7px 12px}
+#commBox>summary{font-size:13.5px;color:var(--acc);font-weight:600;padding:6px 0}
+#commBox[open]>summary{margin-bottom:6px}
+#dayTable table{border-collapse:separate;border-spacing:0}
+#dayTable td{padding:9px 4px;border-bottom:1px solid var(--line)}
+#dayTable th{padding:4px}
+.act{white-space:nowrap}
+.act button{background:var(--bg);border-radius:8px;padding:5px 9px;margin:1px 0;display:inline-block}
+tr.flash td{animation:fl 1.8s ease-out}
+@keyframes fl{0%,40%{background:rgba(31,79,216,.22)}100%{background:transparent}}
+.tot td{border-top:2px solid var(--ink);font-size:14px}
+#qbox{font-size:17px;font-family:inherit;min-height:54px}
+#qprev .flag{border-radius:12px;padding:8px 10px}
+.bnav{box-shadow:0 -4px 18px rgba(20,30,60,.08);border-top-color:transparent}
+.bnav button{padding:9px 2px 10px}
+.bnav button.on i{transform:translateY(-1px)}
 </style>
 </head>
 <body>
@@ -117,15 +157,16 @@ input[type=date]{width:100%;font-size:16px;padding:9px;border:1px solid var(--li
 </div>
 
 <div class="card" id="quickCard">
-  <h2>Quick add</h2>
+  <div class="fh" data-fold="quick"><h2>Quick add</h2><span class="fx">▾</span></div><div class="fb">
   <div class="mute">Type or dictate (keyboard mic): <b>BKR Ramesh OUT 50,000</b>. One entry per line.</div>
   <textarea id="qbox" rows="2" autocomplete="off" autocorrect="off" spellcheck="false" placeholder="CODE narration OUT/IN amount" style="width:100%;margin-top:6px;font:inherit;padding:8px;box-sizing:border-box;border-radius:8px"></textarea>
   <div id="qprev"></div>
   <div style="margin-top:8px;display:none" id="qgo"><button class="btn" id="qadd">Add</button></div>
 </div>
+</div>
 
 <div class="card" id="entryCard">
-  <h2 id="entryTitle">New entry</h2>
+  <div class="fh" data-fold="entry"><h2 id="entryTitle">New entry</h2><span class="fx">▾</span></div><div class="fb">
   <input id="code" type="search" autocapitalize="characters" autocomplete="off" autocorrect="off" spellcheck="false" placeholder="Account code (blank = unconfirmed)">
   <div class="chips" id="codeSug" style="margin:6px 0 0"></div>
   <div id="codeFlag"></div>
@@ -140,15 +181,17 @@ input[type=date]{width:100%;font-size:16px;padding:9px;border:1px solid var(--li
   </div>
   <input id="amt" type="number" inputmode="decimal" placeholder="Amount">
 
-  <div class="mute" style="margin-top:10px">Commission on the same row (optional)</div>
+  <details id="commBox" style="margin-top:6px"><summary>+ Commission on the same row (optional)</summary>
   <div class="two" style="margin-top:4px">
     <input id="comm" type="number" inputmode="decimal" placeholder="Commission">
     <div class="sides small" style="margin:0"><button class="side" id="cR">R (receive)</button><button class="side" id="cI">I (issue)</button></div>
   </div>
 
+  </details>
   <div id="entryFlag"></div>
   <div style="margin-top:10px"><button class="btn" id="add">Add entry</button></div>
   <div style="margin-top:8px;display:none" id="cancelRow"><button class="btn sec" id="cancelEdit">Cancel edit</button></div>
+</div>
 </div>
 
 <div class="card" id="dayCard">
@@ -159,7 +202,7 @@ input[type=date]{width:100%;font-size:16px;padding:9px;border:1px solid var(--li
 </div>
 
 <div class="card" id="expCard">
-  <h2>Small expenses <span id="expCodeLbl"></span></h2>
+  <div class="fh" data-fold="exp"><h2>Small expenses <span id="expCodeLbl"></span></h2><span class="fx">▾</span></div><div class="fb">
   <div class="two"><input id="exLabel" type="text" placeholder="TEA, AUTO…" autocapitalize="characters" autocomplete="off" style="text-transform:uppercase"><input id="exAmt" type="number" inputmode="decimal" placeholder="Amount"></div>
   <div class="chips" id="exChips"></div>
   <div style="margin-top:6px"><button class="btn sec" id="exAdd">Add expense line</button></div>
@@ -167,6 +210,7 @@ input[type=date]{width:100%;font-size:16px;padding:9px;border:1px solid var(--li
   <div class="mute" id="exNote"></div>
   <div style="margin-top:6px"><button class="btn sec" id="exCopy">Copy expense breakdown</button></div>
   <div class="mute" style="margin-top:6px">Tick “own row” on a line to send it as its own row. For rent, EB and other bigger expenses use the entry form above. DAILY BANK is a normal entry above — tap its chip.</div>
+</div>
 </div>
 
 
@@ -378,7 +422,7 @@ input[type=date]{width:100%;font-size:16px;padding:9px;border:1px solid var(--li
 <script>
 (function(){
 var DEFAULT_CODES=[];
-var APP_VERSION='2026-11-07.1';
+var APP_VERSION='2026-11-08.1';
 var NARRS=ls('cashentry.narrs')||[];
 var EXPCODE=ls('cashentry.expcode')||'SHOP-EXP';
 var BIZ=ls('cashentry.biz')||'';
@@ -529,9 +573,29 @@ $('sOut').onclick=function(){f.side='out';f.dupOK=null;renderForm()};
 $('sIn').onclick=function(){f.side='in';f.dupOK=null;renderForm()};
 $('cR').onclick=function(){f.cs=f.cs==='r'?null:'r';renderForm()};
 $('cI').onclick=function(){f.cs=f.cs==='i'?null:'i';renderForm()};
-$('cancelEdit').onclick=resetForm;
+$('cancelEdit').onclick=function(){resetForm();backToRow()};
 
 
+
+// ---- fold / hide cards, and "go back to where I was" ----
+var UI=ls('cashentry.ui')||{exp:1};
+function uiFold(k,fold){
+  var c=document.querySelector('[data-fold="'+k+'"]');if(!c)return;c=c.parentNode;
+  c.classList.toggle('folded',!!fold);UI[k]=fold?1:0;ls('cashentry.ui',UI);
+  var x=c.querySelector('.fx');if(x)x.textContent=fold?'Show ▸':'Hide ▾';
+}
+Array.prototype.forEach.call(document.querySelectorAll('[data-fold]'),function(h){
+  var k=h.getAttribute('data-fold');uiFold(k,!!UI[k]);
+  h.onclick=function(){uiFold(k,!h.parentNode.classList.contains('folded'))};
+});
+function backToRow(){
+  var r=f.ret;f.ret=null;if(!r)return;
+  setTimeout(function(){
+    window.scrollTo({top:r.y,behavior:'smooth'});
+    var b=document.querySelector('#dayTable [data-e="'+r.id+'"]'),tr=b&&b.closest('tr');
+    if(tr){tr.classList.add('flash');setTimeout(function(){tr.classList.remove('flash')},1800)}
+  },60);
+}
 // ---- quick add (typed / dictated line) ----
 var QR=[];
 function qAmt(t){
@@ -592,7 +656,7 @@ $('qadd').onclick=function(){
   $('qbox').value=keep.map(function(r){return r.raw}).join('\n');QR=keep;
   all();renderQuick();toast(n+(n>1?' entries added':' entry added'));
 };
-window.__q=parseQuick;
+window.__q=parseQuick;window.__f=f;
 $('add').onclick=function(){
   var code=$('code').value.trim().toUpperCase(),amt=num($('amt').value),cm=num($('comm').value),narr=$('narr').value.trim().toUpperCase();
   var flag=$('entryFlag');
@@ -607,16 +671,18 @@ $('add').onclick=function(){
   }
   if(f.editId){for(var i=0;i<S.entries.length;i++)if(S.entries[i].id===f.editId)S.entries[i]=e}
   else{S.entries.push(e);if(code)use[code]=(use[code]||0)+1;ls(UKEY,use)}
-  var was=f.editId;save();resetForm();all();toast(was?'Saved':'Added');
+  var was=f.editId;save();resetForm();all();toast(was?'Saved':'Added');if(was)backToRow();
 };
 
 $('dayTable').onclick=function(ev){
   var ed=ev.target.getAttribute&&ev.target.getAttribute('data-e'),dl=ev.target.getAttribute&&ev.target.getAttribute('data-d');
   if(ed){var e=S.entries.filter(function(x){return x.id===ed})[0];if(!e)return;
+    f.ret={y:window.scrollY,id:ed};uiFold('entry',false);
     f.editId=ed;$('code').value=e.code;$('narr').value=String(e.narr||'').toUpperCase();
     var a=e.out||e.inn;$('amt').value=a||'';f.side=e.out?'out':(e.inn?'in':null);
     var c=e.cr||e.ci;$('comm').value=c||'';f.cs=e.cr?'r':(e.ci?'i':null);
-    renderForm();window.scrollTo({top:0,behavior:'smooth'});}
+    if(c)$('commBox').open=true;
+    renderForm();window.scrollTo({top:Math.max(0,$('entryCard').getBoundingClientRect().top+window.scrollY-70),behavior:'smooth'});}
   if(dl&&f.delPending!==dl){f.delPending=dl;renderDay();clearTimeout(f.dp);f.dp=setTimeout(function(){f.delPending=null;renderDay()},4000);return}
   if(dl){f.delPending=null;clearTimeout(f.dp);for(var i=0;i<S.entries.length;i++)if(S.entries[i].id===dl){f.lastDel={e:S.entries[i],i:i};S.entries.splice(i,1);break}
     save();all();toast('Deleted — Undo is under the table');}
