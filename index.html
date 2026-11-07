@@ -116,6 +116,14 @@ input[type=date]{width:100%;font-size:16px;padding:9px;border:1px solid var(--li
   <div style="margin-top:8px"><button class="btn sec" id="openSet">Open settings</button></div>
 </div>
 
+<div class="card" id="quickCard">
+  <h2>Quick add</h2>
+  <div class="mute">Type or dictate (keyboard mic): <b>BKR Ramesh OUT 50,000</b>. One entry per line.</div>
+  <textarea id="qbox" rows="2" autocomplete="off" autocorrect="off" spellcheck="false" placeholder="CODE narration OUT/IN amount" style="width:100%;margin-top:6px;font:inherit;padding:8px;box-sizing:border-box;border-radius:8px"></textarea>
+  <div id="qprev"></div>
+  <div style="margin-top:8px;display:none" id="qgo"><button class="btn" id="qadd">Add</button></div>
+</div>
+
 <div class="card" id="entryCard">
   <h2 id="entryTitle">New entry</h2>
   <input id="code" type="search" autocapitalize="characters" autocomplete="off" autocorrect="off" spellcheck="false" placeholder="Account code (blank = unconfirmed)">
@@ -370,7 +378,7 @@ input[type=date]{width:100%;font-size:16px;padding:9px;border:1px solid var(--li
 <script>
 (function(){
 var DEFAULT_CODES=[];
-var APP_VERSION='2026-11-06.2';
+var APP_VERSION='2026-11-07.1';
 var NARRS=ls('cashentry.narrs')||[];
 var EXPCODE=ls('cashentry.expcode')||'SHOP-EXP';
 var BIZ=ls('cashentry.biz')||'';
@@ -523,6 +531,68 @@ $('cR').onclick=function(){f.cs=f.cs==='r'?null:'r';renderForm()};
 $('cI').onclick=function(){f.cs=f.cs==='i'?null:'i';renderForm()};
 $('cancelEdit').onclick=resetForm;
 
+
+// ---- quick add (typed / dictated line) ----
+var QR=[];
+function qAmt(t){
+  var m=String(t).toLowerCase().match(/^(\d[\d,]*(?:\.\d+)?|\.\d+)(k|l|lakh|lakhs|lac|lacs|cr|crore)?$/);if(!m)return null;
+  var n=parseFloat(m[1].replace(/,/g,''));if(isNaN(n))return null;
+  var u=m[2];if(u==='k')n*=1000;else if(u==='cr'||u==='crore')n*=10000000;else if(u)n*=100000;
+  return r2(n);
+}
+function parseQuick(text){
+  var OUTW={out:1,paid:1,pay:1,gave:1,give:1,sent:1,send:1,issued:1,issue:1},INW={'in':1,received:1,receive:1,got:1,collected:1,collect:1,recd:1,rcvd:1};
+  var NOISE={rs:1,'rs.':1,inr:1,rupees:1,rupee:1,'₹':1,amount:1,of:1};
+  return String(text||'').split(/\n/).map(function(l){return l.trim()}).filter(Boolean).map(function(line){
+    var tk=line.replace(/[₹,](?=\s|$)/g,function(m){return m==='₹'?' ':m}).replace(/(\d)\s+(k|lakhs?|lacs?|crore|cr)(?=\s|$)/gi,'$1$2').split(/\s+/),side=null,amt=null,code='',nar=[],ai=-1,i;
+    for(i=tk.length-1;i>=0;i--){var a=qAmt(tk[i]);if(a!==null){amt=a;ai=i;break}}
+    for(i=0;i<tk.length;i++){
+      if(i===ai)continue;var w=tk[i],lw=w.toLowerCase().replace(/[.:;]+$/,'');
+      if(OUTW[lw]){side='out';continue}
+      if(INW[lw]){side='in';continue}
+      if(NOISE[lw])continue;
+      var u=w.toUpperCase().replace(/[.:;]+$/,'');
+      if(!code&&codes.indexOf(u)>=0){code=u;continue}
+      nar.push(u);
+    }
+    return{raw:line,code:code,narr:nar.join(' '),side:side,amt:amt};
+  });
+}
+function qDup(r){return r.amt&&r.side&&S.entries.some(function(x){return x.code===r.code&&(r.side==='out'?x.out===r.amt:x.inn===r.amt)&&(x.narr||'')===r.narr})}
+function renderQuick(){
+  var h='',ok=0;
+  QR.forEach(function(r,i){
+    var bad=!r.amt,miss=!r.side;
+    h+='<div class="flag '+(bad?'bad':(r.code?'':'warn'))+'" style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">'
+     +'<span style="flex:1;min-width:150px"><b>'+(r.code?esc(r.code):'NO CODE (waits)')+'</b> · '+esc(r.narr||'—')+' · <b>'+(r.amt?fmt(r.amt):'no amount')+'</b>'+(qDup(r)?' <i>(same already entered)</i>':'')+'</span>';
+    if(miss&&!bad)h+='<button class="btn sec" data-qs="out" data-qi="'+i+'" style="width:auto;padding:4px 10px">OUT</button><button class="btn sec" data-qs="in" data-qi="'+i+'" style="width:auto;padding:4px 10px">IN</button>';
+    else if(!bad)h+='<b style="color:'+(r.side==='out'?'var(--out,#c0392b)':'var(--in,#1e8449)')+'">'+r.side.toUpperCase()+'</b>';
+    h+='<button class="btn sec" data-qx="'+i+'" style="width:auto;padding:4px 10px" aria-label="Remove">✕</button></div>';
+    if(!bad&&!miss)ok++;
+  });
+  $('qprev').innerHTML=h;
+  $('qgo').style.display=QR.length?'block':'none';
+  $('qadd').textContent=ok===QR.length?('Add '+(QR.length>1?QR.length+' entries':'entry')):('Add '+ok+' ready, '+(QR.length-ok)+' need a fix');
+  $('qadd').disabled=!ok;
+}
+$('qbox').oninput=function(){QR=parseQuick(this.value);renderQuick()};
+$('qprev').onclick=function(e){
+  var t=e.target,s=t.getAttribute&&t.getAttribute('data-qs'),x=t.getAttribute&&t.getAttribute('data-qx'),i;
+  if(s){i=+t.getAttribute('data-qi');QR[i].side=s;renderQuick()}
+  else if(x!==null&&x!==undefined){QR.splice(+x,1);renderQuick()}
+};
+$('qadd').onclick=function(){
+  var n=0,keep=[];
+  QR.forEach(function(r){
+    if(!r.amt||!r.side){keep.push(r);return}
+    S.entries.push({id:'e'+(S.seq++),code:r.code,narr:r.narr,out:r.side==='out'?r.amt:0,inn:r.side==='in'?r.amt:0,cr:0,ci:0});
+    if(r.code)use[r.code]=(use[r.code]||0)+1;n++;
+  });
+  ls(UKEY,use);save();
+  $('qbox').value=keep.map(function(r){return r.raw}).join('\n');QR=keep;
+  all();renderQuick();toast(n+(n>1?' entries added':' entry added'));
+};
+window.__q=parseQuick;
 $('add').onclick=function(){
   var code=$('code').value.trim().toUpperCase(),amt=num($('amt').value),cm=num($('comm').value),narr=$('narr').value.trim().toUpperCase();
   var flag=$('entryFlag');
