@@ -401,7 +401,7 @@ tr.flash td{animation:fl 1.8s ease-out}
 <script>
 (function(){
 var DEFAULT_CODES=[];
-var APP_VERSION='2026-11-08.3';
+var APP_VERSION='2026-11-08.4';
 var NARRS=ls('cashentry.narrs')||[];
 var EXPCODE=ls('cashentry.expcode')||'SHOP-EXP';
 var BIZ=ls('cashentry.biz')||'';
@@ -1736,14 +1736,16 @@ function obForMonth(m){
     Object.keys(rows).sort().forEach(function(c){var r=rows[c];if((r[0]||0)||(r[1]||0))out.push({c:c,ty:typeOf(c),o:r[0]||0,i:r[1]||0})});
     return{rows:out,src:'saved',date:first};
   }
-  if(first<=L.ob.date)return null;
-  var pm=prevMonth(m),r=monthSummary(pm),all={},rc=L.reserve||'RESERVE';
+  var pm=prevMonth(m),curM=today().slice(0,7);
+  if(pm>curM)return{err:'That month is too far ahead. Its opening can only be worked out once the month before it has started.'};
+  if(L.ob.date>pm+'-01'&&!archFor(pm+'-01'))return{err:'No opening balances are saved for this month, and the tool has no earlier balances to work it out from. Opening balances start on '+fd(L.ob.date)+'.'};
+  var r=monthSummary(pm),all={},rc=L.reserve||'RESERVE';
   codes.forEach(function(c){all[c]=1});Object.keys(r.bal).forEach(function(c){all[c]=1});
   Object.keys(all).sort().forEach(function(c){
     var ty=typeOf(c),v=r.bal[c]||0;if(c===rc)v=r.sug;if(ty==='Expense')v=0;
     if(Math.abs(v)>=0.005)out.push({c:c,ty:ty,o:v<0?-v:0,i:v>0?v:0});
   });
-  return{rows:out,src:'calc',date:first,prev:pm};
+  return{rows:out,src:'calc',date:first,prev:pm,prov:pm>=curM};
 }
 function renderObView(){
   if(!L||!$('obvMonth'))return;
@@ -1751,16 +1753,16 @@ function renderObView(){
   var m=$('obvMonth').value,box=$('obvBody'),inf=$('obvInfo');
   if(!m){box.innerHTML='';inf.textContent='';return}
   var d=obForMonth(m);
-  if(!d){box.innerHTML='';inf.innerHTML='<div class="flag warn">No opening balances for this month. Opening balances start on '+(L.ob?fd(L.ob.date):'(not loaded)')+'; pick that month or a later one.</div>';return}
+  if(!d||d.err){box.innerHTML='';inf.innerHTML='<div class="flag warn">'+esc(d?d.err:'No opening balances loaded yet.')+'</div>';return}
   var o=0,i=0,h='<table class="vt"><tr class="vh"><td>Account</td><td>Type</td><td class="num">OUT</td><td class="num">IN</td></tr>';
   d.rows.forEach(function(r){o+=r.o;i+=r.i;h+='<tr><td><b>'+esc(r.c)+'</b></td><td class="mute">'+esc(r.ty)+'</td><td class="num">'+(r.o?fmt2(r.o):'')+'</td><td class="num">'+(r.i?fmt2(r.i):'')+'</td></tr>'});
   h+='<tr><td colspan="2"><b>Total</b></td><td class="num"><b>'+fmt2(o)+'</b></td><td class="num"><b>'+fmt2(i)+'</b></td></tr></table>';
   box.innerHTML=h;
-  inf.textContent=d.src==='saved'?'Opening balances saved in the tool for '+fd(d.date)+' · '+d.rows.length+' accounts.':'Worked out from the closing of '+d.prev+' (expense accounts zero, '+(L.reserve||'RESERVE')+' carries the suggested reserve) · '+d.rows.length+' accounts. Same figures as “Copy next month’s opening balances”.';
+  inf.textContent=d.src==='saved'?'Opening balances saved in the tool for '+fd(d.date)+' · '+d.rows.length+' accounts.':'Worked out from the closing of '+d.prev+' (expense accounts zero, '+(L.reserve||'RESERVE')+' carries the suggested reserve) · '+d.rows.length+' accounts. Same figures as “Copy next month’s opening balances”.'+(d.prov?' PROVISIONAL: '+d.prev+' is not finished, so this is the position as of today and will change.':'');
 }
 $('obvMonth').onchange=renderObView;
 $('obvCopy').onclick=function(){
-  var m=$('obvMonth').value,d=m&&obForMonth(m);if(!d||!d.rows.length){toast('Nothing to copy');return}
+  var m=$('obvMonth').value,d=m&&obForMonth(m);if(!d||d.err||!d.rows.length){toast('Nothing to copy');return}
   copyText(d.rows.map(function(r){return[r.c,r.ty,r.o?plain(r.o):'',r.i?plain(r.i):'',d.date].join('\t')}).join('\n'),d.rows.length+' accounts copied');
 };
 function renderMonth(){
