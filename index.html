@@ -242,12 +242,27 @@ tr.flash td{animation:fl 1.8s ease-out}
 </div>
 
 <div class="card" id="profCard">
-  <h2>Profit this month</h2>
+  <div class="fh" data-fold="prof"><h2>Profit this month</h2><span class="fx">▾</span></div><div class="fb">
   <div id="profBody"></div>
-</div>
+</div></div>
 <div class="card"><details id="bakBox" open><summary>Backup and restore</summary>
   <div id="ledBak" class="mute" style="margin:6px 0"></div>
   <div style="margin-bottom:8px"><button class="btn" id="ledShare">Back up the whole ledger (file)</button></div>
+  <div style="margin-bottom:8px"><button class="btn sec" id="driveBtn">Back up to Google Drive</button></div>
+  <div id="driveNote" class="mute" style="margin-bottom:8px"></div>
+  <details id="driveSet"><summary>Google Drive setup (one time)</summary>
+    <div class="mute" style="margin:6px 0">Your ledger goes only to your own Google Drive, into a folder this app creates (“Cash Entry backups”). The app cannot see any other file in your Drive. Google's sign-in script loads only when you use this.</div>
+    <ol class="mute" style="margin:6px 0 6px 18px;padding:0">
+      <li>On a computer, open console.cloud.google.com and create a project.</li>
+      <li>APIs &amp; Services → Library → enable “Google Drive API”.</li>
+      <li>OAuth consent screen → External → add your own Gmail as a test user.</li>
+      <li>Credentials → Create credentials → OAuth client ID → Web application. Under Authorised JavaScript origins add: <b id="drOrigin"></b></li>
+      <li>Copy the Client ID and paste it below.</li>
+    </ol>
+    <input id="drCid" type="text" autocomplete="off" placeholder="Client ID (ends with .apps.googleusercontent.com)">
+    <label style="display:flex;gap:8px;align-items:center;font-size:15px;margin-top:8px"><input type="checkbox" id="drAuto" style="width:20px;height:20px"> Also back up automatically after I post a day</label>
+    <div style="margin-top:8px"><button class="btn sec" id="drForget">Disconnect Google Drive</button></div>
+  </details>
   <div class="mute" style="margin:10px 0 4px">Safety copies kept inside the app (last 5, made before every post, reopen or restore)</div>
   <div id="snapList"></div>
   <div class="mute" style="margin:10px 0 4px">Restore from a backup file (the file picker can open your Google Drive folder too)</div>
@@ -324,13 +339,21 @@ tr.flash td{animation:fl 1.8s ease-out}
   <div id="stOut"></div>
 </div>
 <div class="card" id="monthCard">
-  <h2>Month summary</h2>
+  <div class="fh" data-fold="month"><h2>Month summary</h2><span class="fx">▾</span></div><div class="fb">
   <input type="month" id="monthIn">
   <div id="monthBody" style="margin-top:8px"></div>
   <div class="mute" style="margin-top:10px">RESERVE account code</div>
   <input id="reserveCode" type="text" style="margin-top:4px;text-transform:uppercase">
   <div style="margin-top:10px"><button class="btn sec" id="monthCopy">Copy next month's opening balances</button></div>
   <div class="mute" id="monthNote" style="margin-top:6px"></div>
+</div></div>
+<div class="card" id="obvCard">
+  <div class="fh" data-fold="obv"><h2>Opening balances of a month</h2><span class="fx">▾</span></div><div class="fb">
+  <input type="month" id="obvMonth">
+  <div id="obvInfo" class="mute" style="margin-top:8px"></div>
+  <div id="obvBody"></div>
+  <div style="margin-top:10px"><button class="btn sec" id="obvCopy">Copy for Excel Chart of Accounts</button></div>
+</div></div>
 <div class="card">
   <h2>All accounts</h2>
   <div class="chips" id="typeBar" style="margin-top:0"></div>
@@ -338,7 +361,6 @@ tr.flash td{animation:fl 1.8s ease-out}
   <div id="balList"></div>
   <div id="balMore" style="margin-top:8px"></div>
   <div style="margin-top:10px"><button class="btn sec" id="sendTb">Send trial balance picture</button></div>
-</div>
 </div>
 <div class="card" id="waitCard" style="display:none"><h2>Waiting for account code</h2><div id="waitList"></div><div style="margin-top:8px"><button class="btn" id="waitSend">Send picture of waiting entries</button></div></div>
 <div class="card"><details id="postedBox" open><summary>Posted days</summary><div id="postedList" style="margin-top:8px"></div></details></div>
@@ -379,7 +401,7 @@ tr.flash td{animation:fl 1.8s ease-out}
 <script>
 (function(){
 var DEFAULT_CODES=[];
-var APP_VERSION='2026-11-08.2';
+var APP_VERSION='2026-11-08.3';
 var NARRS=ls('cashentry.narrs')||[];
 var EXPCODE=ls('cashentry.expcode')||'SHOP-EXP';
 var BIZ=ls('cashentry.biz')||'';
@@ -535,7 +557,7 @@ $('cancelEdit').onclick=function(){resetForm();backToRow()};
 
 
 // ---- fold / hide cards, and "go back to where I was" ----
-var UI=ls('cashentry.ui')||{exp:1};
+var UI=ls('cashentry.ui')||{};if(UI.__v!==2){UI.__v=2;if(UI.exp===undefined)UI.exp=1;if(UI.month===undefined)UI.month=1;if(UI.obv===undefined)UI.obv=1;ls('cashentry.ui',UI)}
 function uiFold(k,fold){
   var c=document.querySelector('[data-fold="'+k+'"]');if(!c)return;c=c.parentNode;
   c.classList.toggle('folded',!!fold);UI[k]=fold?1:0;ls('cashentry.ui',UI);
@@ -613,7 +635,7 @@ $('qadd').onclick=function(){
   $('qbox').value=keep.map(function(r){return r.raw}).join('\n');QR=keep;
   all();renderQuick();toast(n+(n>1?' entries added':' entry added'));
 };
-window.__q=parseQuick;window.__f=f;
+window.__q=parseQuick;window.__ob=function(m){return obForMonth(m)};window.__f=f;
 $('add').onclick=function(){
   var code=$('code').value.trim().toUpperCase(),amt=num($('amt').value),cm=num($('comm').value),narr=$('narr').value.trim().toUpperCase();
   var flag=$('entryFlag');
@@ -888,7 +910,7 @@ function setView(v){
   ['Cash','Deals','Ledger','Day','Settings'].forEach(function(n){$('view'+n).style.display=(v===n.toLowerCase())?'':'none'});
   $('cashTop').style.display=v==='cash'?'':'none';
   ['Cash','Deals','Ledger','Day'].forEach(function(n){$('tab'+n).classList.toggle('on',v===n.toLowerCase())});
-  if(v==='deals')renderDeals();if(v==='ledger')renderLedger();if(v==='day'){renderClose();renderLedBak();renderSnaps()}
+  if(v==='deals')renderDeals();if(v==='ledger')renderLedger();if(v==='day'){renderClose();renderLedBak();renderSnaps();renderDrive()}
   window.scrollTo(0,0);
 }
 $('tabDay').onclick=function(){setView('day')};
@@ -1201,13 +1223,13 @@ function crownCanvases(){
 function sendCrownImage(){shareImages(crownCanvases(),'crown-aed-'+today(),'Crown AED statement','Crown AED statement')}
 function renderLedger(){
   if(!L){$('ledBanner').innerHTML='<div class="card"><div class="mute">Opening the ledger…</div></div>';return}
-  renderLedBanner();renderCrown();renderStatement();renderTypeBar();renderBalList();renderMonth();renderAccts();renderWait();renderPosted();renderOb();renderLedBak();renderDayView();if($('fqIn').value)renderFind();
+  renderLedBanner();renderCrown();renderStatement();renderTypeBar();renderBalList();renderMonth();renderObView();renderAccts();renderWait();renderPosted();renderOb();renderLedBak();renderDayView();if($('fqIn').value)renderFind();
 }
 function renderLedBanner(){
   var h='';
   if(!L.ob)h+='<div class="flag warn" style="margin:12px 0">No opening balances yet. Open “Opening balances” below and paste them from the Chart of Accounts.</div>';
   if(L.wait.length)h+='<div class="flag warn" style="margin:12px 0">'+L.wait.length+' entr'+(L.wait.length>1?'ies are':'y is')+' waiting for an account code (see below).</div>';
-  if(L.days.length&&L.chg>L.bak)h+='<div class="flag warn" style="margin:12px 0">The ledger has changed since the last backup. Open the Day tab and use “Backup, restore and export”.</div>';
+  if(L.days.length&&L.chg>L.bak)h+='<div class="flag warn" style="margin:12px 0">The ledger has changed since the last backup. Open the Day tab and use “Backup and restore”.</div>';
   $('ledBanner').innerHTML=h;
 }
 function renderStatement(){
@@ -1306,7 +1328,9 @@ function renderBakNudge(){
 $('bakNudge').onclick=function(e){
   if(e.target.id==='bakLater'){ls('cashentry.bakSnooze',Date.now()+6*3600000);renderBakNudge();return}
   if(e.target.id==='bakNow'){
-    $('ledShare').click();setTimeout(renderBakNudge,1500)
+    var c=drCfg();
+    if(c&&c.cid)driveBackup(true,function(){renderBakNudge()});
+    else{$('ledShare').click();setTimeout(renderBakNudge,1500)}
   }
 };
 function renderLedBak(){
@@ -1699,6 +1723,46 @@ function monthCore(m,skipWait){
   L.days.forEach(function(d){if(d.date<=end&&(!last||d.date>last.date))last=d});
   return{dp:r2(dp),cm:r2(cm),ex:r2(ex),net:net,res:res,sug:r2(res+net),cash:last?last.close:null,cashDate:last?last.date:'',bal:bal};
 }
+
+// ---- opening balances of any month (like the Chart of Accounts in Excel)
+function prevMonth(m){var p=m.split('-'),d=new Date(+p[0],+p[1]-2,1);return d.getFullYear()+'-'+z2(d.getMonth()+1)}
+function obForMonth(m){
+  if(!L||!L.ob)return null;
+  var first=m+'-01',src=null,rows=null;
+  if(L.ob.date===first){rows=L.ob.rows;src='saved'}
+  else{(L.obHist||[]).forEach(function(h){if(h.date===first){rows=h.rows;src='saved'}})}
+  var out=[];
+  if(rows){
+    Object.keys(rows).sort().forEach(function(c){var r=rows[c];if((r[0]||0)||(r[1]||0))out.push({c:c,ty:typeOf(c),o:r[0]||0,i:r[1]||0})});
+    return{rows:out,src:'saved',date:first};
+  }
+  if(first<=L.ob.date)return null;
+  var pm=prevMonth(m),r=monthSummary(pm),all={},rc=L.reserve||'RESERVE';
+  codes.forEach(function(c){all[c]=1});Object.keys(r.bal).forEach(function(c){all[c]=1});
+  Object.keys(all).sort().forEach(function(c){
+    var ty=typeOf(c),v=r.bal[c]||0;if(c===rc)v=r.sug;if(ty==='Expense')v=0;
+    if(Math.abs(v)>=0.005)out.push({c:c,ty:ty,o:v<0?-v:0,i:v>0?v:0});
+  });
+  return{rows:out,src:'calc',date:first,prev:pm};
+}
+function renderObView(){
+  if(!L||!$('obvMonth'))return;
+  if(!$('obvMonth').value)$('obvMonth').value=(S.date||today()).slice(0,7);
+  var m=$('obvMonth').value,box=$('obvBody'),inf=$('obvInfo');
+  if(!m){box.innerHTML='';inf.textContent='';return}
+  var d=obForMonth(m);
+  if(!d){box.innerHTML='';inf.innerHTML='<div class="flag warn">No opening balances for this month. Opening balances start on '+(L.ob?fd(L.ob.date):'(not loaded)')+'; pick that month or a later one.</div>';return}
+  var o=0,i=0,h='<table class="vt"><tr class="vh"><td>Account</td><td>Type</td><td class="num">OUT</td><td class="num">IN</td></tr>';
+  d.rows.forEach(function(r){o+=r.o;i+=r.i;h+='<tr><td><b>'+esc(r.c)+'</b></td><td class="mute">'+esc(r.ty)+'</td><td class="num">'+(r.o?fmt2(r.o):'')+'</td><td class="num">'+(r.i?fmt2(r.i):'')+'</td></tr>'});
+  h+='<tr><td colspan="2"><b>Total</b></td><td class="num"><b>'+fmt2(o)+'</b></td><td class="num"><b>'+fmt2(i)+'</b></td></tr></table>';
+  box.innerHTML=h;
+  inf.textContent=d.src==='saved'?'Opening balances saved in the tool for '+fd(d.date)+' · '+d.rows.length+' accounts.':'Worked out from the closing of '+d.prev+' (expense accounts zero, '+(L.reserve||'RESERVE')+' carries the suggested reserve) · '+d.rows.length+' accounts. Same figures as “Copy next month’s opening balances”.';
+}
+$('obvMonth').onchange=renderObView;
+$('obvCopy').onclick=function(){
+  var m=$('obvMonth').value,d=m&&obForMonth(m);if(!d||!d.rows.length){toast('Nothing to copy');return}
+  copyText(d.rows.map(function(r){return[r.c,r.ty,r.o?plain(r.o):'',r.i?plain(r.i):'',d.date].join('\t')}).join('\n'),d.rows.length+' accounts copied');
+};
 function renderMonth(){
   if(!L)return;
   if(!$('monthIn').value)$('monthIn').value=today().slice(0,7);
@@ -2160,6 +2224,87 @@ function shareFileGen(name,txt,mime,done){
   downloadText(name,txt);done();toast('File downloaded — send it from your Files app');
 }
 
+// ---- Google Drive backup (own Drive, drive.file scope, no listing calls)
+var DR_KEY='cashentry.drive',DT=null;
+function drCfg(){return ls(DR_KEY)||{}}
+function drSave(c){ls(DR_KEY,c)}
+function renderDrive(){
+  if(!$('driveBtn'))return;
+  var c=drCfg();$('drOrigin').textContent=location.origin;
+  if(document.activeElement!==$('drCid'))$('drCid').value=c.cid||'';
+  $('drAuto').checked=!!c.auto;
+  $('driveBtn').style.display=c.cid?'':'none';
+  $('drForget').style.display=c.cid?'':'none';
+  var n=$('driveNote');
+  n.textContent=c.cid?(c.last?'Last Drive backup: '+new Date(c.last).toLocaleString():'Client ID saved. Tap “Back up to Google Drive” above to sign in.'):'Not set up. Open “Google Drive setup” below.';
+}
+function loadGIS(cb){
+  if(window.google&&google.accounts&&google.accounts.oauth2)return cb(true);
+  var sc=document.createElement('script');sc.src='https://accounts.google.com/gsi/client';sc.async=true;
+  sc.onload=function(){cb(true)};sc.onerror=function(){cb(false)};document.head.appendChild(sc);
+}
+function drToken(interactive,cb){
+  if(DT&&DT.exp>Date.now()+60000)return cb(DT.t);
+  var c=drCfg();if(!c.cid)return cb(null,'Not set up');
+  loadGIS(function(ok){
+    if(!ok)return cb(null,'Could not reach Google (offline?)');
+    try{
+      var done=false;function fin(t,m){if(done)return;done=true;cb(t,m)}
+      var tc=google.accounts.oauth2.initTokenClient({client_id:c.cid,scope:'https://www.googleapis.com/auth/drive.file',
+        callback:function(r){if(r&&r.access_token){DT={t:r.access_token,exp:Date.now()+(+r.expires_in||3000)*1000};fin(DT.t)}else fin(null,(r&&r.error)||'Sign-in failed')},
+        error_callback:function(e){fin(null,(e&&e.type)||'Sign-in cancelled')}});
+      tc.requestAccessToken({prompt:interactive?'':'none'});
+    }catch(e){cb(null,'Google sign-in failed')}
+  });
+}
+function drFetch(tok,url,method,body,ctype,cb){
+  var h={Authorization:'Bearer '+tok};if(ctype)h['Content-Type']=ctype;
+  fetch(url,{method:method,headers:h,body:body}).then(function(r){return r.text().then(function(t){var j=null;try{j=JSON.parse(t)}catch(e){}cb(r.status,j)})}).catch(function(){cb(0,null)});
+}
+function drMulti(meta,txt){
+  var b='cashentry'+Date.now();
+  return{type:'multipart/related; boundary='+b,body:'--'+b+'\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n'+JSON.stringify(meta)+'\r\n--'+b+'\r\nContent-Type: application/json\r\n\r\n'+txt+'\r\n--'+b+'--'}
+}
+function drUpload(tok,name,txt,cb,retry){
+  var c=drCfg();c.files=c.files||{};
+  function mkFolder(){
+    drFetch(tok,'https://www.googleapis.com/drive/v3/files','POST',JSON.stringify({name:'Cash Entry backups',mimeType:'application/vnd.google-apps.folder'}),'application/json',function(st,j){
+      if(st>=200&&st<300&&j&&j.id){c.folder=j.id;drSave(c);create()}else cb(false,'Drive refused (code '+st+')')});
+  }
+  function create(){
+    var m=drMulti({name:name,parents:[c.folder]},txt);
+    drFetch(tok,'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id','POST',m.body,m.type,function(st,j){
+      if(st>=200&&st<300&&j&&j.id){c.files[name]=j.id;drSave(c);cb(true)}
+      else if((st===404||st===400)&&!retry){c.folder=null;c.files={};drSave(c);drUpload(tok,name,txt,cb,true)}
+      else cb(false,st===401?'Sign-in expired':'Drive refused (code '+st+')')});
+  }
+  if(!c.folder)return mkFolder();
+  if(c.files[name]){
+    var m=drMulti({},txt);
+    drFetch(tok,'https://www.googleapis.com/upload/drive/v3/files/'+c.files[name]+'?uploadType=multipart&fields=id','PATCH',m.body,m.type,function(st){
+      if(st>=200&&st<300)cb(true);
+      else if(st===404){delete c.files[name];drSave(c);create()}
+      else cb(false,st===401?'Sign-in expired':'Drive refused (code '+st+')')});
+  }else create();
+}
+function driveBackup(interactive,done){
+  if(!L){if(done)done(false);return}
+  var txt=JSON.stringify({app:'cashentry-ledger',v:1,biz:BIZ,at:new Date().toISOString(),L:L});
+  var name='cash-ledger-backup-'+today()+'.json';
+  drToken(interactive,function(tok,msg){
+    if(!tok){if(interactive)toast('Drive backup not done: '+msg);if(done)done(false,msg);return}
+    drUpload(tok,name,txt,function(ok,m){
+      if(ok){var c=drCfg();c.last=Date.now();drSave(c);L.bak=Date.now();ldPut();renderDrive();toast('Backed up to Google Drive')}
+      else{if(m==='Sign-in expired')DT=null;toast('Drive backup not done: '+m)}
+      if(done)done(ok,m);
+    });
+  });
+}
+$('driveBtn').onclick=function(){driveBackup(true)};
+$('drCid').onchange=function(){var c=drCfg();c.cid=this.value.replace(/\s+/g,'');this.value=c.cid;if(!c.cid){c.folder=null;c.files={}}DT=null;drSave(c);renderDrive();if(c.cid&&!/^\d+-[A-Za-z0-9_]+\.apps\.googleusercontent\.com$/.test(c.cid)){toast('That does not look like a Client ID. It should look like 1234567890-abc123.apps.googleusercontent.com')}else if(c.cid){toast('Client ID saved. Now tap “Back up to Google Drive”');$('driveBtn').scrollIntoView({behavior:'smooth',block:'center'})}};
+$('drAuto').onchange=function(){var c=drCfg();c.auto=this.checked;drSave(c)};
+$('drForget').onclick=function(){drSave({});DT=null;renderDrive();toast('Google Drive disconnected (files already in Drive stay there)')};
+
 
 // ===== import a whole Excel workbook (.xlsx read in the browser, nothing uploaded) =====
 function u16(b,o){return b[o]|(b[o+1]<<8)}
@@ -2479,7 +2624,7 @@ function doPost(){
     f.review=false;f.revOk=false;
     S={open:String(later?lastD.close:t.bal),entries:[],exp:[],expNarr:S.expNarr,seq:S.seq,deals:[],date:nxt>td?nxt:td,sid:newSid()};
     save();f.lastDel=null;resetForm();all();
-    toast('Posted '+fd(date)+(nc?' · '+nc+' row(s) waiting for a code':'')+'. Back up the ledger.');
+    var c=drCfg();if(c.cid&&c.auto){toast('Posted '+fd(date)+'. Backing up to Drive…');driveBackup(false,function(ok){if(!ok)toast('Posted '+fd(date)+'. Drive backup NOT done — back up from the Day tab.')})}else toast('Posted '+fd(date)+(nc?' · '+nc+' row(s) waiting for a code':'')+'. Back up the ledger.');
   });
 }
 $('dealsToday').onclick=function(e){
