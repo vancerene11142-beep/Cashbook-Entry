@@ -356,6 +356,14 @@ tr.flash td{animation:fl 1.8s ease-out}
   <div id="obvBody"></div>
   <div style="margin-top:10px"><button class="btn sec" id="obvCopy">Copy for Excel Chart of Accounts</button></div>
 </div></div>
+<div class="card" id="rndCard">
+  <div class="fh" data-fold="rnd"><h2>Round-off clean-up</h2><span class="fx">▾</span></div><div class="fb">
+  <div class="mute">Tiny leftover balances from round payments. Tick the ones that are genuinely round-off and the tool adds two balancing rows to today's sheet: the account is cleared, and the same amount goes to the round-off account. Cash in hand does not change.</div>
+  <div class="two" style="margin-top:8px"><div><div class="mute">Smaller than (₹)</div><input id="rndLim" type="text" inputmode="decimal" value="10"></div><div><div class="mute">Round-off account</div><input id="rndCode" type="text" autocapitalize="characters" style="text-transform:uppercase"></div></div>
+  <div id="rndList" style="margin-top:8px"></div>
+  <div style="margin-top:8px"><button class="btn" id="rndAdd" disabled>Add adjustment rows to today's sheet</button></div>
+  <div class="mute" id="rndNote" style="margin-top:6px"></div>
+</div></div>
 <div class="card">
   <h2>All accounts</h2>
   <div class="chips" id="typeBar" style="margin-top:0"></div>
@@ -403,7 +411,7 @@ tr.flash td{animation:fl 1.8s ease-out}
 <script>
 (function(){
 var DEFAULT_CODES=[];
-var APP_VERSION='2026-11-08.5';
+var APP_VERSION='2026-11-08.6';
 var NARRS=ls('cashentry.narrs')||[];
 var EXPCODE=ls('cashentry.expcode')||'SHOP-EXP';
 var BIZ=ls('cashentry.biz')||'';
@@ -559,7 +567,7 @@ $('cancelEdit').onclick=function(){resetForm();backToRow()};
 
 
 // ---- fold / hide cards, and "go back to where I was" ----
-var UI=ls('cashentry.ui')||{};if(UI.__v!==2){UI.__v=2;if(UI.exp===undefined)UI.exp=1;if(UI.month===undefined)UI.month=1;if(UI.obv===undefined)UI.obv=1;ls('cashentry.ui',UI)}
+var UI=ls('cashentry.ui')||{};if(UI.__v!==2){UI.__v=2;if(UI.exp===undefined)UI.exp=1;if(UI.month===undefined)UI.month=1;if(UI.obv===undefined)UI.obv=1;if(UI.rnd===undefined)UI.rnd=1;ls('cashentry.ui',UI)}
 function uiFold(k,fold){
   var c=document.querySelector('[data-fold="'+k+'"]');if(!c)return;c=c.parentNode;
   c.classList.toggle('folded',!!fold);UI[k]=fold?1:0;ls('cashentry.ui',UI);
@@ -1225,7 +1233,7 @@ function crownCanvases(){
 function sendCrownImage(){shareImages(crownCanvases(),'crown-aed-'+today(),'Crown AED statement','Crown AED statement')}
 function renderLedger(){
   if(!L){$('ledBanner').innerHTML='<div class="card"><div class="mute">Opening the ledger…</div></div>';return}
-  renderLedBanner();renderCrown();renderStatement();renderTypeBar();renderBalList();renderMonth();renderObView();renderAccts();renderWait();renderPosted();renderOb();renderLedBak();renderDayView();if($('fqIn').value)renderFind();
+  renderLedBanner();renderCrown();renderStatement();renderTypeBar();renderBalList();renderMonth();renderObView();renderRnd();renderAccts();renderWait();renderPosted();renderOb();renderLedBak();renderDayView();if($('fqIn').value)renderFind();
 }
 function renderLedBanner(){
   var h='';
@@ -1789,6 +1797,50 @@ $('obvMonth').onchange=renderObView;
 $('obvCopy').onclick=function(){
   var m=$('obvMonth').value,d=m&&obForMonth(m);if(!d||d.err||!d.rows.length){toast('Nothing to copy');return}
   copyText(d.rows.map(function(r){return[r.c,r.ty,r.o?plain(r.o):'',r.i?plain(r.i):'',d.date].join('\t')}).join('\n'),d.rows.length+' accounts copied');
+};
+
+// ---- round-off clean-up
+var RND={};
+function rndCodeVal(){return(L&&L.rndCode)||'ROUNDOFF'}
+function rndCandidates(){
+  var lim=parseFloat($('rndLim').value)||10,bal=balances(undefined,true),skip={},out=[];
+  [L.reserve||'RESERVE',L.commCode,cashAcctCode(),rndCodeVal(),(L.crown&&L.crown.code)||'CROWN'].forEach(function(c){if(c)skip[c]=1});
+  Object.keys(bal).sort().forEach(function(c){
+    var v=bal[c],ty=typeOf(c);
+    if(skip[c]||ty==='Expense'||(ty&&ty!=='Customer'&&ty!=='Correspondent'))return;
+    if(Math.abs(v)>=0.005&&Math.abs(v)<lim)out.push({c:c,v:v});
+  });
+  return out;
+}
+function renderRnd(){
+  if(!L||!$('rndList'))return;
+  if(document.activeElement!==$('rndCode'))$('rndCode').value=rndCodeVal();
+  var list=rndCandidates(),h='';
+  if(!list.length){$('rndList').innerHTML='<div class="mute">No account has a balance under ₹'+fmt2(parseFloat($('rndLim').value)||10)+'.</div>';$('rndAdd').disabled=true;$('rndNote').textContent='';return}
+  list.forEach(function(x){h+='<label class="exrow" style="gap:10px"><input type="checkbox" data-rnd="'+esc(x.c)+'" style="width:20px;height:20px"'+(RND[x.c]?' checked':'')+'><span><b>'+esc(x.c)+'</b></span><span class="num" style="flex:none;color:var(--'+(x.v<0?'out':'in')+')">'+(x.v<0?'owes us ':'we owe ')+fmt2(Math.abs(x.v))+'</span></label>'});
+  $('rndList').innerHTML=h;
+  var n=list.filter(function(x){return RND[x.c]}).length,t=0;list.forEach(function(x){if(RND[x.c])t+=Math.abs(x.v)});
+  $('rndAdd').disabled=!n;$('rndAdd').textContent=n?'Add adjustment rows for '+n+' account'+(n>1?'s':'')+' (₹'+fmt2(t)+')':'Tick accounts to clear';
+  $('rndNote').textContent='Rows are added to today\'s sheet with the narration ROUND OFF. Copy them to Excel with the rest of the day. Make sure '+rndCodeVal()+' exists in the Excel Chart of Accounts (type Expense).';
+}
+$('rndLim').oninput=renderRnd;
+$('rndCode').onchange=function(){if(!L)return;L.rndCode=this.value.trim().toUpperCase()||'ROUNDOFF';ldSave(renderRnd)};
+$('rndList').onchange=function(e){var c=e.target.getAttribute&&e.target.getAttribute('data-rnd');if(c){RND[c]=e.target.checked;renderRnd()}};
+$('rndAdd').onclick=function(){
+  if(!L)return;var rc=rndCodeVal(),list=rndCandidates().filter(function(x){return RND[x.c]});if(!list.length)return;
+  var toOut=0,toIn=0;
+  list.forEach(function(x){
+    var a=r2(Math.abs(x.v));
+    if(x.v<0){S.entries.push({id:'e'+(S.seq++),code:x.c,narr:'ROUND OFF',out:0,inn:a,cr:0,ci:0});toOut+=a}
+    else{S.entries.push({id:'e'+(S.seq++),code:x.c,narr:'ROUND OFF',out:a,inn:0,cr:0,ci:0});toIn+=a}
+  });
+  toOut=r2(toOut);toIn=r2(toIn);
+  if(toOut>0)S.entries.push({id:'e'+(S.seq++),code:rc,narr:'ROUND OFF ADJUSTMENT',out:toOut,inn:0,cr:0,ci:0});
+  if(toIn>0)S.entries.push({id:'e'+(S.seq++),code:rc,narr:'ROUND OFF ADJUSTMENT',out:0,inn:toIn,cr:0,ci:0});
+  if(codes.indexOf(rc)<0){codes.push(rc);codes.sort();ls(CKEY,codes);$('codesBox').value=codes.join('\n')}
+  L.types=L.types||{};if(!L.types[rc])L.types[rc]='Expense';
+  RND={};save();all();
+  ldSave(function(){renderLedger();toast(list.length+' account'+(list.length>1?'s':'')+' cleared on today\'s sheet')});
 };
 function renderMonth(){
   if(!L)return;
