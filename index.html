@@ -344,6 +344,8 @@ tr.flash td{animation:fl 1.8s ease-out}
   <div id="monthBody" style="margin-top:8px"></div>
   <div class="mute" style="margin-top:10px">RESERVE account code</div>
   <input id="reserveCode" type="text" style="margin-top:4px;text-transform:uppercase">
+  <div class="mute" style="margin-top:10px">SHOP cash account code (gets the closing cash in hand when opening balances are worked out)</div>
+  <input id="cashAcct" type="text" style="margin-top:4px;text-transform:uppercase">
   <div style="margin-top:10px"><button class="btn sec" id="monthCopy">Copy next month's opening balances</button></div>
   <div class="mute" id="monthNote" style="margin-top:6px"></div>
 </div></div>
@@ -401,7 +403,7 @@ tr.flash td{animation:fl 1.8s ease-out}
 <script>
 (function(){
 var DEFAULT_CODES=[];
-var APP_VERSION='2026-11-08.4';
+var APP_VERSION='2026-11-08.5';
 var NARRS=ls('cashentry.narrs')||[];
 var EXPCODE=ls('cashentry.expcode')||'SHOP-EXP';
 var BIZ=ls('cashentry.biz')||'';
@@ -1724,6 +1726,29 @@ function monthCore(m,skipWait){
   return{dp:r2(dp),cm:r2(cm),ex:r2(ex),net:net,res:res,sug:r2(res+net),cash:last?last.close:null,cashDate:last?last.date:'',bal:bal};
 }
 
+
+// ---- opening balances worked out from a month's closing (shared by the viewer and the copy button)
+function cashAcctCode(){
+  if(L&&L.cashAcct)return L.cashAcct;
+  var all={};codes.forEach(function(c){all[c]=1});if(L&&L.ob)Object.keys(L.ob.rows).forEach(function(c){all[c]=1});
+  var ks=Object.keys(all),a=ks.filter(function(c){return /IRUP/i.test(c)})[0]||ks.filter(function(c){return /^SHOP/i.test(c)})[0]||'';
+  return a;
+}
+function rollRows(pm){
+  var r=monthSummary(pm),all={},rc=L.reserve||'RESERVE',cc=L.commCode,ca=cashAcctCode(),out=[],to=0,ti=0,cashNote='';
+  codes.forEach(function(c){all[c]=1});Object.keys(r.bal).forEach(function(c){all[c]=1});if(ca)all[ca]=1;
+  Object.keys(all).sort().forEach(function(c){
+    var ty=typeOf(c),v=r.bal[c]||0;
+    if(c===rc)v=r.sug;
+    else if(ty==='Expense'||(cc&&c===cc))v=0;
+    else if(c===ca&&r.cash!=null){v=-r.cash;cashNote=c+' = closing cash '+fmt2(r.cash)+' of '+fd(r.cashDate)}
+    var o=v<0?-v:0,i=v>0?v:0;to+=o;ti+=i;
+    out.push({c:c,ty:ty,o:o,i:i});
+  });
+  if(!ca)cashNote='No SHOP cash account chosen — set its code in Month summary, or the totals will not tally.';
+  else if(r.cash==null)cashNote='No posted day found up to the end of '+pm+', so '+ca+' was left as it was.';
+  return{rows:out,to:to,ti:ti,r:r,cashNote:cashNote,tally:Math.abs(to-ti)<0.005};
+}
 // ---- opening balances of any month (like the Chart of Accounts in Excel)
 function prevMonth(m){var p=m.split('-'),d=new Date(+p[0],+p[1]-2,1);return d.getFullYear()+'-'+z2(d.getMonth()+1)}
 function obForMonth(m){
@@ -1739,13 +1764,9 @@ function obForMonth(m){
   var pm=prevMonth(m),curM=today().slice(0,7);
   if(pm>curM)return{err:'That month is too far ahead. Its opening can only be worked out once the month before it has started.'};
   if(L.ob.date>pm+'-01'&&!archFor(pm+'-01'))return{err:'No opening balances are saved for this month, and the tool has no earlier balances to work it out from. Opening balances start on '+fd(L.ob.date)+'.'};
-  var r=monthSummary(pm),all={},rc=L.reserve||'RESERVE';
-  codes.forEach(function(c){all[c]=1});Object.keys(r.bal).forEach(function(c){all[c]=1});
-  Object.keys(all).sort().forEach(function(c){
-    var ty=typeOf(c),v=r.bal[c]||0;if(c===rc)v=r.sug;if(ty==='Expense')v=0;
-    if(Math.abs(v)>=0.005)out.push({c:c,ty:ty,o:v<0?-v:0,i:v>0?v:0});
-  });
-  return{rows:out,src:'calc',date:first,prev:pm,prov:pm>=curM};
+  var rr=rollRows(pm);
+  rr.rows.forEach(function(x){if(x.o||x.i)out.push(x)});
+  return{rows:out,src:'calc',date:first,prev:pm,prov:pm>=curM,cashNote:rr.cashNote,to:rr.to,ti:rr.ti,tally:rr.tally};
 }
 function renderObView(){
   if(!L||!$('obvMonth'))return;
@@ -1758,7 +1779,11 @@ function renderObView(){
   d.rows.forEach(function(r){o+=r.o;i+=r.i;h+='<tr><td><b>'+esc(r.c)+'</b></td><td class="mute">'+esc(r.ty)+'</td><td class="num">'+(r.o?fmt2(r.o):'')+'</td><td class="num">'+(r.i?fmt2(r.i):'')+'</td></tr>'});
   h+='<tr><td colspan="2"><b>Total</b></td><td class="num"><b>'+fmt2(o)+'</b></td><td class="num"><b>'+fmt2(i)+'</b></td></tr></table>';
   box.innerHTML=h;
-  inf.textContent=d.src==='saved'?'Opening balances saved in the tool for '+fd(d.date)+' · '+d.rows.length+' accounts.':'Worked out from the closing of '+d.prev+' (expense accounts zero, '+(L.reserve||'RESERVE')+' carries the suggested reserve) · '+d.rows.length+' accounts. Same figures as “Copy next month’s opening balances”.'+(d.prov?' PROVISIONAL: '+d.prev+' is not finished, so this is the position as of today and will change.':'');
+  var flags='';
+  if(d.src==='calc'){if(d.cashNote)flags+='<div class="'+'mute'+'" style="margin-top:4px">'+esc(d.cashNote)+'</div>';flags+=d.tally?'<div class="flag okf">OUT and IN tally.</div>':'<div class="flag bad">DOES NOT TALLY: OUT − IN = '+fmt2(r2(d.to-d.ti))+'. Do not paste this into Excel yet.</div>'}
+  else if(Math.abs(o-i)>=0.005)flags='<div class="flag warn">Saved balances: OUT − IN = '+fmt2(r2(o-i))+'.</div>';
+  inf.textContent=d.src==='saved'?'Opening balances saved in the tool for '+fd(d.date)+' · '+d.rows.length+' accounts.':'Worked out from the closing of '+d.prev+' (expense and commission accounts zero, '+(L.reserve||'RESERVE')+' carries the new reserve) · '+d.rows.length+' accounts. Same figures as “Copy next month’s opening balances”.'+(d.prov?' PROVISIONAL: '+d.prev+' is not finished, so this is the position as of today and will change.':'');
+  inf.insertAdjacentHTML('beforeend',flags);
 }
 $('obvMonth').onchange=renderObView;
 $('obvCopy').onclick=function(){
@@ -1768,6 +1793,7 @@ $('obvCopy').onclick=function(){
 function renderMonth(){
   if(!L)return;
   if(!$('monthIn').value)$('monthIn').value=today().slice(0,7);
+  if(document.activeElement!==$('cashAcct'))$('cashAcct').value=cashAcctCode();
   if(document.activeElement!==$('reserveCode'))$('reserveCode').value=L.reserve||'RESERVE';
   var m=$('monthIn').value,box=$('monthBody');
   if(!m){box.innerHTML='';return}
@@ -1789,20 +1815,14 @@ function renderMonth(){
     +'<div class="mute" style="margin-top:6px">Same rules as the Excel Monthly Summary. Commission profit = commission received minus issued, plus cash IN minus cash OUT on the commission account. Expenses are accounts of type Expense'+(Object.keys(L.types||{}).length?'':' — <b>no account types loaded yet</b> (paste the Chart of Accounts under Opening balances, or set types under Accounts and types)')+'.</div>';
 }
 $('monthIn').onchange=renderMonth;
+$('cashAcct').onchange=function(){if(!L)return;L.cashAcct=this.value.trim().toUpperCase();ldSave(function(){renderMonth();renderObView()})};
 $('reserveCode').onchange=function(){if(!L)return;L.reserve=this.value.trim().toUpperCase()||'RESERVE';ldSave(function(){renderMonth()})};
 $('monthCopy').onclick=function(){
   if(!L)return;var m=$('monthIn').value;if(!m){toast('Pick the month');return}
-  var r=monthSummary(m),nextFirst=addDay(lastDayOf(m),1),lines=[],to=0,ti=0,rc=L.reserve||'RESERVE';
-  var all={};codes.forEach(function(c){all[c]=1});Object.keys(r.bal).forEach(function(c){all[c]=1});
-  Object.keys(all).sort().forEach(function(c){
-    var ty=typeOf(c),v=r.bal[c]||0;
-    if(c===rc)v=r.sug;
-    if(ty==='Expense')v=0;
-    var o=v<0?-v:0,i=v>0?v:0;to+=o;ti+=i;
-    lines.push([c,ty,o?plain(o):'',i?plain(i):'',nextFirst].join('\t'));
-  });
+  var rr=rollRows(m),nextFirst=addDay(lastDayOf(m),1),rc=L.reserve||'RESERVE',to=rr.to,ti=rr.ti;
+  var lines=rr.rows.map(function(x){return[x.c,x.ty,x.o?plain(x.o):'',x.i?plain(x.i):'',nextFirst].join('\t')});
   copyText(lines.join('\n'),lines.length+' accounts copied');
-  $('monthNote').textContent='Columns: Code · Type · OUT · IN · Date (for the Chart of Accounts). Expense accounts are blank and '+rc+' carries the suggested new reserve. Totals: OUT '+fmt2(to)+' · IN '+fmt2(ti)+' · difference '+fmt2(r2(to-ti))+'. Check that difference against how you balance the opening cash (SHOP-IRUPU) in Excel before pasting.';
+  $('monthNote').textContent='Columns: Code · Type · OUT · IN · Date (for the Chart of Accounts). Expense and commission accounts are blank, '+rc+' carries the new reserve. '+rr.cashNote+' Totals: OUT '+fmt2(to)+' · IN '+fmt2(ti)+(rr.tally?' · they tally.':' · DIFFERENCE '+fmt2(r2(to-ti))+' — do not paste until this is explained.');
 };
 // account types UI
 function renderTypeBar(){
