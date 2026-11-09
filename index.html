@@ -411,7 +411,7 @@ tr.flash td{animation:fl 1.8s ease-out}
 <script>
 (function(){
 var DEFAULT_CODES=[];
-var APP_VERSION='2026-11-08.6';
+var APP_VERSION='2026-11-09.1';
 var NARRS=ls('cashentry.narrs')||[];
 var EXPCODE=ls('cashentry.expcode')||'SHOP-EXP';
 var BIZ=ls('cashentry.biz')||'';
@@ -444,6 +444,7 @@ function renderBak(){
   el.textContent=stale?(META.bak?'Changed since the last backup ('+new Date(META.bak).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})+'). Share the day file.':'Not backed up yet. Share the day file before you clear the day.'):'Backed up '+new Date(META.bak).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})+' — nothing new since.';
 }
 function r2(x){var g=x<0?-1:1;x=Math.abs(x);return(g*Math.round(parseFloat((x*100).toPrecision(15)))/100)+0}
+function rateNum(v){if(v===''||v==null)return 0;var n=parseFloat(String(v).replace(/,/g,''));return isNaN(n)?0:parseFloat(n.toPrecision(12))}
 function num(v){if(v===''||v==null)return 0;var n=parseFloat(String(v).replace(/,/g,''));return isNaN(n)?0:r2(n)}
 function fmt(n){n=r2(n);return n.toLocaleString('en-IN',{minimumFractionDigits:(n%1?2:0),maximumFractionDigits:2})}
 function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
@@ -2786,7 +2787,7 @@ function dealFormHtml(p,x){
    +'<div class="two" style="margin-top:8px"><button class="btn" id="'+p+'Save">Save correction</button><button class="btn sec" id="'+p+'Cancel">Cancel</button></div></div>';
 }
 function readDealForm(p){
-  var c=$(p+'C').value.trim().toUpperCase(),v=num($(p+'V').value),r=num($(p+'R').value),ps=$(p+'P').value==='S'?'S':'P',op=$(p+'O').value==='/'?'/':'*',err='';
+  var c=$(p+'C').value.trim().toUpperCase(),v=num($(p+'V').value),r=rateNum($(p+'R').value),ps=$(p+'P').value==='S'?'S':'P',op=$(p+'O').value==='/'?'/':'*',err='';
   if(!c)err='Account code is needed';
   else if(!(v>0))err='Volume must be more than 0';
   else if(!(r>0))err='Rate must be more than 0';
