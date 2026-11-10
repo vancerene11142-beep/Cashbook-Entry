@@ -214,6 +214,11 @@ tr.flash td{animation:fl 1.8s ease-out}
 </div>
 
 
+<div class="card">
+  <button class="btn" id="shareImg">Send cash book picture</button>
+  <div class="mute" style="margin-top:6px">A picture of today's sheet as it stands, to send before you post the day.</div>
+</div>
+
 </div>
 <div class="wrap" id="viewDay" style="display:none">
 <div class="card" id="closeCard">
@@ -411,7 +416,7 @@ tr.flash td{animation:fl 1.8s ease-out}
 <script>
 (function(){
 var DEFAULT_CODES=[];
-var APP_VERSION='2026-11-09.1';
+var APP_VERSION='2026-11-10.1';
 var NARRS=ls('cashentry.narrs')||[];
 var EXPCODE=ls('cashentry.expcode')||'SHOP-EXP';
 var BIZ=ls('cashentry.biz')||'';
@@ -577,6 +582,12 @@ function uiFold(k,fold){
 Array.prototype.forEach.call(document.querySelectorAll('[data-fold]'),function(h){
   var k=h.getAttribute('data-fold');uiFold(k,!!UI[k]);
   h.onclick=function(){uiFold(k,!h.parentNode.classList.contains('folded'))};
+});
+$('shareImg').onclick=function(){sendDayImage(dayModelToday())};
+// remember which sections (details) are open or closed
+Array.prototype.forEach.call(document.querySelectorAll('details[id]'),function(d){
+  var k='d_'+d.id;if(UI[k]!==undefined)d.open=!!UI[k];
+  d.addEventListener('toggle',function(){UI[k]=d.open?1:0;ls('cashentry.ui',UI)});
 });
 function backToRow(){
   var r=f.ret;f.ret=null;if(!r)return;
