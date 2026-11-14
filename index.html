@@ -416,7 +416,7 @@ tr.flash td{animation:fl 1.8s ease-out}
 <script>
 (function(){
 var DEFAULT_CODES=[];
-var APP_VERSION='2026-11-10.1';
+var APP_VERSION='2026-11-14.1';
 var NARRS=ls('cashentry.narrs')||[];
 var EXPCODE=ls('cashentry.expcode')||'SHOP-EXP';
 var BIZ=ls('cashentry.biz')||'';
@@ -1056,6 +1056,14 @@ function events(){
 }
 // net = IN minus OUT.  negative = they owe us (OUT), positive = we owe them (IN)
 function tbIncl(){return L&&pendingEv().length>0&&f.tbPend!==false}
+// trial balance: the shop cash row shows the CURRENT closing cash (not the month-end figure kept in the opening balances)
+function curCashRow(net,incl){
+  var ca=cashAcctCode();if(!ca||!L)return net;
+  var c=null,ld=latestDay();
+  if(incl)c=totals().bal;else if(ld)c=ld.close;
+  if(c==null||isNaN(c))return net;
+  net[ca]=r2(-c);return net;
+}
 function balances(to,incl){
   var net={},cm=0,cc=L.commCode;
   if(L.ob)Object.keys(L.ob.rows).forEach(function(c){var r=L.ob.rows[c];net[c]=(r[1]||0)-(r[0]||0)});
@@ -1285,7 +1293,7 @@ function renderStatement(){
   out.innerHTML=h;
 }
 function renderBalList(){
-  var inc=tbIncl(),pn=pendingEv().length,net=balances(null,inc),keys=Object.keys(net);
+  var inc=tbIncl(),pn=pendingEv().length,net=curCashRow(balances(null,inc),inc),keys=Object.keys(net);
   if(f.hz===undefined)f.hz=true;
   if(f.hz)keys=keys.filter(function(k){return Math.abs(net[k])>=0.005});
   else{codes.forEach(function(c){if(keys.indexOf(c)<0)keys.push(c)});keys=keys.map(function(k){return k})}
@@ -1658,7 +1666,7 @@ function sendDayImage(m){
 
 // ===== trial balance picture =====
 function tbList(){
-  var net=balances(null,tbIncl()),keys=Object.keys(net).filter(function(k){return Math.abs(net[k])>=0.005});
+  var net=curCashRow(balances(null,tbIncl()),tbIncl()),keys=Object.keys(net).filter(function(k){return Math.abs(net[k])>=0.005});
   if(f.ty)keys=keys.filter(function(k){return typeOf(k)===f.ty});
   keys.sort(f.big?function(a,b){return Math.abs(net[b]||0)-Math.abs(net[a]||0)||(a<b?-1:1)}:function(a,b){return a<b?-1:a>b?1:0});
   return keys.map(function(k){var v=net[k];return{c:k,o:v<0?-v:0,i:v>0?v:0}});
@@ -1929,7 +1937,7 @@ function renameCode(oldC,newC,done){
     (L.late||[]).forEach(function(e){fix(e,'c')});(L.wait||[]).forEach(function(e){fix(e,'c')});
     function rk(o){if(o&&o[oldC]!==undefined){o[newC]=o[oldC];delete o[oldC];n++}}
     if(L.ob)rk(L.ob.rows);(L.obHist||[]).forEach(function(h){rk(h.rows)});rk(L.types);
-    if(L.commCode===oldC)L.commCode=newC;if(L.reserve===oldC)L.reserve=newC;if(L.crown&&L.crown.code===oldC)L.crown.code=newC;
+    if(L.commCode===oldC)L.commCode=newC;if(L.cashAcct===oldC)L.cashAcct=newC;if(L.rndCode===oldC)L.rndCode=newC;if(L.reserve===oldC)L.reserve=newC;if(L.crown&&L.crown.code===oldC)L.crown.code=newC;
     if(f.stCode===oldC){f.stCode=newC;$('stIn').value=newC}
   }
   if(L)ldSave(function(){all();renderLedger();done(true,oldC+' is now '+newC+' ('+n+' places updated)')});
@@ -2271,7 +2279,7 @@ $('cmpText').oninput=function(){
   var out=$('cmpOut');if(!L){out.innerHTML='';return}
   if(!this.value.trim()){out.innerHTML='';return}
   oninputCrown();
-  var p=parseSheetRows(this.value),net=balances(),seen={},diffs=[],ok=0;
+  var p=parseSheetRows(this.value),net=curCashRow(balances(),false),seen={},diffs=[],ok=0;
   p.rows.forEach(function(r){
     seen[r.code]=1;var ex=r2(r.i-r.o),tl=net[r.code]||0;
     if(Math.abs(ex-tl)<0.005)ok++;else diffs.push({c:r.code,ex:ex,tl:tl});
@@ -2527,7 +2535,7 @@ function xlCompare(B){
   var keep=L,res=[];
   L=B.L;CACHE=null;
   try{
-    var net=balances(),X=B.X,tol=0.005;
+    var net=curCashRow(balances(),false),X=B.X,tol=0.005;
     var ms=monthSummary(null),cp=crownPos();
     function chk(label,ex,tv){if(typeof ex!=='number'){res.push({l:label,e:'not in file',t:fmt2(tv),ok:null});return}res.push({l:label,e:fmt2(ex),t:fmt2(tv),ok:Math.abs(ex-tv)<=tol})}
     var cashLast=B.stats.lastClose;
