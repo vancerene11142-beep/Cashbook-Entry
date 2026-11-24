@@ -219,16 +219,19 @@ tr.flash td{animation:fl 1.8s ease-out}
   <div class="mute" style="margin-top:6px">A picture of today's sheet as it stands, to send before you post the day.</div>
 </div>
 
+<div class="card" id="ccCard">
+  <details><summary style="font-weight:700;font-size:16px">Counted cash doesn't match?</summary>
+    <div class="mute" style="margin:6px 0">Only for you: nothing here is posted, copied or put in any picture. Use it only when the cash you counted differs from the app's closing cash.</div>
+    <input id="ccIn" type="text" inputmode="decimal" placeholder="Cash counted in hand" autocomplete="off">
+    <div id="ccRes" style="margin-top:8px"></div>
+  </details>
+</div>
+
 </div>
 <div class="wrap" id="viewDay" style="display:none">
 <div class="card" id="closeCard">
   <h2>Close day — post to the ledger</h2>
   <div class="two"><div><div class="mute">Date of this sheet</div><input type="date" id="dayDate"></div><div><div class="mute">Cash in hand at close</div><div class="bigbal" id="closeBal" style="font-size:22px;padding-top:6px">0</div></div></div>
-  <details style="margin-top:8px"><summary style="font-size:14px;color:var(--mute)">Counted cash doesn't match?</summary>
-    <div class="mute" style="margin:6px 0">Only for you: nothing here is posted, copied or put in any picture. Type the cash you counted in hand.</div>
-    <input id="ccIn" type="text" inputmode="decimal" placeholder="Cash counted in hand" autocomplete="off">
-    <div id="ccRes" style="margin-top:8px"></div>
-  </details>
   <div id="lastCloseNote" class="mute" style="margin-top:6px"></div>
   <div id="closeInfo" style="margin-top:8px"></div>
   <div id="reviewBox" style="display:none"></div>
@@ -422,7 +425,7 @@ tr.flash td{animation:fl 1.8s ease-out}
 <script>
 (function(){
 var DEFAULT_CODES=[];
-var APP_VERSION='2026-11-24.1';
+var APP_VERSION='2026-11-24.2';
 var NARRS=ls('cashentry.narrs')||[];
 var EXPCODE=ls('cashentry.expcode')||'SHOP-EXP';
 var BIZ=ls('cashentry.biz')||'';
@@ -484,9 +487,38 @@ function renderTop(){
   var b=$('bal');b.textContent=fmt(t.bal);b.style.color=t.bal<0?'var(--bad)':'';
   var nr=rows().length;$('cnt').textContent=nr+(nr===1?' row':' rows')+(S.date?' · '+fd(S.date):'');
 }
+var NH={key:'',m:{}};
+function narrHist(){
+  var key=(L&&L.days?L.days.length+'|'+(L.chg||0):'0');
+  if(NH.key!==key){
+    var m={},lim=addDay(today(),-150);
+    function add(n,c,w){n=String(n||'').trim().toUpperCase();if(!n||n==='-'||n.indexOf('ROUND OFF')===0)return;var o=m[n]||(m[n]={n:n,k:0,c:{}});o.k+=w;if(c)o.c[c]=(o.c[c]||0)+w}
+    if(L&&L.days)L.days.forEach(function(d){if(d.date<lim)return;(d.ent||[]).forEach(function(e){add(e.n,e.c,1)})});
+    NH.key=key;NH.m=m;
+  }
+  return NH.m;
+}
+function narrSuggest(typed,code){
+  typed=(typed||'').trim().toUpperCase();code=(code||'').trim().toUpperCase();
+  var base=narrHist(),m={};
+  Object.keys(base).forEach(function(n){m[n]={n:n,k:base[n].k,c:base[n].c}});
+  S.entries.forEach(function(e){var n=String(e.narr||'').trim().toUpperCase();if(!n||n==='-'||n.indexOf('ROUND OFF')===0)return;var o=m[n]||(m[n]={n:n,k:0,c:{}});o.k+=1;if(e.code)o.c[e.code]=(o.c[e.code]||0)+1});
+  NARRS.forEach(function(n){var o=m[n]||(m[n]={n:n,k:0,c:{}});o.k+=3});
+  var a=Object.keys(m).map(function(n){return m[n]});
+  if(!typed){
+    if(!code)return[];
+    a=a.filter(function(o){return o.c[code]});
+  }else a=a.filter(function(o){return o.n.indexOf(typed)>=0});
+  a.forEach(function(o){o.sc=o.k+(code&&o.c[code]?40+o.c[code]:0)+(typed&&o.n.indexOf(typed)===0?25:0)});
+  a.sort(function(x,y){return y.sc-x.sc||(x.n<y.n?-1:1)});
+  return a.slice(0,8).map(function(o){return o.n});
+}
 function renderNarr(){
-  var cur=$('narr').value.trim().toUpperCase();
-  $('narrChips').innerHTML=!NARRS.length?'':NARRS.map(function(n){return'<button class="chip'+(cur===n?' on':'')+'" data-n="'+esc(n)+'">'+esc(n)+'</button>'}).join('');
+  var cur=$('narr').value.trim().toUpperCase(),code=$('code').value;
+  var a=narrSuggest(cur,code);
+  if(!cur&&!a.length)a=NARRS.slice();
+  if(cur&&a.length===1&&a[0]===cur)a=[];
+  $('narrChips').innerHTML=a.map(function(n){return'<button class="chip'+(cur===n?' on':'')+'" data-n="'+esc(n)+'">'+esc(n)+'</button>'}).join('');
 }
 function codeSuggest(typed,max){
   typed=(typed||'').trim().toUpperCase();max=max||8;
@@ -1054,7 +1086,7 @@ function events(){
   L.days.forEach(function(d){
     if(ob&&d.date<ob)return;
     if(ARCH_END&&d.date>=ARCH_END)return;
-    (d.deals||[]).forEach(function(x){ev.push({d:d.date,k:0,s:x.s,c:x.c,n:dealNarr(x),o:x.ps==='S'?x.inr:0,i:x.ps==='P'?x.inr:0,cr:0,ci:0})});
+    (d.deals||[]).forEach(function(x){ev.push({d:d.date,k:0,s:x.s,c:x.c,n:dealNarr(x)+(x.nt?' — '+x.nt:''),o:x.ps==='S'?x.inr:0,i:x.ps==='P'?x.inr:0,cr:0,ci:0})});
     (d.ent||[]).forEach(function(e){ev.push({d:d.date,k:1,s:e.s,c:e.c,n:e.n,o:e.o,i:e.i,cr:e.cr,ci:e.ci})});
   });
   L.late.forEach(function(e){if(ob&&e.d<ob)return;if(ARCH_END&&e.d>=ARCH_END)return;ev.push({d:e.d,k:1,s:lateS(e),c:e.c,n:e.n,o:e.o,i:e.i,cr:e.cr,ci:e.ci})});
@@ -1091,7 +1123,7 @@ function perRange(kk,pf,pt){
 function perLabel(rg){return(!rg[0]&&!rg[1])?'All entries':((rg[0]?fd(rg[0]):'start')+' to '+(rg[1]?fd(rg[1]):fd(today())))}
 function pendingEv(){
   var ev=[],d=S.date||today();
-  (S.deals||[]).forEach(function(x,ix){ev.push({d:d,k:0,s:2e9+ix,c:x.code,n:dealNarr({v:x.vol,op:x.op,r:x.rate,ps:x.ps}),o:x.ps==='S'?x.inr:0,i:x.ps==='P'?x.inr:0,cr:0,ci:0,p:1})});
+  (S.deals||[]).forEach(function(x,ix){ev.push({d:d,k:0,s:2e9+ix,c:x.code,n:dealNarr({v:x.vol,op:x.op,r:x.rate,ps:x.ps})+(x.note?' — '+x.note:''),o:x.ps==='S'?x.inr:0,i:x.ps==='P'?x.inr:0,cr:0,ci:0,p:1})});
   rows().forEach(function(e,ix){if(e.code)ev.push({d:d,k:1,s:2e9+ix,c:e.code,n:e.narr,o:e.out||0,i:e.inn||0,cr:e.cr||0,ci:e.ci||0,p:1})});
   return ev;
 }
@@ -1421,7 +1453,7 @@ function renderProf(){
 function renderCC(){
   var el=$('ccRes');if(!el)return;
   var raw=($('ccIn').value||'').trim();
-  if(raw===''){el.innerHTML='';return}
+  if(raw===''){el.innerHTML='<div class="mute">The app says closing cash is <b>'+fmt2(totals().bal)+'</b>. Type what you counted.</div>';return}
   var cnt=num(raw),t=totals(),dd=r2(cnt-t.bal),a=Math.abs(dd),h='';
   if(Math.abs(dd)<0.005){el.innerHTML='<div class="flag okf">Tallies. Counted '+fmt2(cnt)+' = app '+fmt2(t.bal)+'.</div>';return}
   h='<div class="flag bad"><b>'+(dd<0?'Short by ':'Excess by ')+fmt2(a)+'</b><br>Counted '+fmt2(cnt)+' · app says '+fmt2(t.bal)+'</div>';
@@ -2258,7 +2290,7 @@ function findEntries(q){
   L.days.forEach(function(d){
     (d.ent||[]).forEach(function(e){if(hit(e))res.push({d:d.date,id:d.id,s:e.s,e:e,w:''})});
     (d.deals||[]).forEach(function(x){
-      var e={c:x.c,n:dealNarr(x),o:x.ps==='S'?x.inr:0,i:x.ps==='P'?x.inr:0};
+      var e={c:x.c,n:dealNarr(x)+(x.nt?' — '+x.nt:''),o:x.ps==='S'?x.inr:0,i:x.ps==='P'?x.inr:0};
       if(hit(e)||(isNum&&(String(x.v)===qn||String(x.r)===qn)))res.push({d:d.date,id:d.id,s:x.s,e:e,w:'deal'});
     });
   });
