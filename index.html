@@ -224,6 +224,11 @@ tr.flash td{animation:fl 1.8s ease-out}
 <div class="card" id="closeCard">
   <h2>Close day — post to the ledger</h2>
   <div class="two"><div><div class="mute">Date of this sheet</div><input type="date" id="dayDate"></div><div><div class="mute">Cash in hand at close</div><div class="bigbal" id="closeBal" style="font-size:22px;padding-top:6px">0</div></div></div>
+  <details style="margin-top:8px"><summary style="font-size:14px;color:var(--mute)">Counted cash doesn't match?</summary>
+    <div class="mute" style="margin:6px 0">Only for you: nothing here is posted, copied or put in any picture. Type the cash you counted in hand.</div>
+    <input id="ccIn" type="text" inputmode="decimal" placeholder="Cash counted in hand" autocomplete="off">
+    <div id="ccRes" style="margin-top:8px"></div>
+  </details>
   <div id="lastCloseNote" class="mute" style="margin-top:6px"></div>
   <div id="closeInfo" style="margin-top:8px"></div>
   <div id="reviewBox" style="display:none"></div>
@@ -417,7 +422,7 @@ tr.flash td{animation:fl 1.8s ease-out}
 <script>
 (function(){
 var DEFAULT_CODES=[];
-var APP_VERSION='2026-11-19.1';
+var APP_VERSION='2026-11-24.1';
 var NARRS=ls('cashentry.narrs')||[];
 var EXPCODE=ls('cashentry.expcode')||'SHOP-EXP';
 var BIZ=ls('cashentry.biz')||'';
@@ -996,7 +1001,7 @@ function parseBackup(raw){
   if(!T||!Array.isArray(T.entries))return null;
   var ent=T.entries.map(function(e){return{code:String(e.code||'').toUpperCase().trim(),narr:String(e.narr||''),out:num(e.out),inn:num(e.inn),cr:num(e.cr),ci:num(e.ci)}});
   var exp=(Array.isArray(T.exp)?T.exp:[]).map(function(x){return{label:String(x.label||''),amt:num(x.amt),own:!!x.own}}).filter(function(x){return x.amt>0});
-  var dl=(Array.isArray(T.deals)?T.deals:[]).map(function(x){var v=num(x.vol),r=parseFloat(x.rate),op=x.op==='/'?'/':'*';return{code:String(x.code||'').toUpperCase().trim(),vol:v,op:op,rate:r,ps:x.ps==='S'?'S':'P',inr:(v>0&&r>0)?dealInr(v,op,r):0,b:+x.b||0}}).filter(function(x){return x.code&&x.vol>0&&x.rate>0});
+  var dl=(Array.isArray(T.deals)?T.deals:[]).map(function(x){var v=num(x.vol),r=parseFloat(x.rate),op=x.op==='/'?'/':'*';return{code:String(x.code||'').toUpperCase().trim(),vol:v,op:op,rate:r,ps:x.ps==='S'?'S':'P',inr:(v>0&&r>0)?dealInr(v,op,r):0,b:+x.b||0,note:String(x.note||'').slice(0,200)}}).filter(function(x){return x.code&&x.vol>0&&x.rate>0});
   return{sid:String(o.sid||T.sid||''),date:/^\d{4}-\d\d-\d\d$/.test(T.date||'')?T.date:'',deals:dl,open:T.open===''||T.open==null?'':String(num(T.open)),entries:ent,exp:exp,expNarr:String(T.expNarr||'EXP'),at:o.at||'',biz:String(o.biz||'')};
 }
 function sheetSig(T){
@@ -1413,8 +1418,27 @@ function renderProf(){
   h+='<div class="mute" style="margin-top:6px">'+fd(m+'-01').slice(3)+'. “Posted” is the days already closed; “Today’s sheet” is what you have entered but not posted yet. Same rules as the Month summary in the Ledger tab.</div>';
   el.innerHTML=h;
 }
+function renderCC(){
+  var el=$('ccRes');if(!el)return;
+  var raw=($('ccIn').value||'').trim();
+  if(raw===''){el.innerHTML='';return}
+  var cnt=num(raw),t=totals(),dd=r2(cnt-t.bal),a=Math.abs(dd),h='';
+  if(Math.abs(dd)<0.005){el.innerHTML='<div class="flag okf">Tallies. Counted '+fmt2(cnt)+' = app '+fmt2(t.bal)+'.</div>';return}
+  h='<div class="flag bad"><b>'+(dd<0?'Short by ':'Excess by ')+fmt2(a)+'</b><br>Counted '+fmt2(cnt)+' · app says '+fmt2(t.bal)+'</div>';
+  h+='<div class="mute" style="margin-top:6px">'+(dd<0?'Cash is less than the app says: an OUT payment may not be entered, or an IN entry may be wrong.':'Cash is more than the app says: an IN receipt may not be entered, or an OUT entry may be wrong.')+'</div>';
+  var rs=rows().filter(function(r){return !r.bundle}),same=[],half=[];
+  function ln(r){return'<div class="mute">• '+esc(r.code||'(no code)')+' · '+esc(r.narr||'-')+' · '+(r.out?'OUT '+fmt2(r.out):'IN '+fmt2(r.inn))+'</div>'}
+  rs.forEach(function(r){var v=r.out||r.inn;if(Math.abs(v-a)<0.005)same.push(r);
+    if(dd<0&&r.inn&&Math.abs(r.inn*2-a)<0.005)half.push(r);if(dd>0&&r.out&&Math.abs(r.out*2-a)<0.005)half.push(r)});
+  h+='<div style="margin-top:6px"><b style="font-size:13px">Entries of exactly '+fmt2(a)+' today</b>'+(same.length?same.slice(0,6).map(ln).join(''):'<div class="mute">None. If you paid or received '+fmt2(a)+', it may be the missing entry.</div>')+'</div>';
+  if(half.length)h+='<div style="margin-top:6px"><b style="font-size:13px">Possible wrong side (amount × 2 = difference)</b>'+half.slice(0,6).map(function(r){return ln(r)}).join('')+'<div class="mute">If one of these was really '+(dd<0?'OUT':'IN')+', change its side.</div></div>';
+  el.innerHTML=h;
+}
+$('ccIn').oninput=function(){S.counted=this.value;save();renderCC()};
 function renderClose(){
   if(!$('closeInfo'))return;
+  if(document.activeElement!==$('ccIn'))$('ccIn').value=S.counted||'';
+  renderCC();
   var t=totals(),rs=rows(),dl=S.deals||[];
   try{renderProf()}catch(e){}
   $('closeBal').textContent=fmt(t.bal);
@@ -2085,7 +2109,7 @@ function reopenDay(id){
     var n={open:String(day.open||''),entries:[],exp:[],expNarr:S.expNarr,seq:S.seq,deals:[],date:day.date,sid:day.sid||newSid()};
     (day.ent||[]).filter(function(e){return !(e.x&&day.exp)}).concat(back).sort(function(a,b){return a.s-b.s}).forEach(function(e){n.entries.push({id:'e'+(n.seq++),code:e.c,narr:e.n,out:e.o,inn:e.i,cr:e.cr,ci:e.ci})});
     (day.exp||[]).forEach(function(x){n.exp.push({label:x.label,amt:x.amt,own:!!x.own})});
-    (day.deals||[]).forEach(function(x){n.deals.push({code:x.c,vol:x.v,op:x.op,rate:x.r,ps:x.ps,inr:x.inr,b:x.b||0})});
+    (day.deals||[]).forEach(function(x){var o={code:x.c,vol:x.v,op:x.op,rate:x.r,ps:x.ps,inr:x.inr,b:x.b||0};if(x.nt)o.note=x.nt;n.deals.push(o)});
     S=n;save();f.review=false;all();setView('cash');toast('Day reopened on the Cash book tab'+(back.length?' with '+back.length+' waiting/late-coded row(s) put back':'')+' — review it, then post it again');
   });
 }
@@ -2111,7 +2135,7 @@ function renderDayView(){
   h+='<div class="two" style="margin-top:6px"><div><div class="mute">Opening cash</div><b>'+fmt(d.open)+'</b></div><div><div class="mute">Closing cash</div><b>'+fmt(d.close)+'</b></div></div>';
   if((d.deals||[]).length){
     var dd=d.deals.slice().sort(function(a,b){return a.s-b.s});
-    h+='<div class="mute" style="margin-top:10px">Currency deals ('+dd.length+')</div><table class="vt">'+dd.map(function(x){return'<tr><td><b>'+esc(x.c)+'</b></td><td>'+esc(dealNarr(x))+'</td><td class="num '+(x.ps==='S'?'oo':'ii')+'">'+(x.ps==='S'?'OUT ':'IN ')+fmt2(x.inr)+'</td><td><button class="act" style="border:0;background:none;color:var(--acc);font-size:14px" data-dp="'+x.s+'">edit</button></td></tr>'+(f.dpEd===x.s?'<tr><td colspan="4">'+dealFormHtml('dp',x)+'<div style="margin-top:2px"><button class="act" style="border:0;background:none;color:var(--bad);font-size:14px" id="dpDel">'+(f.dpDel?'sure? tap again to delete this deal':'delete this deal')+'</button></div></td></tr>':'')}).join('')+'</table>';
+    h+='<div class="mute" style="margin-top:10px">Currency deals ('+dd.length+')</div><table class="vt">'+dd.map(function(x){return'<tr><td><b>'+esc(x.c)+'</b></td><td>'+esc(dealNarr(x))+(x.nt?'<div class="mute">📝 '+esc(x.nt)+'</div>':'')+'</td><td class="num '+(x.ps==='S'?'oo':'ii')+'">'+(x.ps==='S'?'OUT ':'IN ')+fmt2(x.inr)+'</td><td><button class="act" style="border:0;background:none;color:var(--acc);font-size:14px" data-dp="'+x.s+'">edit</button></td></tr>'+(f.dpEd===x.s?'<tr><td colspan="4">'+dealFormHtml('dp',{c:x.c,v:x.v,r:x.r,ps:x.ps,op:x.op,n:x.nt})+'<div style="margin-top:2px"><button class="act" style="border:0;background:none;color:var(--bad);font-size:14px" id="dpDel">'+(f.dpDel?'sure? tap again to delete this deal':'delete this deal')+'</button></div></td></tr>':'')}).join('')+'</table>';
   }
   h+='<div class="mute" style="margin-top:10px">Cash book ('+ent.length+' rows)</div><table class="vt"><tr class="vh"><td>Code</td><td>Narration</td><td class="num">OUT</td><td class="num">IN</td><td></td></tr>';
   ent.forEach(function(e){
@@ -2147,7 +2171,7 @@ function applyDealEdit(del){
     if(r.err){m.innerHTML='<div class="flag bad">'+esc(r.err)+'</div>';return}
     if(acctList().indexOf(r.c)<0){m.innerHTML='<div class="flag bad">'+esc(r.c)+' is not in the account list. Add it first (Ledger → Accounts and types).</div>';return}
     snapshot('before correcting a posted deal');
-    x.c=r.c;x.v=r.v;x.op=r.op;x.r=r.r;x.ps=r.ps;x.inr=r.inr;
+    x.c=r.c;x.v=r.v;x.op=r.op;x.r=r.r;x.ps=r.ps;x.inr=r.inr;if(r.n)x.nt=r.n;else delete x.nt;
   }
   CACHE=null;
   ldSave(function(ok){
@@ -2742,7 +2766,7 @@ function doPost(){
   var date=S.date,rs=rows(),dl=S.deals||[],nc=rs.filter(function(r){return !r.code}).length;
   snapshot('before posting '+fd(date));
   var t=totals(),ent=[],wait=[],snap={days:L.days,wait:L.wait,seq:L.seq};
-  var deals=dl.map(function(x){return{c:x.code,v:x.vol,op:x.op,r:x.rate,ps:x.ps,inr:x.inr,b:x.b||0,s:L.seq++}});
+  var deals=dl.map(function(x){var o={c:x.code,v:x.vol,op:x.op,r:x.rate,ps:x.ps,inr:x.inr,b:x.b||0,s:L.seq++};if(x.note)o.nt=x.note;return o});
   rs.forEach(function(r){
     if(r.code)ent.push({c:r.code,n:r.narr,o:r.out,i:r.inn,cr:r.cr,ci:r.ci,s:L.seq++,x:r.ex?1:0});
     else wait.push({id:'w'+(L.seq++),d:date,n:r.narr,o:r.out,i:r.inn,cr:r.cr,ci:r.ci});
@@ -2768,7 +2792,7 @@ $('dealsToday').onclick=function(e){
     var r=readDealForm('dt'),m=$('dtM');
     if(r.err){m.innerHTML='<div class="flag bad">'+esc(r.err)+'</div>';return}
     if(!known(r.c)){m.innerHTML='<div class="flag bad">'+esc(r.c)+' is not in the account list</div>';return}
-    S.deals[f.dedT]={code:r.c,vol:r.v,op:r.op,rate:r.r,ps:r.ps,inr:r.inr,b:x.b||0};
+    S.deals[f.dedT]={code:r.c,vol:r.v,op:r.op,rate:r.r,ps:r.ps,inr:r.inr,b:x.b||0};if(r.n)S.deals[f.dedT].note=r.n;
     f.dedT=null;save();all();renderDeals();toast('Deal corrected: '+fmt2(r.inr));return;
   }
   var d=e.target.getAttribute&&e.target.getAttribute('data-dd');if(d===null||d===undefined)return;d=+d;
@@ -2840,6 +2864,7 @@ function dealFormHtml(p,x){
    +'<div class="two"><div><div class="mute">Volume</div><input id="'+p+'V" type="text" inputmode="decimal" value="'+esc(x.v)+'"></div><div><div class="mute">Rate</div><input id="'+p+'R" type="text" inputmode="decimal" value="'+esc(x.r)+'"></div></div>'
    +'<div class="two" style="margin-top:4px"><div><div class="mute">Purchase / Sale</div><select id="'+p+'P"><option value="P"'+sel('P',x.ps)+'>Purchase (P)</option><option value="S"'+sel('S',x.ps)+'>Sale (S)</option></select></div>'
    +'<div><div class="mute">Volume and rate</div><select id="'+p+'O"><option value="*"'+sel('*',x.op)+'>× multiply</option><option value="/"'+sel('/',x.op)+'>÷ divide</option></select></div></div>'
+   +'<div class="mute" style="margin-top:6px">Note (stays in this app only, for later reference)</div><input id="'+p+'N" type="text" maxlength="200" autocomplete="off" placeholder="e.g. Return of cancelled deal" value="'+esc(x.n||'')+'">'
    +'<div id="'+p+'M" style="margin-top:6px"></div>'
    +'<div class="two" style="margin-top:8px"><button class="btn" id="'+p+'Save">Save correction</button><button class="btn sec" id="'+p+'Cancel">Cancel</button></div></div>';
 }
@@ -2848,7 +2873,7 @@ function readDealForm(p){
   if(!c)err='Account code is needed';
   else if(!(v>0))err='Volume must be more than 0';
   else if(!(r>0))err='Rate must be more than 0';
-  return{c:c,v:r2(v),r:r,op:op,ps:ps,inr:(v>0&&r>0)?dealInr(r2(v),op,r):0,err:err};
+  return{c:c,v:r2(v),r:r,op:op,ps:ps,n:($(p+'N')?$(p+'N').value.trim().slice(0,200):''),inr:(v>0&&r>0)?dealInr(r2(v),op,r):0,err:err};
 }
 function renderDealsToday(){
   var dl=S.deals||[];
@@ -2856,7 +2881,7 @@ function renderDealsToday(){
   $('dealsLink').innerHTML=dl.length?'<button class="pill" id="goDeals">'+dl.length+' deal'+(dl.length>1?'s':'')+' on today\'s sheet — see Deals tab →</button>':'';
   if(!dl.length){$('dealsToday').innerHTML='';$('dealsStats').innerHTML='';return}
   var fl=L?dealFlags(dl):dl.map(function(){return''});
-  $('dealsToday').innerHTML=dl.map(function(x,ix){return'<div class="exrow"><span><b>'+esc(x.code)+'</b> '+x.vol+' '+x.op+' '+x.rate+' ('+x.ps+') = '+fmt2(x.inr)+(fl[ix]?'<div class="flag warn" style="margin:2px 0 0">'+esc(fl[ix])+'</div>':'')+'</span><div style="flex:none;white-space:nowrap"><button data-de="'+ix+'" style="color:var(--acc);font-size:14px;margin-right:4px">edit</button><button data-dd="'+ix+'">'+(f.dd===ix?'sure?':'✕')+'</button></div></div>'+(f.dedT===ix?dealFormHtml('dt',{c:x.code,v:x.vol,r:x.rate,ps:x.ps,op:x.op}):'')}).join('');
+  $('dealsToday').innerHTML=dl.map(function(x,ix){return'<div class="exrow"><span><b>'+esc(x.code)+'</b> '+x.vol+' '+x.op+' '+x.rate+' ('+x.ps+') = '+fmt2(x.inr)+(x.note?'<div class="mute" style="margin:2px 0 0">📝 '+esc(x.note)+'</div>':'')+(fl[ix]?'<div class="flag warn" style="margin:2px 0 0">'+esc(fl[ix])+'</div>':'')+'</span><div style="flex:none;white-space:nowrap"><button data-de="'+ix+'" style="color:var(--acc);font-size:14px;margin-right:4px">edit</button><button data-dd="'+ix+'">'+(f.dd===ix?'sure?':'✕')+'</button></div></div>'+(f.dedT===ix?dealFormHtml('dt',{c:x.code,v:x.vol,r:x.rate,ps:x.ps,op:x.op,n:x.note}):'')}).join('');
   var dp=dealsProfit(dl),h='';
   batchStats(dl).forEach(function(b){h+='<div class="flag '+(b.bad?'warn':'okf')+'">Message '+b.i+': purchases '+fmt2(b.p)+' · sales '+fmt2(b.s)+(b.bad?' — differ by '+fmt2(Math.abs(b.diff))+' (stock kept with Crown?)':' — balanced')+'</div>'});
   h+='<div class="mute">Deals profit (sales − purchases, INR): <b>'+signed(dp.profit)+'</b> · '+profitMsg(dp.profit)+'</div>';
