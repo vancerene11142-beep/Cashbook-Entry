@@ -425,7 +425,7 @@ tr.flash td{animation:fl 1.8s ease-out}
 <script>
 (function(){
 var DEFAULT_CODES=[];
-var APP_VERSION='2026-11-24.2';
+var APP_VERSION='2026-11-25.1';
 var NARRS=ls('cashentry.narrs')||[];
 var EXPCODE=ls('cashentry.expcode')||'SHOP-EXP';
 var BIZ=ls('cashentry.biz')||'';
@@ -937,12 +937,12 @@ function renderDeals(){
   var rows=computeDeals(parseDeals(D.text)),deals=rows.filter(function(r){return r.deal});
   var box=$('dealRows');
   if(!deals.length){box.innerHTML='<div class="mute">'+(D.text.trim()?'No deal lines found (each needs @ or ➗ ).':'Paste one batch of the WhatsApp message above.')+'</div>';$('dealSum').innerHTML='';$('dealCopyNote').textContent='';return}
-  var pv=0,sv=0,okn=0;
+  var VM={p:0,s:0},VD={p:0,s:0},okn=0;
   var h='';
   rows.forEach(function(r){
     if(!r.deal){h+='<div class="mute" style="padding:3px 0">Skipped: “'+esc(r.raw)+'” (not a deal line)</div>';return}
     if(r.ok)okn++;
-    if(!r.divSep&&r.vol>0&&r.rate!=null){if(r.ps==='P')pv+=r.vol;else sv+=r.vol}
+    if(r.vol>0&&r.rate!=null&&!D.hold[r.i]){var gq=r.op==='/'?VD:VM;if(r.ps==='P')gq.p+=r.vol;else gq.s+=r.vol}
     var held=D.hold[r.i];
     h+='<div class="drow '+(held?'hold':r.ok?'ok':'bad')+'"><div class="dtop"><b>Block '+r.block+' · '+(r.ps==='P'?'Purchase':'Sale')+'</b><span class="mute" style="flex:1;margin:0 6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(r.raw)+'</span><label class="own"><input type="checkbox" data-hold="'+r.i+'"'+(held?' checked':'')+'> skip</label></div>'
      +'<div class="dgrid"><div><label>Code</label><input type="text" data-f="code" data-i="'+r.i+'" value="'+esc(r.code)+'" autocapitalize="characters" autocomplete="off"></div>'
@@ -956,7 +956,9 @@ function renderDeals(){
   });
   box.innerHTML=h;
   var bad=deals.filter(function(r){return !r.ok&&!D.hold[r.i]}).length;
-  $('dealSum').innerHTML='<div class="two"><div>Purchase vol <b>'+fmt(pv)+'</b></div><div>Sale vol <b>'+fmt(sv)+'</b></div></div><div class="mute">'+okn+' ready · '+bad+' need attention · '+Object.keys(D.hold).filter(function(k){return D.hold[k]}).length+' skipped. Volume totals are for information (stock kept with Crown need not match).</div>';
+  function vline(g,lab){if(!(g.p||g.s))return'';var d=r2(g.p-g.s),bs=Math.max(g.p,g.s),bd=bs>0&&Math.abs(d)>bs*TOL.batch/100;
+    return'<div class="two"><div>'+lab+'Purchase vol <b>'+fmt(g.p)+'</b></div><div>Sale vol <b>'+fmt(g.s)+'</b></div></div>'+(bd?'<div class="flag warn">'+lab+'Purchases and sales differ by '+fmt2(Math.abs(d))+' — check the volumes (stock kept with Crown?)</div>':'')}
+  $('dealSum').innerHTML=vline(VM,VD.p||VD.s?'× deals: ':'')+vline(VD,'÷ deals: ')+'<div class="mute">'+okn+' ready · '+bad+' need attention · '+Object.keys(D.hold).filter(function(k){return D.hold[k]}).length+' skipped. Volume totals are for information (stock kept with Crown need not match).</div>';
   $('dealCopyNote').textContent=okn+' of '+deals.length+' rows will be copied';
 }
 function dealTSV(){
@@ -2762,12 +2764,12 @@ function renderReview(){
   dl.forEach(function(x){add(x.code,x.ps==='P'?x.inr:-x.inr)});
   if(cc&&Math.abs(cm)>0.0001)add(cc,cm);
   keys=Object.keys(ch).sort();
-  var seenR={},dupR=[],seenD={},dupD=[],pv=0,sv=0;
+  var seenR={},dupR=[],seenD={},dupD=[],pv=0,sv=0,pd=0,sd=0;
   rs.forEach(function(r){var k=[r.code,r.out,r.inn,r.cr,r.ci].join('|');if(r.code&&seenR[k])dupR.push(r.code+' '+(r.out?'OUT '+fmt2(r.out):r.inn?'IN '+fmt2(r.inn):'commission'));seenR[k]=1});
-  dl.forEach(function(x){var k=[x.code,x.vol,x.op,x.rate,x.ps].join('|');if(seenD[k])dupD.push(x.code+' '+x.vol+' '+x.op+' '+x.rate+' ('+x.ps+')');seenD[k]=1;if(x.ps==='P')pv+=x.vol;else sv+=x.vol});
+  dl.forEach(function(x){var k=[x.code,x.vol,x.op,x.rate,x.ps].join('|');if(seenD[k])dupD.push(x.code+' '+x.vol+' '+x.op+' '+x.rate+' ('+x.ps+')');seenD[k]=1;if(x.op==='/'){if(x.ps==='P')pd+=x.vol;else sd+=x.vol}else{if(x.ps==='P')pv+=x.vol;else sv+=x.vol}});
   var big=rs.slice().sort(function(a,b){return(b.out+b.inn)-(a.out+a.inn)}).slice(0,3).filter(function(r){return r.out+r.inn>0});
   var h='<div class="bcard" style="border-color:var(--acc)"><b>Review before posting — '+fd(S.date)+'</b>';
-  h+='<div class="mute" style="margin-top:4px">Cash: OUT '+fmt2(t.o)+' · IN '+fmt2(t.i)+' · closing cash '+fmt2(t.bal)+(dl.length?'<br>Deals: '+dl.length+' (purchase volume '+fmt(pv)+', sale volume '+fmt(sv)+')':'')+'</div>';
+  h+='<div class="mute" style="margin-top:4px">Cash: OUT '+fmt2(t.o)+' · IN '+fmt2(t.i)+' · closing cash '+fmt2(t.bal)+(dl.length?'<br>Deals: '+dl.length+' (× deals: purchase volume '+fmt(pv)+', sale volume '+fmt(sv)+(pd||sd?'; ÷ deals: purchase volume '+fmt(pd)+', sale volume '+fmt(sd):'')+')':'')+'</div>';
   h+=reviewChecks(dl);
   var cp=crownPos(),cp2=crownPos(dl);
   if(cp2.n>cp.n)h+='<div class="mute" style="margin-top:4px">Crown AED volume held: '+signed(cp.net)+' → <b>'+signed(cp2.net)+'</b></div>';
@@ -2865,9 +2867,9 @@ function dealFlags(dl){
   return dl.map(function(x){var a=rateStep(cl,x.code,x.op,x.rate);return a?'Rate '+x.rate+' is more than '+TOL.rate+'% from this account\'s usual '+r2(a*10000)/10000:''});
 }
 function batchStats(dl){
-  var g={},keys=[];
-  dl.forEach(function(x){var k=x.b||0;if(!g[k]){g[k]={p:0,s:0};keys.push(k)}g[k][x.ps==='P'?'p':'s']+=x.vol});
-  return keys.map(function(k,i){var o=g[k],diff=r2(o.p-o.s),base=Math.max(o.p,o.s);return{i:i+1,p:r2(o.p),s:r2(o.s),diff:diff,bad:base>0&&Math.abs(diff)>base*TOL.batch/100}});
+  var g={},keys=[],bi={},nb=0;
+  dl.forEach(function(x){var b=x.b||0,op=x.op==='/'?'/':'*',k=b+'|'+op;if(!(b in bi))bi[b]=++nb;if(!g[k]){g[k]={p:0,s:0,b:b,op:op};keys.push(k)}g[k][x.ps==='P'?'p':'s']+=x.vol});
+  return keys.map(function(k){var o=g[k],diff=r2(o.p-o.s),base=Math.max(o.p,o.s);return{i:bi[o.b],op:o.op,lab:bi[o.b]+(o.op==='/'?' (÷ deals)':''),p:r2(o.p),s:r2(o.s),diff:diff,bad:base>0&&Math.abs(diff)>base*TOL.batch/100}});
 }
 function dealsProfit(dl){var o=0,i=0;dl.forEach(function(x){if(x.ps==='S')o+=x.inr;else i+=x.inr});return{o:r2(o),i:r2(i),profit:r2(o-i)}}
 function profitMsg(p){return p<0?'LOSS — unusual, please review':p===0?'Zero — check entries':'OK — profit as expected'}
@@ -2884,7 +2886,7 @@ function reviewChecks(dl){
   var h='',dp=dealsProfit(dl);
   if(dl.length){
     h+='<div class="mute" style="margin-top:4px">Deals profit today (sales − purchases, INR): <b>'+signed(dp.profit)+'</b> · '+profitMsg(dp.profit)+'</div>';
-    batchStats(dl).forEach(function(b){if(b.bad)h+='<div class="flag warn">Message '+b.i+': purchases '+fmt2(b.p)+' vs sales '+fmt2(b.s)+' — differ by '+fmt2(Math.abs(b.diff))+' (stock kept with Crown?)</div>'});
+    batchStats(dl).forEach(function(b){if(b.bad)h+='<div class="flag warn">Message '+b.lab+': purchases '+fmt2(b.p)+' vs sales '+fmt2(b.s)+' — differ by '+fmt2(Math.abs(b.diff))+' (stock kept with Crown?)</div>'});
     var fl=dealFlags(dl);dl.forEach(function(x,i){if(fl[i])h+='<div class="flag warn">'+esc(x.code)+' '+x.vol+' '+x.op+' '+x.rate+' ('+x.ps+'): '+esc(fl[i])+'</div>'});
   }
   return h;
@@ -2915,7 +2917,7 @@ function renderDealsToday(){
   var fl=L?dealFlags(dl):dl.map(function(){return''});
   $('dealsToday').innerHTML=dl.map(function(x,ix){return'<div class="exrow"><span><b>'+esc(x.code)+'</b> '+x.vol+' '+x.op+' '+x.rate+' ('+x.ps+') = '+fmt2(x.inr)+(x.note?'<div class="mute" style="margin:2px 0 0">📝 '+esc(x.note)+'</div>':'')+(fl[ix]?'<div class="flag warn" style="margin:2px 0 0">'+esc(fl[ix])+'</div>':'')+'</span><div style="flex:none;white-space:nowrap"><button data-de="'+ix+'" style="color:var(--acc);font-size:14px;margin-right:4px">edit</button><button data-dd="'+ix+'">'+(f.dd===ix?'sure?':'✕')+'</button></div></div>'+(f.dedT===ix?dealFormHtml('dt',{c:x.code,v:x.vol,r:x.rate,ps:x.ps,op:x.op,n:x.note}):'')}).join('');
   var dp=dealsProfit(dl),h='';
-  batchStats(dl).forEach(function(b){h+='<div class="flag '+(b.bad?'warn':'okf')+'">Message '+b.i+': purchases '+fmt2(b.p)+' · sales '+fmt2(b.s)+(b.bad?' — differ by '+fmt2(Math.abs(b.diff))+' (stock kept with Crown?)':' — balanced')+'</div>'});
+  batchStats(dl).forEach(function(b){h+='<div class="flag '+(b.bad?'warn':'okf')+'">Message '+b.lab+': purchases '+fmt2(b.p)+' · sales '+fmt2(b.s)+(b.bad?' — differ by '+fmt2(Math.abs(b.diff))+' (stock kept with Crown?)':' — balanced')+'</div>'});
   h+='<div class="mute">Deals profit (sales − purchases, INR): <b>'+signed(dp.profit)+'</b> · '+profitMsg(dp.profit)+'</div>';
   if(L){var cp=crownPos(),cp2=crownPos(dl);if(cp2.n>cp.n)h+='<div class="mute" style="margin-top:4px">Crown AED volume held: '+signed(cp.net)+' → <b>'+signed(cp2.net)+'</b> after this sheet</div>'}
   $('dealsStats').innerHTML=h;
