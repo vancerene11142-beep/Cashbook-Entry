@@ -220,9 +220,25 @@ tr.flash td{animation:fl 1.8s ease-out}
 </div>
 
 <div class="card" id="ccCard">
-  <details><summary style="font-weight:700;font-size:16px">Counted cash doesn't match?</summary>
-    <div class="mute" style="margin:6px 0">Only for you: nothing here is posted, copied or put in any picture. Use it only when the cash you counted differs from the app's closing cash.</div>
-    <input id="ccIn" type="text" inputmode="decimal" placeholder="Cash counted in hand" autocomplete="off">
+  <details id="cpDet"><summary style="font-weight:700;font-size:16px">Cash in hand: where</summary>
+    <div class="mute" style="margin:6px 0">Where today's closing cash is kept. Saved with the day, and shown small at the end of the cash book picture.</div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px">
+      <label class="mute">OF<input id="cp_of" type="text" inputmode="decimal" autocomplete="off"></label>
+      <label class="mute">D<input id="cp_d" type="text" inputmode="decimal" autocomplete="off"></label>
+      <label class="mute">C<input id="cp_c" type="text" inputmode="decimal" autocomplete="off"></label>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:6px;margin-top:6px">
+      <label class="mute">⬇️<input id="cp_dn" type="text" inputmode="decimal" autocomplete="off"></label>
+      <label class="mute">IB<input id="cp_ib" type="text" inputmode="decimal" autocomplete="off"></label>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px">
+      <label class="mute">Susp OD (name)<input id="cp_sn" type="text" autocapitalize="characters" autocomplete="off"></label>
+      <label class="mute">Amount<input id="cp_sa" type="text" inputmode="decimal" autocomplete="off"></label>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px">
+      <label class="mute">Others (name)<input id="cp_on" type="text" autocapitalize="characters" autocomplete="off"></label>
+      <label class="mute">Amount<input id="cp_oa" type="text" inputmode="decimal" autocomplete="off"></label>
+    </div>
     <div id="ccRes" style="margin-top:8px"></div>
   </details>
 </div>
@@ -425,7 +441,7 @@ tr.flash td{animation:fl 1.8s ease-out}
 <script>
 (function(){
 var DEFAULT_CODES=[];
-var APP_VERSION='2026-11-25.1';
+var APP_VERSION='2026-11-28.1';
 var NARRS=ls('cashentry.narrs')||[];
 var EXPCODE=ls('cashentry.expcode')||'SHOP-EXP';
 var BIZ=ls('cashentry.biz')||'';
@@ -1452,26 +1468,37 @@ function renderProf(){
   h+='<div class="mute" style="margin-top:6px">'+fd(m+'-01').slice(3)+'. “Posted” is the days already closed; “Today’s sheet” is what you have entered but not posted yet. Same rules as the Month summary in the Ledger tab.</div>';
   el.innerHTML=h;
 }
+var CP_F=[['of','OF'],['d','D'],['c','C'],['dn','⬇️'],['ib','IB']];
+function cpTotal(cp){cp=cp||{};var t=0;CP_F.forEach(function(p){t+=num(cp[p[0]])});return r2(t+num(cp.sa)+num(cp.oa))}
+function cpHas(cp){return !!cp&&Math.abs(cpTotal(cp))>0.004}
+function cpItems(cp,nd){
+  cp=cp||{};var it=[];
+  CP_F.forEach(function(p){var v=num(cp[p[0]]);if(v)it.push(p[1]+' '+fmt2(v))});
+  if(num(cp.sa))it.push('Susp OD'+(String(cp.sn||'').trim()?' ('+String(cp.sn).trim()+')':'')+' '+fmt2(num(cp.sa)));
+  if(num(cp.oa))it.push('Others'+(String(cp.on||'').trim()?' ('+String(cp.on).trim()+')':'')+' '+fmt2(num(cp.oa)));
+  if(nd)it.push('Deals: '+nd);
+  return it;
+}
 function renderCC(){
   var el=$('ccRes');if(!el)return;
-  var raw=($('ccIn').value||'').trim();
-  if(raw===''){el.innerHTML='<div class="mute">The app says closing cash is <b>'+fmt2(totals().bal)+'</b>. Type what you counted.</div>';return}
-  var cnt=num(raw),t=totals(),dd=r2(cnt-t.bal),a=Math.abs(dd),h='';
-  if(Math.abs(dd)<0.005){el.innerHTML='<div class="flag okf">Tallies. Counted '+fmt2(cnt)+' = app '+fmt2(t.bal)+'.</div>';return}
-  h='<div class="flag bad"><b>'+(dd<0?'Short by ':'Excess by ')+fmt2(a)+'</b><br>Counted '+fmt2(cnt)+' · app says '+fmt2(t.bal)+'</div>';
+  var cp=S.cp||{},t=totals();
+  if(!cpHas(cp)){el.innerHTML='<div class="mute">Closing cash in the app: <b>'+fmt2(t.bal)+'</b>.</div>';return}
+  var cnt=cpTotal(cp),dd=r2(cnt-t.bal),a=Math.abs(dd),h='';
+  if(Math.abs(dd)<0.005){el.innerHTML='<div class="flag okf">Tallies. Total '+fmt2(cnt)+' = closing cash '+fmt2(t.bal)+'.</div>';return}
+  h='<div class="flag bad"><b>'+(dd<0?'Short by ':'Excess by ')+fmt2(a)+'</b><br>Total '+fmt2(cnt)+' · closing cash '+fmt2(t.bal)+'</div>';
   h+='<div class="mute" style="margin-top:6px">'+(dd<0?'Cash is less than the app says: an OUT payment may not be entered, or an IN entry may be wrong.':'Cash is more than the app says: an IN receipt may not be entered, or an OUT entry may be wrong.')+'</div>';
   var rs=rows().filter(function(r){return !r.bundle}),same=[],half=[];
   function ln(r){return'<div class="mute">• '+esc(r.code||'(no code)')+' · '+esc(r.narr||'-')+' · '+(r.out?'OUT '+fmt2(r.out):'IN '+fmt2(r.inn))+'</div>'}
   rs.forEach(function(r){var v=r.out||r.inn;if(Math.abs(v-a)<0.005)same.push(r);
     if(dd<0&&r.inn&&Math.abs(r.inn*2-a)<0.005)half.push(r);if(dd>0&&r.out&&Math.abs(r.out*2-a)<0.005)half.push(r)});
   h+='<div style="margin-top:6px"><b style="font-size:13px">Entries of exactly '+fmt2(a)+' today</b>'+(same.length?same.slice(0,6).map(ln).join(''):'<div class="mute">None. If you paid or received '+fmt2(a)+', it may be the missing entry.</div>')+'</div>';
-  if(half.length)h+='<div style="margin-top:6px"><b style="font-size:13px">Possible wrong side (amount × 2 = difference)</b>'+half.slice(0,6).map(function(r){return ln(r)}).join('')+'<div class="mute">If one of these was really '+(dd<0?'OUT':'IN')+', change its side.</div></div>';
+  if(half.length)h+='<div style="margin-top:6px"><b style="font-size:13px">Possible wrong side (amount × 2 = difference)</b>'+half.slice(0,6).map(ln).join('')+'<div class="mute">If one of these was really '+(dd<0?'OUT':'IN')+', change its side.</div></div>';
   el.innerHTML=h;
 }
-$('ccIn').oninput=function(){S.counted=this.value;save();renderCC()};
+['of','d','c','dn','ib','sn','sa','on','oa'].forEach(function(k){$('cp_'+k).oninput=function(){if(!S.cp)S.cp={};S.cp[k]=this.value;save();renderCC()}});
 function renderClose(){
   if(!$('closeInfo'))return;
-  if(document.activeElement!==$('ccIn'))$('ccIn').value=S.counted||'';
+  ['of','d','c','dn','ib','sn','sa','on','oa'].forEach(function(k){var e=$('cp_'+k);if(document.activeElement!==e)e.value=(S.cp||{})[k]||''});
   renderCC();
   var t=totals(),rs=rows(),dl=S.deals||[];
   try{renderProf()}catch(e){}
@@ -1657,13 +1684,13 @@ function sendStatement(){
 // ===== daily cash book picture (for the boss) =====
 function dayModelToday(){
   var t=totals();
-  return{date:S.date,open:num(S.open),close:t.bal,unposted:true,
+  return{cp:S.cp,nd:(S.deals||[]).length,date:S.date,open:num(S.open),close:t.bal,unposted:true,
     rows:S.entries.map(function(r){return{c:r.code,n:r.narr,o:r.out,i:r.inn,cr:r.cr,ci:r.ci}}),
     exp:(S.exp||[]).map(function(x){return{label:x.label,amt:x.amt}})};
 }
 function dayModelPosted(d){
   var hasExp=Array.isArray(d.exp);
-  return{date:d.date,open:d.open,close:d.close,
+  return{cp:d.cp,nd:(d.deals||[]).length,date:d.date,open:d.open,close:d.close,
     rows:(d.ent||[]).filter(function(e){return !(hasExp&&e.x)}).concat(dayExtras(d.date)).sort(function(a,b){return a.s-b.s}).map(function(e){return{c:e.c,n:e.n,o:e.o,i:e.i,cr:e.cr,ci:e.ci}}),
     exp:hasExp?d.exp.map(function(x){return{label:x.label,amt:x.amt}}):[]};
 }
@@ -1677,11 +1704,13 @@ function dayCanvases(m){
   m.rows.forEach(function(r){k++;lines.push({t:'r',k:k,r:r})});
   if(!m.rows.length&&!(m.exp||[]).length)lines.push({t:'msg',x:'No cash entries.'});
   if((m.exp||[]).length){lines.push({t:'sec',x:'EXPENSES BREAKDOWN'});m.exp.forEach(function(x,ix){lines.push({t:'x',k:ix+1,x:x})});lines.push({t:'xt',v:texp})}
+  var cpl=[],cpi=cpItems(m.cp,m.nd);
+  if(cpi.length){var mc=document.createElement('canvas').getContext('2d');mc.font='16px '+FONT;var cur='';cpi.forEach(function(x){var tt=cur?cur+'  ·  '+x:x;if(cur&&mc.measureText(tt).width>W-56){cpl.push(cur);cur=x}else cur=tt});if(cur)cpl.push(cur)}
   var pages=[];for(var i=0;i<lines.length;i+=PER)pages.push(lines.slice(i,i+PER));
   if(!pages.length)pages=[[]];
   var np=pages.length,out=[];
   pages.forEach(function(pl,pi){
-    var first=pi===0,last=pi===np-1,headH=first?290:110,footH=last?(180+(hasC?30:0)):60;
+    var first=pi===0,last=pi===np-1,headH=first?290:110,footH=last?(180+(hasC?30:0)+(cpl.length?cpl.length*24+16:0)):60;
     var c=document.createElement('canvas');c.width=W;c.height=headH+40+pl.length*rowH+footH;
     var g=c.getContext('2d');
     var T=mkT(g);
@@ -1739,6 +1768,7 @@ function dayCanvases(m){
       yy+=52;
       T('Opening '+fmt2(m.open)+'  +  IN '+fmt2(ti)+'  −  OUT '+fmt2(to),28,yy,{sz:19,c:GREY});
       T('Closing cash '+fmt2(m.close),W-28,yy,{a:'right',b:1,sz:26});
+      cpl.forEach(function(tx,ix){T(tx,28,yy+38+ix*24,{sz:16,c:'#9aa0a8'})});
     }
     if(np>1)T('Page '+(pi+1)+' of '+np,W-28,c.height-24,{a:'right',sz:16,c:GREY});
     out.push(c);
@@ -2144,6 +2174,7 @@ function reopenDay(id){
     (day.ent||[]).filter(function(e){return !(e.x&&day.exp)}).concat(back).sort(function(a,b){return a.s-b.s}).forEach(function(e){n.entries.push({id:'e'+(n.seq++),code:e.c,narr:e.n,out:e.o,inn:e.i,cr:e.cr,ci:e.ci})});
     (day.exp||[]).forEach(function(x){n.exp.push({label:x.label,amt:x.amt,own:!!x.own})});
     (day.deals||[]).forEach(function(x){var o={code:x.c,vol:x.v,op:x.op,rate:x.r,ps:x.ps,inr:x.inr,b:x.b||0};if(x.nt)o.note=x.nt;n.deals.push(o)});
+    if(day.cp)n.cp=JSON.parse(JSON.stringify(day.cp));
     S=n;save();f.review=false;all();setView('cash');toast('Day reopened on the Cash book tab'+(back.length?' with '+back.length+' waiting/late-coded row(s) put back':'')+' — review it, then post it again');
   });
 }
@@ -2187,6 +2218,7 @@ function renderDayView(){
   h+='<tr class="vh"><td colspan="2">Total</td><td class="num">'+fmt2(o)+'</td><td class="num">'+fmt2(i)+'</td><td></td></tr></table>';
   if(cr||ci)h+='<div class="mute">Commission R '+fmt2(cr)+' · Commission I '+fmt2(ci)+'</div>';
   if((d.deals||[]).length){var dpf=dealsProfit(d.deals.map(function(x){return{ps:x.ps,inr:x.inr}}));h+='<div class="mute">Deals profit that day: <b class="'+(dpf.profit<0?'oo':'ii')+'">'+signed(dpf.profit)+'</b></div>'}
+  var cpv=cpItems(d.cp,(d.deals||[]).length);if(cpv.length)h+='<div class="mute" style="font-size:12px;margin-top:8px">'+esc(cpv.join('  ·  '))+'</div>';
   h+='<div class="two" style="margin-top:10px"><button class="btn sec sm" id="vwPrev"'+(ix>0?'':' disabled')+'>◀ Earlier day</button><button class="btn sec sm" id="vwNext"'+(ix<sd.length-1?'':' disabled')+'>Later day ▶</button></div>';
   h+='<div style="margin-top:8px"><button class="btn sec" id="vwCopy">Copy this day\'s rows</button></div><div style="margin-top:8px"><button class="btn" id="vwImg">Send cash book picture</button></div><div class="mute" style="margin-top:6px">Tap “edit” on a row or a deal to correct it.</div>';
   c.innerHTML=h;c.style.display='';
@@ -2806,6 +2838,7 @@ function doPost(){
     else wait.push({id:'w'+(L.seq++),d:date,n:r.narr,o:r.out,i:r.inn,cr:r.cr,ci:r.ci});
   });
   var day={id:'d'+(L.seq++),date:date,open:num(S.open),close:t.bal,at:Date.now(),sid:S.sid,ent:ent,deals:deals,exp:(S.exp||[]).map(function(x){return{label:x.label,amt:x.amt,own:!!x.own}})};
+  if(cpHas(S.cp))day.cp=JSON.parse(JSON.stringify(S.cp));
   L.days=L.days.concat([day]).sort(function(a,b){return a.date<b.date?-1:a.date>b.date?1:0});L.wait=L.wait.concat(wait);
   ldSave(function(ok){
     if(!ok){L.days=snap.days;L.wait=snap.wait;L.seq=snap.seq;CACHE=null;renderClose();return}
